@@ -3,6 +3,12 @@ import { useLocation } from 'react-router-dom';
 
 export function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => {
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ambiente sem rolagem programática */
+    }
+  }, [pathname]);
   return null;
 }

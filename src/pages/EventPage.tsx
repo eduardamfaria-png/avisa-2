@@ -33,7 +33,9 @@ export function EventPage() {
 
   const defaultSector = radar?.sectorId ?? (event ? cheapestListing(world.listings, event.id)?.sectorId ?? event.sectors[0]?.id : '') ?? '';
   const [sectorId, setSectorId] = useState(defaultSector);
-  useEffect(() => setSectorId(defaultSector), [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSectorId(defaultSector);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (id && data) store.trackClick(id);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
