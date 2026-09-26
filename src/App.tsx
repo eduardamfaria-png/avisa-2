@@ -1,4 +1,4 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout, RequireAuth } from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
 import { Alertas } from './pages/Alertas';
@@ -27,9 +27,12 @@ function NotFound() {
   );
 }
 
+// Na versão publicada como link (sem controle da URL), a navegação fica em memória.
+const Router = import.meta.env.VITE_ROUTER === 'memory' ? MemoryRouter : BrowserRouter;
+
 export function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <ScrollToTop />
       <ToastProvider>
         <Routes>
@@ -52,6 +55,6 @@ export function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </ToastProvider>
-    </BrowserRouter>
+    </Router>
   );
 }

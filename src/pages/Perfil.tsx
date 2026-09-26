@@ -28,6 +28,7 @@ export function Perfil() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
   const [artist, setArtist] = useState<Artist | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   if (!user || !data) return null;
   const home = catalog.city(data.prefs.homeCityId);
   const plan = PLANS[user.plan];
@@ -224,11 +225,14 @@ export function Perfil() {
             className="list-item"
             style={{ width: '100%', textAlign: 'left' }}
             onClick={() => {
-              if (confirm('Reiniciar a demonstração? Preços, eventos e alertas voltam ao início.')) store.resetDemo();
+              if (!confirmReset) return setConfirmReset(true);
+              store.resetDemo();
+              setConfirmReset(false);
             }}
+            onBlur={() => setConfirmReset(false)}
           >
             <div className="list-item__main">
-              <strong>Reiniciar demonstração</strong>
+              <strong style={confirmReset ? { color: 'var(--yellow)' } : undefined}>{confirmReset ? 'Toque de novo para confirmar' : 'Reiniciar demonstração'}</strong>
               <small>Volta preços, eventos e alertas ao estado inicial</small>
             </div>
           </button>

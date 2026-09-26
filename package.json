@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "monitor": "tsx server/worker.ts"
+    "monitor": "tsx server/worker.ts",
+    "build:artifact": "tsc -b && VITE_ROUTER=memory vite build --outDir dist-artifact --emptyOutDir && node scripts/build-artifact.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

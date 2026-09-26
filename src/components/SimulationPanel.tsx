@@ -27,6 +27,7 @@ export function SimulationPanel({ compact }: { compact?: boolean }) {
   const toast = useToast();
   const [step, setStep] = useState(-1);
   const [summary, setSummary] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     if (!running) return;
@@ -88,14 +89,15 @@ export function SimulationPanel({ compact }: { compact?: boolean }) {
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => {
-              if (confirm('Reiniciar a demonstração? Preços, eventos e alertas voltam ao início.')) {
-                store.resetDemo();
-                setSummary(null);
-                setStep(-1);
-              }
+              if (!confirmReset) return setConfirmReset(true);
+              store.resetDemo();
+              setSummary(null);
+              setStep(-1);
+              setConfirmReset(false);
             }}
+            onBlur={() => setConfirmReset(false)}
           >
-            <RotateCcw size={15} /> Reiniciar
+            <RotateCcw size={15} /> {confirmReset ? 'Confirmar: voltar ao início' : 'Reiniciar'}
           </button>
         )}
       </div>
