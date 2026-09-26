@@ -1,6 +1,7 @@
 import { ArrowLeft, ExternalLink, FlaskConical, ShieldCheck } from 'lucide-react';
 import { useEffect } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useGoBack } from '../lib/links';
 import { formatBRL } from '../core/format';
 import { outboundUrl } from '../core/plans';
 import { fmtDateLong, fmtRelative } from '../lib/dates';
@@ -16,7 +17,7 @@ export function Ingresso() {
   const { listingId } = useParams();
   const [params] = useSearchParams();
   const { world, user, store } = useApp();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/app');
   const listing = world.listings.find((l) => l.id === listingId);
   const event = listing && world.events.find((e) => e.id === listing.eventId);
   const source = listing && catalog.source(listing.sourceId);
@@ -46,7 +47,7 @@ export function Ingresso() {
 
   return (
     <div className="exit">
-      <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)} style={{ marginLeft: -10, alignSelf: 'flex-start' }}>
+      <button className="btn btn-ghost btn-sm" onClick={goBack} style={{ marginLeft: -10, alignSelf: 'flex-start' }}>
         <ArrowLeft size={17} /> Voltar
       </button>
       <div className="card exit__card">

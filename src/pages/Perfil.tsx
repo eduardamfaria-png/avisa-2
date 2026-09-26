@@ -1,6 +1,7 @@
 import { LogOut, Pencil } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { FollowModal } from '../components/FollowModal';
 import { UserAvatar } from '../components/UserAvatar';
 import { describeScope } from '../core/location';

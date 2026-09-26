@@ -1,4 +1,5 @@
-import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link } from './lib/links';
 import { AppLayout, RequireAuth } from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
 import { Alertas } from './pages/Alertas';

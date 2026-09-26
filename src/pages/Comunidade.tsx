@@ -1,5 +1,5 @@
 import { Award, Camera, Sparkles, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/links';
 
 export function Comunidade() {
   return (

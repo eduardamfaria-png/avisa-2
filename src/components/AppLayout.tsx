@@ -1,5 +1,6 @@
 import { Bell, CalendarDays, Compass, Radar, UserRound, UsersRound } from 'lucide-react';
-import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink } from '../lib/links';
 import { useApp } from '../state/hooks';
 import { Logo } from './Logo';
 import { NotificationCenter } from './NotificationCenter';

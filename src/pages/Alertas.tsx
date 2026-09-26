@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { AlertCard } from '../components/AlertCard';
 import { PriceAlertModal } from '../components/PriceAlertModal';
 import { SimulationPanel } from '../components/SimulationPanel';

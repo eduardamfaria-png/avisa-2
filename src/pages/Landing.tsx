@@ -1,5 +1,6 @@
 import { ArrowDown, Bell, CalendarDays, Radar, Search, SlidersHorizontal } from 'lucide-react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { Logo } from '../components/Logo';
 import { useApp } from '../state/hooks';
 

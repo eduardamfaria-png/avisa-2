@@ -1,6 +1,7 @@
 import { Calendar, Clock, MapPin, Settings2, Sparkles, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { formatBRL } from '../core/format';
 import { cheapestListing } from '../core/market';
 import type { Event, RadarItem } from '../core/types';

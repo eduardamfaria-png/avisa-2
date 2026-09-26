@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { Link, useGoBack } from '../lib/links';
 import { EventTile } from '../components/EventCard';
 import { EventCover } from '../components/EventCover';
 import { FollowButton } from '../components/FollowButton';
@@ -12,7 +13,7 @@ import { useApp } from '../state/hooks';
 export function ArtistPage() {
   const { id } = useParams();
   const { world, data } = useApp();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/app/explorar');
   const artist = catalog.artist(id ?? '');
   if (!artist)
     return (
@@ -30,7 +31,7 @@ export function ArtistPage() {
 
   return (
     <>
-      <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)} style={{ marginLeft: -10, marginBottom: 10 }}>
+      <button className="btn btn-ghost btn-sm" onClick={goBack} style={{ marginLeft: -10, marginBottom: 10 }}>
         <ArrowLeft size={17} /> Voltar
       </button>
       <EventCover hue={artist.hue} className="artist-hero">

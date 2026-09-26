@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { Logo } from '../components/Logo';
 import { useApp } from '../state/hooks';
 

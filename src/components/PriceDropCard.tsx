@@ -1,5 +1,5 @@
 import { TrendingDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { formatBRL } from '../core/format';
 import { fmtWeekdayDate } from '../lib/dates';
 import type { Opportunity } from '../services/recommendations';

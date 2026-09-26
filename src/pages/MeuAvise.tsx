@@ -1,6 +1,7 @@
 import { Bell, Compass, Plus, Radar } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { DemoNotice } from '../components/DemoNotice';
 import { EventCard, EventTile } from '../components/EventCard';
 import { FollowModal } from '../components/FollowModal';

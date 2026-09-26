@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { EventTile } from '../components/EventCard';
 import { FollowButton } from '../components/FollowButton';
 import { SearchBar } from '../components/SearchBar';

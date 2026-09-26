@@ -1,6 +1,7 @@
 import { Bell } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { fmtRelative } from '../lib/dates';
 import { ALERT_META } from '../lib/status';
 import { catalog } from '../services/catalog';

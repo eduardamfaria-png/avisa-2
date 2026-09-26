@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { useState } from 'react';
 import { Calendar } from '../components/Calendar';
 import { Countdown } from '../components/Countdown';

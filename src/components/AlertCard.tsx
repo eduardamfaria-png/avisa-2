@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Link } from '../lib/links';
 import { formatBRL } from '../core/format';
 import type { Notification } from '../core/types';
 import { fmtRelative } from '../lib/dates';

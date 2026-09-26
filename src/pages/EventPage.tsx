@@ -1,6 +1,7 @@
 import { ArrowLeft, Bell, Calendar, Clock, ExternalLink, MapPin, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { Link, useGoBack } from '../lib/links';
 import { Countdown } from '../components/Countdown';
 import { DemoNotice } from '../components/DemoNotice';
 import { EventCover } from '../components/EventCover';
@@ -23,7 +24,7 @@ import { useApp, useRequireAuth } from '../state/hooks';
 export function EventPage() {
   const { id } = useParams();
   const { world, data, store } = useApp();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/app/explorar');
   const toast = useToast();
   const requireAuth = useRequireAuth();
   const [alertOpen, setAlertOpen] = useState(false);
@@ -65,7 +66,7 @@ export function EventPage() {
 
   return (
     <div className="event-page">
-      <button className="btn btn-ghost btn-sm" onClick={() => (history.length > 1 ? navigate(-1) : navigate('/app/explorar'))} style={{ marginLeft: -10, marginBottom: 10 }}>
+      <button className="btn btn-ghost btn-sm" onClick={goBack} style={{ marginLeft: -10, marginBottom: 10 }}>
         <ArrowLeft size={17} /> Voltar
       </button>
 

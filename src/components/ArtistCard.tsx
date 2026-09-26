@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/links';
 import type { Artist } from '../core/types';
 import { FollowButton } from './FollowButton';
 import { UserAvatar } from './UserAvatar';
