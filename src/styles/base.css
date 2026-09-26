@@ -71,7 +71,8 @@ p {
   margin: 0;
 }
 
-a {
+a,
+[role='link'] {
   color: inherit;
   text-decoration: none;
 }
@@ -142,7 +143,6 @@ svg {
 
 @keyframes fade-up {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
   to {

@@ -12,7 +12,7 @@ import {
 
 /**
  * Na versão publicada como link do Claude, o ambiente intercepta cliques em
- * `<a href>`. Ali os links internos viram elementos sem `href` que navegam
+ * `<a href>`. Ali os links internos viram elementos que não são `<a>` que navegam
  * pelo roteador; no site normal continuam sendo links de verdade.
  */
 const IN_MEMORY = import.meta.env.VITE_ROUTER === 'memory';
@@ -22,10 +22,10 @@ function useInternalNav(to: LinkProps['to'], replace?: boolean) {
   return {
     role: 'link',
     tabIndex: 0,
-    onKeyDown: (e: KeyboardEvent<HTMLAnchorElement>) => {
+    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
       if (e.key === 'Enter') navigate(to, { replace });
     },
-    go: (e: MouseEvent<HTMLAnchorElement>) => {
+    go: (e: MouseEvent<HTMLElement>) => {
       if (e.defaultPrevented) return;
       e.preventDefault();
       navigate(to, { replace });
@@ -39,14 +39,14 @@ export function Link({ to, replace, onClick, style, ...rest }: LinkProps) {
   const { reloadDocument: _r, preventScrollReset: _p, relative: _rel, viewTransition: _v, state: _s, discover: _d, ...anchor } = rest as LinkProps & Record<string, unknown>;
   void [_r, _p, _rel, _v, _s, _d];
   return (
-    <a
-      {...(anchor as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+    <span
+      {...(anchor as React.HTMLAttributes<HTMLSpanElement>)}
       role={nav.role}
       tabIndex={nav.tabIndex}
       onKeyDown={nav.onKeyDown}
       style={{ cursor: 'pointer', ...style }}
       onClick={(e) => {
-        onClick?.(e);
+        onClick?.(e as unknown as MouseEvent<HTMLAnchorElement>);
         nav.go(e);
       }}
     />

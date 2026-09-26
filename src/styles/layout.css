@@ -58,7 +58,8 @@
   border-top: 1px solid var(--line);
 }
 
-.bottom-nav a {
+.bottom-nav a,
+.bottom-nav [role='link'] {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -71,15 +72,15 @@
   transition: color 0.2s;
 }
 
-.bottom-nav a.active {
+.bottom-nav .active {
   color: var(--text);
 }
 
-.bottom-nav a.active svg {
+.bottom-nav .active svg {
   color: var(--purple);
 }
 
-.bottom-nav a.active::before {
+.bottom-nav .active::before {
   content: '';
   position: absolute;
   top: 0;
@@ -256,6 +257,7 @@
 }
 
 .section-head a,
+.section-head [role='link'],
 .link {
   color: var(--blue);
   font-size: 14px;

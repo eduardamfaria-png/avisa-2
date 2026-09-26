@@ -16,6 +16,7 @@ import { MeuAvise } from './pages/MeuAvise';
 import { Onboarding } from './pages/Onboarding';
 import { Perfil } from './pages/Perfil';
 import { ScrollToTop } from './components/ScrollToTop';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function NotFound() {
   return (
@@ -33,6 +34,7 @@ const Router = import.meta.env.VITE_ROUTER === 'memory' ? MemoryRouter : Browser
 
 export function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <ScrollToTop />
       <ToastProvider>
@@ -57,5 +59,6 @@ export function App() {
         </Routes>
       </ToastProvider>
     </Router>
+    </ErrorBoundary>
   );
 }
