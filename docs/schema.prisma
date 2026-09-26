@@ -1,0 +1,309 @@
+// Schema relacional de referência para o backend do AVISÊ (Postgres).
+// Espelha as entidades de src/core/types.ts. Ainda não é usado pelo app
+// (a Fase 1 roda com dados mockados e persistência local).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan { FREE PREMIUM }
+enum EventCategory { SHOW FESTIVAL TEATRO STAND_UP ESPORTE }
+enum EventStatus { ANNOUNCED PRESALE ON_SALE SOLD_OUT RESALE }
+enum SourceKind { OFFICIAL RESALE }
+enum SourceIntegration { MOCK OFFICIAL_API PARTNER_FEED }
+enum LocationScope { MY_CITY RADIUS CITIES BRAZIL INTERNATIONAL }
+enum RadarPriority { ALTA NORMAL BAIXA }
+enum AlertLevel { ALWAYS IMPORTANT OFF }
+enum TravelPreference { NEAR OTHER_CITIES BRAZIL INTERNATIONAL }
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  username    String   @unique
+  email       String   @unique
+  avatarUrl   String?
+  plan        Plan     @default(FREE)
+  onboarded   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  preference        UserPreference?
+  artistPreferences ArtistPreference[]
+  eventPreferences  EventPreference[]
+  radarItems        RadarItem[]
+  alerts            Alert[]
+  notifications     Notification[]
+  reviews           Review[]
+  comments          Comment[]
+  likes             Like[]
+  following         Follow[]      @relation("follower")
+  followers         Follow[]      @relation("followee")
+  achievements      Achievement[]
+}
+
+model City {
+  id      String  @id
+  name    String
+  state   String
+  country String
+  lat     Float
+  lng     Float
+  venues  Venue[]
+  events  Event[]
+}
+
+model Venue {
+  id       String  @id @default(cuid())
+  name     String
+  cityId   String
+  city     City    @relation(fields: [cityId], references: [id])
+  address  String?
+  capacity Int?
+  events   Event[]
+}
+
+model Artist {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  genre     String
+  category  EventCategory
+  imageUrl  String?
+  bio       String?
+  events    EventArtist[]
+  followers ArtistPreference[]
+}
+
+model Event {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  category      EventCategory
+  date          DateTime
+  description   String?
+  status        EventStatus
+  salesStartAt  DateTime?
+  currentBatch  String?
+  imageUrl      String?
+  venueId       String
+  venue         Venue         @relation(fields: [venueId], references: [id])
+  cityId        String
+  city          City          @relation(fields: [cityId], references: [id])
+  announcedAt   DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  artists       EventArtist[]
+  sectors       Sector[]
+  listings      TicketListing[]
+  history       PriceHistory[]
+  radarItems    RadarItem[]
+  reviews       Review[]
+  @@index([date])
+  @@index([cityId, date])
+}
+
+model EventArtist {
+  eventId  String
+  artistId String
+  event    Event  @relation(fields: [eventId], references: [id])
+  artist   Artist @relation(fields: [artistId], references: [id])
+  @@id([eventId, artistId])
+}
+
+model Sector {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+  name    String
+  prices  Price[]
+}
+
+/// Fonte de ingressos. Só entra em produção com integração autorizada.
+model TicketSource {
+  id          String            @id
+  name        String
+  kind        SourceKind
+  integration SourceIntegration
+  homepage    String?
+  enabled     Boolean           @default(true)
+  listings    TicketListing[]
+}
+
+/// Oferta atual (último estado conhecido) de uma fonte para um setor.
+model TicketListing {
+  id        String       @id @default(cuid())
+  eventId   String
+  event     Event        @relation(fields: [eventId], references: [id])
+  sectorId  String
+  sourceId  String
+  source    TicketSource @relation(fields: [sourceId], references: [id])
+  price     Int?         // centavos; null = indisponível
+  available Boolean
+  batch     String?
+  url       String
+  updatedAt DateTime     @updatedAt
+  @@unique([sourceId, eventId, sectorId])
+}
+
+/// Preço de um setor (valor de face / lote) — útil para lotes oficiais.
+model Price {
+  id        String   @id @default(cuid())
+  sectorId  String
+  sector    Sector   @relation(fields: [sectorId], references: [id])
+  batch     String?
+  amount    Int
+  validFrom DateTime
+}
+
+/// Menor preço encontrado por setor ao longo do tempo.
+model PriceHistory {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  sectorId  String
+  sourceId  String
+  price     Int
+  at        DateTime @default(now())
+  @@index([eventId, sectorId, at])
+}
+
+model RadarItem {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  eventId       String
+  event         Event         @relation(fields: [eventId], references: [id])
+  sectorId      String?
+  maxPrice      Int?
+  priority      RadarPriority @default(NORMAL)
+  alertsEnabled Boolean       @default(true)
+  addedAt       DateTime      @default(now())
+  @@unique([userId, eventId])
+}
+
+/// Regra de preço-alvo ("me avise abaixo de R$ X").
+model Alert {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id])
+  eventId            String
+  sectorId           String?
+  sourceId           String?
+  maxPrice           Int
+  active             Boolean   @default(true)
+  lastTriggeredAt    DateTime?
+  lastTriggeredPrice Int?
+  createdAt          DateTime  @default(now())
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  type       String   // AlertType
+  importance String
+  eventId    String?
+  artistId   String?
+  sectorId   String?
+  listingId  String?
+  title      String
+  body       String
+  data       Json
+  read       Boolean  @default(false)
+  channel    String   @default("in_app") // in_app | push | email (fase 3)
+  createdAt  DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+model UserPreference {
+  userId        String           @id
+  user          User             @relation(fields: [userId], references: [id])
+  homeCityId    String?
+  cityIds       String[]
+  travel        TravelPreference @default(OTHER_CITIES)
+  budget        String?
+  alertSettings Json             // Record<AlertSettingKey, AlertLevel>
+  behavior      Json             // cliques / ignorados (personalização)
+}
+
+model ArtistPreference {
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  artistId   String
+  artist     Artist        @relation(fields: [artistId], references: [id])
+  scope      LocationScope
+  radiusKm   Int           @default(100)
+  cityIds    String[]
+  followedAt DateTime      @default(now())
+  @@id([userId, artistId])
+}
+
+model EventPreference {
+  userId  String
+  user    User    @relation(fields: [userId], references: [id])
+  eventId String
+  ignored Boolean @default(false)
+  clicks  Int     @default(0)
+  @@id([userId, eventId])
+}
+
+// ───── Fase 2 (comunidade) ─────
+
+model Review {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id])
+  rating        Int
+  experience    Int?
+  organization  Int?
+  structure     Int?
+  valueForMoney Int?
+  wouldGoAgain  Boolean?
+  recommends    Boolean?
+  text          String?
+  photoUrls     String[]
+  createdAt     DateTime @default(now())
+  comments      Comment[]
+  likes         Like[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  reviewId String
+  review   Review @relation(fields: [reviewId], references: [id])
+  @@id([userId, reviewId])
+}
+
+model Follow {
+  followerId String
+  followeeId String
+  follower   User     @relation("follower", fields: [followerId], references: [id])
+  followee   User     @relation("followee", fields: [followeeId], references: [id])
+  createdAt  DateTime @default(now())
+  @@id([followerId, followeeId])
+}
+
+model Achievement {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  code       String   // first_event, ten_events, five_cities...
+  unlockedAt DateTime @default(now())
+  @@unique([userId, code])
+}
