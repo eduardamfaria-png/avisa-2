@@ -1,0 +1,22 @@
+rules_version = '2';
+// Só a equipe do Instituto Íris lê e escreve. Ninguém mais vê nenhum dado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // E-mail principal do instituto: sempre tem acesso (troque pelo e-mail da coordenação).
+    function donos() { return ['EMAIL_DA_COORDENACAO']; }
+
+    function emailVerificado() {
+      return request.auth != null && request.auth.token.email != null && request.auth.token.email_verified == true;
+    }
+    function email() { return request.auth.token.email.lower(); }
+    function naEquipe() {
+      let acesso = /databases/$(database)/documents/config/acesso;
+      return exists(acesso) && email() in get(acesso).data.emails;
+    }
+    function membro() { return emailVerificado() && (email() in donos() || naEquipe()); }
+
+    match /{document=**} {
+      allow read, write: if membro();
+    }
+  }
+}

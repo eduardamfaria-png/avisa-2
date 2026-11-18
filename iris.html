@@ -382,17 +382,23 @@ body.gated .app { grid-template-columns: 1fr; }
     confirm: null,
     me: null,
     gate: '',
+    platform: 'claude',
+    login: { email: '', sent: '', busy: false, needEmail: false, error: '' },
   };
   try { const v = localStorage.getItem('iris:view'); if (v) S.view = v === 'alunos' ? 'inscricoes' : v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
 
-  let db = null, assets = null, downloads = null;
+  let db = null, assets = null, downloads = null, backend = null;
 
   const list = (col) => Object.entries(S.data[col]).map(([id, d]) => ({ id, ...d }));
   const get = (col, id) => (S.data[col][id] ? { id, ...S.data[col][id] } : null);
   const turmasList = () => list('turmas').sort(sortByName);
   const alunosList = () => list('alunos').sort(sortByName);
   const alunosDaTurma = (tid) => alunosList().filter((a) => isAtivo(a) && (a.turmaIds || []).includes(tid));
-  const fotoSrc = (a) => (a && a.fotoId ? '/_blob/' + encodeURIComponent(a.fotoId) : '');
+  const fotoSrc = (a) => {
+    if (!a) return '';
+    if (S.platform === 'firebase') return S.data.fotos?.[a.id]?.data || '';
+    return a.fotoId ? '/_blob/' + encodeURIComponent(a.fotoId) : '';
+  };
   const avatar = (a, size = 40) => {
     const src = fotoSrc(a);
     const st = `width:${size}px;height:${size}px;font-size:${Math.round(size * 0.38)}px;background:hsl(${hueOf(a?.nome)} 45% 38%)`;
@@ -533,12 +539,12 @@ body.gated .app { grid-template-columns: 1fr; }
     const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
     $('#tabs').innerHTML = NAV.map((n) => btn(...n)).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who"><img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28"><span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
+    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28">` : ''}<span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.platform === 'firebase' ? `<div class="row" style="gap:6px;margin-bottom:10px"><button class="btn sm" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
   }
 
   function header(eyebrow, title, sub, actions = '') {
     return `<div class="mobile-head brand">${LOGO}<div><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div></div>
-      ${S.me && S.me.name ? `<div class="who mobile-who"><img src="${esc(S.me.avatarUrl)}" alt="" width="24" height="24"><span>${esc(S.me.name)}</span></div>` : ''}
+      ${S.me && S.me.name ? `<div class="who mobile-who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="24" height="24">` : ''}<span class="grow">${esc(S.me.name)}</span>${S.platform === 'firebase' ? '<button class="btn sm ghost" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button>' : ''}</div>` : ''}
       <div class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${actions ? `<div class="row wrapx">${actions}</div>` : ''}</div>`;
   }
 
@@ -557,7 +563,27 @@ body.gated .app { grid-template-columns: 1fr; }
     return `<button class="${cls}${on ? ' danger' : ''}" data-act="confirm" data-key="${key}">${on ? confirmLabel : label}</button>`;
   }
 
+  function loginScreen() {
+    const L = S.login;
+    let body;
+    if (L.sent) body = `<p>Enviamos um link de acesso para <b>${esc(L.sent)}</b>.</p><p class="muted small">Abra seu e-mail (veja também o spam) e toque no link. Ele entra direto no sistema.</p><button class="btn ghost sm" data-act="login-reset">Usar outro e-mail</button>`;
+    else body = `<p>${L.needEmail ? 'Confirme seu e-mail para terminar a entrada.' : 'Digite seu e-mail. Vamos enviar um link para você entrar, sem senha.'}</p>
+      <form class="stack" style="width:100%" data-form="login"><input class="input" type="email" id="login-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email)}" required>
+      <button class="btn primary block" type="submit" ${L.busy ? 'disabled' : ''}>${L.busy ? 'Enviando…' : L.needEmail ? 'Entrar' : 'Receber link de acesso'}</button></form>
+      ${L.needEmail ? '' : `<div class="faint small">ou</div><button class="btn block" data-act="login-google">Entrar com Google</button>`}`;
+    return `<div class="gate"><div class="card gate-card">
+      <div class="gate-logo">${LOGO.replace('width="38" height="38"', 'width="72" height="72"')}</div>
+      <div class="eyebrow">Instituto Íris · Gestão</div>
+      <h1>Entrar</h1>${body}
+      ${L.error ? `<div class="banner" style="text-align:left">${esc(L.error)}</div>` : ''}
+      <p class="faint small" style="margin-top:6px">Acesso só para a equipe do instituto.</p>
+    </div></div>`;
+  }
+
   function gateScreen() {
+    if (S.gate === 'login') return loginScreen();
+    if (S.gate === 'loading') return `<div class="gate"><div class="card gate-card"><div class="gate-logo">${LOGO.replace('width="38" height="38"', 'width="72" height="72"')}</div><p class="muted">Carregando…</p></div></div>`;
+    if (S.gate === 'erro') return `<div class="gate"><div class="card gate-card"><h1>Não foi possível conectar</h1><p class="muted">${esc(S.login.error || 'Verifique a internet e recarregue a página.')}</p></div></div>`;
     const nome = S.me && S.me.name;
     const negado = S.gate === 'denied';
     return `<div class="gate"><div class="card gate-card">
@@ -566,7 +592,8 @@ body.gated .app { grid-template-columns: 1fr; }
       <h1>Acesso restrito à equipe</h1>
       ${negado
         ? `<p>${nome ? `Você entrou como <b>${esc(nome)}</b>, mas esta conta` : 'Esta conta'} ainda não tem permissão para ver os dados dos alunos.</p>
-           <p class="muted small">Peça à coordenação do instituto para liberar seu acesso. Depois, abra este link de novo.</p>`
+           <p class="muted small">Peça à coordenação do instituto para liberar seu acesso. Depois, abra este link de novo.</p>
+           ${S.platform === 'firebase' ? '<button class="btn" data-act="sair">Sair e usar outro e-mail</button>' : ''}`
         : `<p>Para entrar, use a conta Claude que a coordenação autorizou.</p>
            <p class="muted small">Se você já entrou e continua vendo esta tela, sua conta ainda não foi liberada. Fale com a coordenação.</p>
            <a class="btn primary" href="https://claude.ai/login" target="_blank" rel="noopener">Entrar com minha conta</a>`}
@@ -1119,6 +1146,17 @@ body.gated .app { grid-template-columns: 1fr; }
     const m = $('#modal-root .modal'); m.dataset.ctx = JSON.stringify({ type: 'lanc', id }); m.dataset.tipo = l.tipo;
   }
 
+  function equipeModal() {
+    const emails = (S.data.config?.acesso?.emails || []).slice().sort();
+    openModal('Equipe com acesso', `<p class="muted small" style="margin-bottom:12px">Só estes e-mails conseguem entrar. Todos podem fazer tudo no sistema. O e-mail principal do instituto, definido na configuração, sempre tem acesso.</p>
+      <div class="card list" id="equipe-list">${emails.length ? emails.map((e) => `<div class="item"><span class="grow">${esc(e)}</span>${e === (S.me?.email || '') ? '<span class="pill">você</span>' : `<button class="btn sm ghost danger" data-act="equipe-del" data-e="${esc(e)}">Remover</button>`}</div>`).join('') : '<div class="pad small muted">Nenhum e-mail extra liberado ainda.</div>'}</div>
+      <form class="row" style="margin-top:12px" data-form="equipe"><input class="input grow" type="email" id="equipe-email" placeholder="email@exemplo.com" required><button class="btn primary" type="submit">Liberar</button></form>`, '<button class="btn" data-act="modal-close">Fechar</button>');
+  }
+  async function setEquipe(emails) {
+    const clean = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+    if (await guard(() => put('config', 'acesso', { emails: clean, atualizadoEm: new Date().toISOString() }), 'Lista da equipe atualizada.')) equipeModal();
+  }
+
   // Re-renderiza só o rodapé do modal (botões de confirmação).
   function refreshModalFoot() {
     const m = $('#modal-root .modal'); if (!m) return;
@@ -1132,7 +1170,17 @@ body.gated .app { grid-template-columns: 1fr; }
   }
 
   async function uploadPhoto(id, file) {
-    if (!assets || !file) return;
+    if (!file) return;
+    if (S.platform === 'firebase') {
+      toast('Salvando foto…');
+      try {
+        const blob = await resizeImage(file, 320);
+        const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+        if (await guard(() => put('fotos', id, { data, atualizadoEm: new Date().toISOString() }), 'Foto salva.')) { if ($('#modal-root .modal')) alunoModal(id); }
+      } catch { toast('Não foi possível salvar a foto.'); }
+      return;
+    }
+    if (!assets) return;
     toast('Enviando foto…');
     try {
       const blob = await resizeImage(file, 480);
@@ -1195,7 +1243,13 @@ body.gated .app { grid-template-columns: 1fr; }
     return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
   }
   async function saveFile(filename, data) {
-    if (!downloads) return toast('Baixar planilha só funciona pelo link do Claude.');
+    if (!downloads) {
+      // Fora do Claude: download comum do navegador.
+      const url = URL.createObjectURL(new Blob([data], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      return;
+    }
     try { await downloads.save({ filename, data }); } catch (e) { if (e && e.code !== 'cancelled' && e.code !== 'declined') toast('Não foi possível gerar a planilha.'); }
   }
   function csvAlunos() {
@@ -1297,12 +1351,17 @@ body.gated .app { grid-template-columns: 1fr; }
         S.confirm = null;
         const ctx = JSON.parse($('#modal-root .modal')?.dataset.ctx || '{}');
         if (key === 'apagar-exemplos') { await deleteExamples(); return; }
-        if (key === 'del-aluno') { if (await guard(() => del('alunos', ctx.id), 'Aluno excluído.')) closeModal(); }
+        if (key === 'del-aluno') { if (await guard(async () => { await del('alunos', ctx.id); if (S.platform === 'firebase' && S.data.fotos?.[ctx.id]) await del('fotos', ctx.id); }, 'Cadastro excluído.')) closeModal(); }
         if (key === 'del-turma') { if (await guard(() => del('turmas', ctx.id), 'Turma excluída.')) closeModal(); }
         if (key === 'del-lanc') { if (await guard(() => del('lancamentos', ctx.id), 'Lançamento excluído.')) closeModal(); }
         break;
       }
       case 'seed': seed(); break;
+      case 'sair': backend?.signOut(); break;
+      case 'equipe': equipeModal(); break;
+      case 'equipe-del': setEquipe((S.data.config?.acesso?.emails || []).filter((x) => x !== t.dataset.e)); break;
+      case 'login-google': S.login.error = ''; backend?.googleSignIn().catch((err) => { S.login.error = loginErro(err); render(); }); break;
+      case 'login-reset': S.login = { email: '', sent: '', busy: false, needEmail: false, error: '' }; render(); break;
       // Chamada
       case 'ch-turma': openChamada(t.dataset.t); break;
       case 'ch-back': flushChamada(); S.chamada.turmaId = ''; render(); window.scrollTo?.(0, 0); break;
@@ -1333,6 +1392,31 @@ body.gated .app { grid-template-columns: 1fr; }
     }
   });
 
+  document.addEventListener('submit', async (e) => {
+    const f = e.target.dataset.form; if (!f) return;
+    e.preventDefault();
+    if (f === 'login') {
+      const email = val('login-email').toLowerCase(); S.login.email = email; S.login.error = '';
+      if (!email) return;
+      S.login.busy = true; render();
+      try {
+        if (S.login.needEmail) await backend.completeLink(email);
+        else { await backend.sendLink(email); S.login.sent = email; }
+      } catch (err) { S.login.error = loginErro(err); }
+      S.login.busy = false; render();
+    }
+    if (f === 'equipe') { const email = val('equipe-email'); if (email) setEquipe([...(S.data.config?.acesso?.emails || []), email]); }
+  });
+  function loginErro(err) {
+    const c = err && err.code || '';
+    if (c.includes('invalid-email')) return 'Este e-mail não parece válido.';
+    if (c.includes('popup')) return 'A janela do Google foi fechada antes de terminar.';
+    if (c.includes('invalid-action-code') || c.includes('expired')) return 'Este link já foi usado ou expirou. Peça um novo.';
+    if (c.includes('quota') || c.includes('too-many')) return 'Muitas tentativas. Espere alguns minutos e tente de novo.';
+    if (c.includes('unauthorized-domain') || c.includes('operation-not-allowed')) return 'O login ainda não foi ativado na configuração do sistema.';
+    return 'Não foi possível entrar. Tente de novo.';
+  }
+
   document.addEventListener('input', (e) => {
     if (e.target.id === 'alunos-q') { S.alunosQ = e.target.value; render(); }
     else if (e.target.id === 'insc-q') { S.inscQ = e.target.value; render(); }
@@ -1357,7 +1441,43 @@ body.gated .app { grid-template-columns: 1fr; }
   // ───────────── Inicialização ─────────────
   render();
 
+  function subscribeAll(extra) {
+    const timer = setTimeout(() => { S.slow = true; schedule(); }, 10000);
+    for (const col of [...COLS, ...extra]) {
+      db.collection(col).onSnapshot((snap) => {
+        const next = {};
+        for (const doc of snap.docs) next[doc.id] = doc.data();
+        S.data[col] = next;
+        if (!snap.metadata.fromCache && COLS.includes(col)) { S.loaded.add(col); if (S.loaded.size === COLS.length) { clearTimeout(timer); S.slow = false; } }
+        schedule();
+      }, () => { if (COLS.includes(col)) S.loaded.add(col); schedule(); });
+    }
+  }
+
+  // Versão publicada fora do Claude (Firebase): login por e-mail e lista da equipe.
+  async function bootFirebase() {
+    S.platform = 'firebase'; S.gate = 'loading'; render();
+    try { backend = await window.irisBackend; }
+    catch (err) { S.gate = 'erro'; S.login.error = 'A configuração do sistema não foi encontrada.'; render(); return; }
+    downloads = null; db = backend.db; S.canUpload = true;
+    try { if (await backend.linkPending()) { S.login.needEmail = !backend.savedEmail(); if (!S.login.needEmail) await backend.completeLink(backend.savedEmail()); } }
+    catch (err) { S.login.error = loginErro(err); }
+    let subscribed = false;
+    backend.onAuth(async (u) => {
+      if (!u) { S.me = null; S.gate = 'login'; render(); if (subscribed) location.reload(); return; }
+      S.me = { name: u.displayName || u.email, avatarUrl: u.photoURL || '', email: (u.email || '').toLowerCase() };
+      S.login = { email: '', sent: '', busy: false, needEmail: false, error: '' };
+      S.gate = 'loading'; render();
+      const ok = await backend.isMember();
+      if (!ok) { S.gate = 'denied'; render(); return; }
+      S.gate = ''; S.mode = 'db';
+      if (!subscribed) { subscribed = true; subscribeAll(['fotos', 'config']); }
+      render();
+    });
+  }
+
   async function boot() {
+    if (window.irisBackend) return bootFirebase();
     const c = window.claude;
     if (!c || typeof c.use !== 'function') { startLocal(); return; }
     const [d, u, a, dl] = await Promise.all(['db', 'user', 'assets', 'downloads'].map((n) => c.use(n).catch(() => null)));
@@ -1371,16 +1491,7 @@ body.gated .app { grid-template-columns: 1fr; }
       if (w === false) { S.gate = 'denied'; render(); return; }
     }
     db = d; assets = a; downloads = dl; S.canUpload = !!a; S.mode = 'db'; S.gate = '';
-    const timer = setTimeout(() => { S.slow = true; schedule(); }, 10000);
-    for (const col of COLS) {
-      db.collection(col).onSnapshot((snap) => {
-        const next = {};
-        for (const doc of snap.docs) next[doc.id] = doc.data();
-        S.data[col] = next;
-        if (!snap.metadata.fromCache) { S.loaded.add(col); if (S.loaded.size === COLS.length) { clearTimeout(timer); S.slow = false; } }
-        schedule();
-      }, () => { S.loaded.add(col); schedule(); });
-    }
+    subscribeAll([]);
     schedule();
   }
 

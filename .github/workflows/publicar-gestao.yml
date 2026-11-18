@@ -1,0 +1,44 @@
+# Publica o sistema de gestão no Firebase (Google) a cada atualização.
+# Precisa, nas configurações do repositório no GitHub:
+#   Secrets → FIREBASE_SERVICE_ACCOUNT  (chave da conta de serviço, arquivo .json inteiro)
+#   Variables → FIREBASE_PROJECT_ID     (ID do projeto no Firebase)
+name: Publicar gestão
+on:
+  push:
+    branches: [main, claude/confident-cannon-fk3jfq]
+    paths: [iris.html, gestao/**, firestore.rules, firebase.json, scripts/build-gestao.mjs, .github/workflows/publicar-gestao.yml]
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verificar configuração
+        id: cfg
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$SA" ] || [ -z "$PID" ]; then
+            echo "Firebase ainda não configurado; nada a publicar."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Montar o site
+        if: steps.cfg.outputs.ok == 'true'
+        run: node scripts/build-gestao.mjs
+      - name: Publicar site e regras de acesso
+        if: steps.cfg.outputs.ok == 'true'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project "$PID" --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"
