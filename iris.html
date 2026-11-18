@@ -289,6 +289,19 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
 .rb.j.on { background: var(--amber); border-color: var(--amber); color: #fff; }
 .rb:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 520px) { .roll-btns { width: 100%; padding-left: 78px; } .rb { flex: 1; min-width: 0; } }
+/* ── Tela de acesso ── */
+body.gated .side, body.gated .tabs { display: none; }
+body.gated .app { grid-template-columns: 1fr; }
+.gate { min-height: 80vh; display: grid; place-items: center; }
+.gate-card { max-width: 440px; width: 100%; padding: 32px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.gate-card h1 { font-size: 26px; font-weight: 800; }
+.gate-card p { max-width: 36ch; }
+.gate-logo svg { display: block; }
+.who { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--muted); }
+.who img { border-radius: 50%; flex: none; }
+.who b { color: var(--ink); }
+.mobile-who { font-size: 12.5px; margin: -8px 0 0; }
+@media (min-width: 960px) { .mobile-who { display: none; } }
 </style>
 
 <div class="app">
@@ -367,6 +380,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     finMes: ym(new Date()),
     chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false, rev: 0, status: '' },
     confirm: null,
+    me: null,
+    gate: '',
   };
   try { const v = localStorage.getItem('iris:view'); if (v) S.view = v === 'alunos' ? 'inscricoes' : v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
 
@@ -518,11 +533,12 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
     $('#tabs').innerHTML = NAV.map((n) => btn(...n)).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
+    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who"><img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28"><span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
   }
 
   function header(eyebrow, title, sub, actions = '') {
     return `<div class="mobile-head brand">${LOGO}<div><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div></div>
+      ${S.me && S.me.name ? `<div class="who mobile-who"><img src="${esc(S.me.avatarUrl)}" alt="" width="24" height="24"><span>${esc(S.me.name)}</span></div>` : ''}
       <div class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${actions ? `<div class="row wrapx">${actions}</div>` : ''}</div>`;
   }
 
@@ -541,10 +557,29 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     return `<button class="${cls}${on ? ' danger' : ''}" data-act="confirm" data-key="${key}">${on ? confirmLabel : label}</button>`;
   }
 
+  function gateScreen() {
+    const nome = S.me && S.me.name;
+    const negado = S.gate === 'denied';
+    return `<div class="gate"><div class="card gate-card">
+      <div class="gate-logo">${LOGO.replace('width="38" height="38"', 'width="72" height="72"')}</div>
+      <div class="eyebrow">Instituto Íris · Gestão</div>
+      <h1>Acesso restrito à equipe</h1>
+      ${negado
+        ? `<p>${nome ? `Você entrou como <b>${esc(nome)}</b>, mas esta conta` : 'Esta conta'} ainda não tem permissão para ver os dados dos alunos.</p>
+           <p class="muted small">Peça à coordenação do instituto para liberar seu acesso. Depois, abra este link de novo.</p>`
+        : `<p>Para entrar, use a conta Claude que a coordenação autorizou.</p>
+           <p class="muted small">Se você já entrou e continua vendo esta tela, sua conta ainda não foi liberada. Fale com a coordenação.</p>
+           <a class="btn primary" href="https://claude.ai/login" target="_blank" rel="noopener">Entrar com minha conta</a>`}
+      <p class="faint small" style="margin-top:6px">Os dados dos alunos são protegidos e só aparecem para pessoas autorizadas.</p>
+    </div></div>`;
+  }
+
   function render() {
     // Preserva foco e cursor de campos da página principal.
     const ae = document.activeElement;
     const keep = ae && ae.id && $('#view').contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
+    document.body.classList.toggle('gated', !!S.gate);
+    if (S.gate) { $('#view').innerHTML = gateScreen(); return; }
     renderNav();
     if (S.mode === 'loading' || (S.mode === 'db' && S.loaded.size < COLS.length && !S.slow)) {
       $('#view').innerHTML = header('Instituto Íris', 'Carregando dados…', 'Buscando alunos, turmas e chamadas.');
@@ -1326,11 +1361,16 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const c = window.claude;
     if (!c || typeof c.use !== 'function') { startLocal(); return; }
     const [d, u, a, dl] = await Promise.all(['db', 'user', 'assets', 'downloads'].map((n) => c.use(n).catch(() => null)));
-    if (!d) { startLocal(); return; }
-    db = d; assets = a; downloads = dl; S.canUpload = !!a; S.mode = 'db';
+    if (u) { try { S.me = await u.me(); } catch {} }
+    // Sem banco = pessoa não entrou numa conta com acesso a esta página.
+    if (!d) { S.gate = 'signedout'; render(); return; }
     if (u) {
-      try { const w = await u.can('data.write'); if (w === false) S.canWrite = false; } catch {}
+      let w = null;
+      try { w = await u.can('data.write'); } catch {}
+      // Sem permissão de Colaborador/Editor: os dados ficam fechados para essa conta.
+      if (w === false) { S.gate = 'denied'; render(); return; }
     }
+    db = d; assets = a; downloads = dl; S.canUpload = !!a; S.mode = 'db'; S.gate = '';
     const timer = setTimeout(() => { S.slow = true; schedule(); }, 10000);
     for (const col of COLS) {
       db.collection(col).onSnapshot((snap) => {
