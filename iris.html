@@ -262,6 +262,9 @@ td.r, th.r { text-align: right; }
 @media (min-width: 1100px) { .profile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .ph { font-size: 15px; margin-bottom: 12px; }
 
+.start { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
+.start .steps { max-width: none; }
+
 /* ── Ficha e tabela ── */
 .modal.wide { max-width: 760px; }
 .ficha-nav { position: sticky; top: -18px; z-index: 2; background: var(--surface); padding: 8px 0 10px; margin-bottom: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
@@ -599,14 +602,14 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const novas = list('inscricoes').filter((i) => i.status === 'nova').length;
     const turmas = turmasList();
 
-    if (!turmas.length && !alunos.length) {
-      return header('Painel', 'Bem-vinda ao painel do Íris', 'Tudo das aulas em um lugar: alunos, chamada, inscrições e o dinheiro do instituto.') + notices() + `
-        <div class="empty card"><h3>Comece por aqui</h3>
-          <div class="steps"><div>Crie as turmas (curso, dias e horário)</div><div>Cadastre os alunos com a ficha completa</div><div>Faça a chamada em cada aula</div></div>
-          <div class="row wrapx" style="justify-content:center"><button class="btn primary" data-act="turma-new">${icon('plus')}Criar primeira turma</button>
-          ${S.mode === 'db' && S.canWrite ? `<button class="btn" data-act="seed">Carregar exemplo para testar</button>` : ''}</div>
-        </div>`;
-    }
+    const vazio = !turmas.length && !alunos.length;
+    const comeco = vazio ? `
+      <div class="card pad start">
+        <div class="grow"><h2 style="font-size:19px">Comece por aqui</h2>
+          <div class="steps" style="margin-top:10px"><div>Crie as turmas (curso, dias e horário)</div><div>Cadastre os alunos com a ficha completa</div><div>Faça a chamada em cada aula</div></div></div>
+        <div class="stack" style="min-width:220px"><button class="btn primary" data-act="turma-new">${icon('plus')}Criar primeira turma</button>
+          ${S.mode === 'db' && S.canWrite ? `<button class="btn" data-act="seed">Ver com dados de exemplo</button><span class="small muted">Os exemplos podem ser apagados depois com um botão.</span>` : ''}</div>
+      </div>` : '';
 
     const vagas = turmas.reduce((n, t) => n + Math.max(0, (Number(t.capacidade) || 0) - alunosDaTurma(t.id).length), 0);
     const aniversariantes = ativos.filter((a) => a.nascimento && parseYmd(a.nascimento).getMonth() === mesAtual).sort((a, b) => parseYmd(a.nascimento).getDate() - parseYmd(b.nascimento).getDate());
@@ -619,7 +622,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const beneficio = ativos.filter((a) => a.beneficio && a.beneficio !== 'Nenhum').length;
     const recentes = list('inscricoes').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm))).slice(0, 4);
 
-    return header(fmtLong(today()), 'Painel', '') + notices() + `
+    return header(fmtLong(today()), 'Painel', '') + notices() + comeco + `
       <div class="kpis">
         <div class="card kpi hl"><span>Alunos ativos</span><b>${ativos.length}</b><small>${alunos.length} cadastrados · ${inativos} ${inativos === 1 ? 'inativo' : 'inativos'}</small></div>
         <div class="card kpi"><span>Novas matrículas</span><b>${novosMes}</b><small>em ${MESES[mesAtual]}</small></div>
