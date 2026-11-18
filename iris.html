@@ -348,7 +348,12 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   const LOGO = `<svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#fff" stroke="#1c2d6b" stroke-width="3"/><path d="M6 24a14.5 14.5 0 0 0 28 0" fill="none" stroke="#d99a12" stroke-width="3" stroke-linecap="round"/><text x="20" y="23.5" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-size="10.5" fill="#1c2d6b">ÍRIS</text></svg>`;
 
   // ───────────── Estado ─────────────
-  const COLS = ['alunos', 'turmas', 'chamadas', 'inscricoes', 'lancamentos'];
+  const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos'];
+  // Situação de cada pessoa no instituto (inscrição e aluno são o mesmo cadastro).
+  const SIT = { matriculado: ['Matriculado', 'green'], inscrito: ['Aguardando vaga', 'gold'], formado: ['Formado', 'navy'], desistiu: ['Desistiu', 'red'], saiu: ['Saiu do curso', ''] };
+  const sit = (a) => ({ ativo: 'matriculado', inativo: 'saiu' }[a?.status] || (SIT[a?.status] ? a.status : 'matriculado'));
+  const isAtivo = (a) => sit(a) === 'matriculado';
+  const sitPill = (a) => `<span class="pill ${SIT[sit(a)][1]}">${SIT[sit(a)][0]}</span>`;
   const S = {
     mode: 'loading', // loading | db | local
     data: Object.fromEntries(COLS.map((c) => [c, {}])),
@@ -357,9 +362,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     canWrite: true,
     canUpload: false,
     view: 'painel',
-    alunosQ: '', alunosTurma: '', alunosStatus: 'ativo', alunosBairro: '', alunosFaixa: '', alunosIncompletos: false, alunosModo: 'lista',
+    alunosQ: '', alunosTurma: '', alunosStatus: 'matriculado', inscQ: '', qDraft: {}, alunosBairro: '', alunosFaixa: '', alunosIncompletos: false, alunosModo: 'lista',
     calMes: ym(new Date()), calDia: ymd(new Date()),
-    inscStatus: 'todas',
     finMes: ym(new Date()),
     chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false, rev: 0, status: '' },
     confirm: null,
@@ -372,7 +376,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   const get = (col, id) => (S.data[col][id] ? { id, ...S.data[col][id] } : null);
   const turmasList = () => list('turmas').sort(sortByName);
   const alunosList = () => list('alunos').sort(sortByName);
-  const alunosDaTurma = (tid) => alunosList().filter((a) => a.status !== 'inativo' && (a.turmaIds || []).includes(tid));
+  const alunosDaTurma = (tid) => alunosList().filter((a) => isAtivo(a) && (a.turmaIds || []).includes(tid));
   const fotoSrc = (a) => (a && a.fotoId ? '/_blob/' + encodeURIComponent(a.fotoId) : '');
   const avatar = (a, size = 40) => {
     const src = fotoSrc(a);
@@ -477,7 +481,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     ['No instituto', [
       ['__turmas', 'Turmas', 'turmas', null, 1],
       ['matriculaEm', 'Matriculado em', 'date'],
-      ['status', 'Situação', 'select', ['ativo:Ativo', 'inativo:Inativo (saiu)']],
+      ['status', 'Situação', 'select', ['matriculado:Matriculado (cursando)', 'inscrito:Aguardando vaga', 'formado:Formado', 'desistiu:Desistiu', 'saiu:Saiu do curso']],
+      ['saidaEm', 'Data da formatura ou saída', 'date'],
       ['comoConheceu', 'Como conheceu o instituto', 'select', ['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro']],
       ['obs', 'Observações', 'textarea', null, 1],
     ]],
@@ -511,7 +516,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   ];
 
   function renderNav() {
-    const novas = list('inscricoes').filter((i) => i.status === 'nova').length;
+    const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
     $('#tabs').innerHTML = NAV.map((n) => btn(...n)).join('');
     $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
@@ -606,15 +611,16 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
 
   function vPainel() {
     const alunos = alunosList();
-    const ativos = alunos.filter((a) => a.status !== 'inativo');
-    const inativos = alunos.length - ativos.length;
+    const ativos = alunos.filter(isAtivo);
+    const formados = alunos.filter((a) => sit(a) === 'formado').length;
+    const saidas = alunos.filter((a) => sit(a) === 'desistiu' || sit(a) === 'saiu').length;
     const mesAtual = new Date().getMonth();
     const mes = ym(new Date());
     const novosMes = alunos.filter((a) => (a.matriculaEm || '').startsWith(mes)).length;
     const st30 = freqStats(daysAgo(30));
     const vals = Object.values(st30).filter((s) => s.total);
     const media = vals.length ? vals.reduce((n, s) => n + s.pres + s.just, 0) / vals.reduce((n, s) => n + s.total, 0) : null;
-    const novas = list('inscricoes').filter((i) => i.status === 'nova').length;
+    const novas = alunos.filter((a) => sit(a) === 'inscrito').length;
     const turmas = turmasList();
 
     const vazio = !turmas.length && !alunos.length;
@@ -635,14 +641,14 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const pcd = ativos.filter((a) => a.deficiencia && a.deficiencia !== 'Não').length;
     const semImagem = ativos.filter((a) => a.autorizaImagem === 'Não').length;
     const beneficio = ativos.filter((a) => a.beneficio && a.beneficio !== 'Nenhum').length;
-    const recentes = list('inscricoes').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm))).slice(0, 4);
+    const recentes = alunos.slice().sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm))).slice(0, 4);
 
     return header(fmtLong(today()), 'Painel', '') + notices() + comeco + `
       <div class="kpis">
-        <div class="card kpi hl"><span>Alunos ativos</span><b>${ativos.length}</b><small>${alunos.length} cadastrados · ${inativos} ${inativos === 1 ? 'inativo' : 'inativos'}</small></div>
+        <div class="card kpi hl"><span>Alunos ativos</span><b>${ativos.length}</b><small>${alunos.length} no banco · ${formados} ${formados === 1 ? 'formado' : 'formados'} · ${saidas} saíram</small></div>
         <div class="card kpi"><span>Novas matrículas</span><b>${novosMes}</b><small>em ${MESES[mesAtual]}</small></div>
         <div class="card kpi"><span>Frequência média</span><b style="color:${media != null && media < 0.75 ? 'var(--red)' : 'inherit'}">${pct(media)}</b><small>últimos 30 dias</small></div>
-        <div class="card kpi"><span>Inscrições novas</span><b>${novas}</b><small>aguardando contato</small></div>
+        <div class="card kpi"><span>Aguardando vaga</span><b>${novas}</b><small>inscritos ainda sem turma</small></div>
       </div>
       <div class="minis">
         <div><b class="num">${turmas.length}</b><span>${turmas.length === 1 ? 'turma' : 'turmas'}</span></div>
@@ -693,7 +699,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
         </section>
         <section>
           <div class="section-title"><h2>Inscrições recentes</h2><button class="btn sm ghost" data-act="nav" data-v="inscricoes">Ver todas</button></div>
-          <div class="card list">${recentes.length ? recentes.map((i) => `<div class="item"><div class="grow"><strong>${esc(i.nome)}</strong><span class="sub">${esc(get('turmas', i.turmaId)?.nome || 'Sem turma')} · ${fmtDate((i.criadoEm || '').slice(0, 10))}</span></div>${statusPill(i.status)}</div>`).join('') : `<div class="pad muted small">Nenhuma inscrição ainda.</div>`}</div>
+          <div class="card list">${recentes.length ? recentes.map((a) => `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 32)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">Inscrito em ${fmtDate((a.criadoEm || '').slice(0, 10))}</span></div>${sitPill(a)}</button>`).join('') : `<div class="pad muted small">Nenhuma inscrição ainda.</div>`}</div>
         </section>
       </div>`;
   }
@@ -839,7 +845,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       (!S.alunosBairro || (a.bairro || '').trim() === S.alunosBairro) &&
       (!S.alunosFaixa || faixa(a) === S.alunosFaixa) &&
       (!S.alunosIncompletos || missingFields(a).length) &&
-      (S.alunosStatus === 'todos' || (S.alunosStatus === 'ativo' ? a.status !== 'inativo' : a.status === 'inativo')));
+      (S.alunosStatus === 'todos' || sit(a) === S.alunosStatus));
   }
 
   function vAlunos() {
@@ -848,22 +854,22 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const turmas = turmasList();
     const bairros = [...new Set(alunosList().map((a) => (a.bairro || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const turmaNomes = (a) => (a.turmaIds || []).map((id) => get('turmas', id)?.nome).filter(Boolean).join(', ');
-    const freqPill = (a) => { const s = st[a.id]; return a.status === 'inativo' ? '<span class="pill">Inativo</span>' : s && s.total ? `<span class="pill ${s.rate < 0.75 ? 'red' : 'green'} num" title="Frequência">${pct(s.rate)}</span>` : '<span class="pill">sem aulas</span>'; };
+    const freqPill = (a) => { const s = st[a.id]; return !isAtivo(a) ? sitPill(a) : s && s.total ? `<span class="pill ${s.rate < 0.75 ? 'red' : 'green'} num" title="Frequência">${pct(s.rate)}</span>` : '<span class="pill">sem aulas</span>'; };
     const opt = (v, l, cur) => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(l)}</option>`;
 
     const body = !rows.length ? `<div class="empty"><h3>${alunosList().length ? 'Nenhum aluno com esses filtros' : 'Nenhum aluno cadastrado'}</h3>${alunosList().length ? '' : `<button class="btn primary" data-act="aluno-new">${icon('plus')}Cadastrar aluno</button>`}</div>`
       : S.alunosModo === 'tabela'
-        ? `<div class="card table-wrap"><table class="sheet"><thead><tr><th>Aluno</th><th>Idade</th><th>Gênero</th><th>Cor/raça</th><th>Bairro</th><th>Telefone</th><th>Responsável</th><th>Turmas</th><th>Escolaridade</th><th>Deficiência</th><th>Imagem</th><th>Ficha</th><th>Freq.</th></tr></thead><tbody>${rows.map((a) => { const miss = missingFields(a).length; return `<tr data-act="aluno-open" data-id="${a.id}" tabindex="0"><td><div class="row" style="gap:8px">${avatar(a, 28)}<b>${esc(a.nome)}</b></div></td><td class="num">${age(a.nascimento) ?? '—'}</td><td>${esc(a.genero || '—')}</td><td>${esc(a.corRaca || '—')}</td><td>${esc(a.bairro || '—')}</td><td class="num" style="white-space:nowrap">${esc(a.telefone || a.telefoneResp || '—')}</td><td>${esc(a.responsavel || '—')}</td><td>${esc(turmaNomes(a) || '—')}</td><td>${esc(a.escolaridade || '—')}</td><td>${esc(a.deficiencia || '—')}</td><td>${esc(a.autorizaImagem || 'Pendente')}</td><td>${miss ? `<span class="pill amber num">faltam ${miss}</span>` : '<span class="pill green">completa</span>'}</td><td>${freqPill(a)}</td></tr>`; }).join('')}</tbody></table></div>`
+        ? `<div class="card table-wrap"><table class="sheet"><thead><tr><th>Aluno</th><th>Idade</th><th>Gênero</th><th>Cor/raça</th><th>Bairro</th><th>Telefone</th><th>Responsável</th><th>Turmas</th><th>Escolaridade</th><th>Deficiência</th><th>Imagem</th><th>Situação</th><th>Ficha</th><th>Freq.</th></tr></thead><tbody>${rows.map((a) => { const miss = missingFields(a).length; return `<tr data-act="aluno-open" data-id="${a.id}" tabindex="0"><td><div class="row" style="gap:8px">${avatar(a, 28)}<b>${esc(a.nome)}</b></div></td><td class="num">${age(a.nascimento) ?? '—'}</td><td>${esc(a.genero || '—')}</td><td>${esc(a.corRaca || '—')}</td><td>${esc(a.bairro || '—')}</td><td class="num" style="white-space:nowrap">${esc(a.telefone || a.telefoneResp || '—')}</td><td>${esc(a.responsavel || '—')}</td><td>${esc(turmaNomes(a) || '—')}</td><td>${esc(a.escolaridade || '—')}</td><td>${esc(a.deficiencia || '—')}</td><td>${esc(a.autorizaImagem || 'Pendente')}</td><td>${sitPill(a)}</td><td>${miss ? `<span class="pill amber num">faltam ${miss}</span>` : '<span class="pill green">completa</span>'}</td><td>${freqPill(a)}</td></tr>`; }).join('')}</tbody></table></div>`
         : `<div class="card list">${rows.map((a) => { const idade = age(a.nascimento); const miss = missingFields(a).length; return `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 46)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">${idade != null ? idade + ' anos · ' : ''}${esc(turmaNomes(a) || 'Sem turma')}${a.bairro ? ' · ' + esc(a.bairro) : ''}</span></div>${miss ? `<span class="pill amber num" title="Campos faltando na ficha">ficha ${miss}</span>` : ''}${freqPill(a)}</button>`; }).join('')}</div>`;
 
-    return header('Banco de dados', 'Alunos', `${plural(alunosList().filter((a) => a.status !== 'inativo').length, 'aluno ativo', 'alunos ativos')} · ${plural(alunosList().length, 'cadastro', 'cadastros')} no total`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button><button class="btn primary" data-act="aluno-new">${icon('plus')}Novo aluno</button>`) + notices() + `
+    return header('Banco de dados', 'Alunos', `${plural(alunosList().filter(isAtivo).length, 'matriculado', 'matriculados')} · ${plural(alunosList().length, 'cadastro', 'cadastros')} no total`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button><button class="btn primary" data-act="nav" data-v="inscricoes">${icon('plus')}Nova inscrição</button>`) + notices() + `
       <div class="card pad form-grid filters">
         <label class="field full"><span>Buscar</span><input class="input" id="alunos-q" type="search" placeholder="Nome, responsável, CPF, telefone ou bairro" value="${esc(S.alunosQ)}"></label>
         <label class="field"><span>Turma</span><select class="select" id="alunos-turma">${opt('', 'Todas', S.alunosTurma)}${turmas.map((t) => opt(t.id, t.nome, S.alunosTurma)).join('')}</select></label>
-        <label class="field"><span>Situação</span><select class="select" id="alunos-status">${[['ativo', 'Ativos'], ['inativo', 'Inativos'], ['todos', 'Todos']].map(([v, l]) => opt(v, l, S.alunosStatus)).join('')}</select></label>
         <label class="field"><span>Bairro</span><select class="select" id="alunos-bairro">${opt('', 'Todos', S.alunosBairro)}${bairros.map((b) => opt(b, b, S.alunosBairro)).join('')}</select></label>
         <label class="field"><span>Faixa etária</span><select class="select" id="alunos-faixa">${opt('', 'Todas', S.alunosFaixa)}${[...FAIXAS.map((f) => f[0]), 'Sem data'].map((f) => opt(f, f, S.alunosFaixa)).join('')}</select></label>
       </div>
+      <div class="chips" role="tablist" aria-label="Situação">${[...Object.entries(SIT).map(([k, [l]]) => [k, k === 'desistiu' ? 'Desistentes' : k === 'formado' ? 'Formados' : k === 'matriculado' ? 'Matriculados' : l]), ['todos', 'Todos']].map(([k, l]) => `<button class="chip${S.alunosStatus === k ? ' on' : ''}" data-act="alunos-sit" data-v="${k}">${l} <i class="num">${k === 'todos' ? alunosList().length : alunosList().filter((a) => sit(a) === k).length}</i></button>`).join('')}</div>
       <div class="row wrapx">
         <div class="seg" role="tablist" aria-label="Modo de visualização"><button class="${S.alunosModo !== 'tabela' ? 'on' : ''}" data-act="alunos-modo" data-v="lista">Lista</button><button class="${S.alunosModo === 'tabela' ? 'on' : ''}" data-act="alunos-modo" data-v="tabela">Tabela</button></div>
         <label class="check" style="padding:6px 10px"><input type="checkbox" id="alunos-incompletos"${S.alunosIncompletos ? ' checked' : ''}>Só fichas incompletas</label>
@@ -891,25 +897,56 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       }).join('')}</div>` : `<div class="empty"><h3>Nenhuma turma</h3><button class="btn primary" data-act="turma-new">${icon('plus')}Criar turma</button></div>`);
   }
 
-  // ───────────── Inscrições ─────────────
-  const INSC = { nova: ['Nova', 'gold'], contato: ['Em contato', 'navy'], matriculada: ['Matriculada', 'green'], desistiu: ['Desistiu', ''] };
-  const statusPill = (s) => `<span class="pill ${INSC[s]?.[1] || ''}">${INSC[s]?.[0] || esc(s)}</span>`;
+  // ───────────── Inscrições (porta de entrada do cadastro) ─────────────
+  // Inscrição e aluno são o mesmo registro: quem é inscrito aparece em Alunos, na situação escolhida.
   function vInscricoes() {
-    const all = list('inscricoes').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
-    const cnt = (s) => all.filter((i) => i.status === s).length;
-    const rows = S.inscStatus === 'todas' ? all : all.filter((i) => i.status === S.inscStatus);
-    return header('Novos alunos', 'Inscrições', 'Quem quer entrar nas aulas. Ao matricular, o cadastro do aluno é criado.', `<button class="btn" data-act="csv-insc">${icon('down')}Planilha</button><button class="btn primary" data-act="insc-new">${icon('plus')}Nova inscrição</button>`) + notices() + `
-      <div class="chips">${[['todas', 'Todas', all.length], ...Object.entries(INSC).map(([k, [l]]) => [k, l, cnt(k)])].map(([k, l, n]) => `<button class="chip${S.inscStatus === k ? ' on' : ''}" data-act="insc-filter" data-s="${k}">${l} <i class="num">${n}</i></button>`).join('')}</div>
-      ${rows.length ? `<div class="card list">${rows.map((i) => { const idade = age(i.nascimento); return `
-        <div class="item wrapx" style="align-items:flex-start">
-          <div class="grow" style="min-width:200px"><strong>${esc(i.nome)}</strong>
-            <span class="sub">${idade != null ? idade + ' anos · ' : ''}${esc(get('turmas', i.turmaId)?.nome || 'Turma a definir')} · inscrito em ${fmtDate((i.criadoEm || '').slice(0, 10))}</span>
-            <div class="sub">${i.responsavel ? 'Resp.: ' + esc(i.responsavel) + ' · ' : ''}<span style="user-select:all">${esc(i.telefone || 'sem telefone')}</span>${i.origem ? ' · via ' + esc(i.origem) : ''}</div></div>
-          <div class="row wrapx">${statusPill(i.status)}
-            <select class="select" style="width:auto;min-height:34px;font-size:13.5px;padding:4px 30px 4px 10px" data-insc-status="${i.id}" aria-label="Situação">${Object.entries(INSC).map(([k, [l]]) => `<option value="${k}"${i.status === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
-            ${i.status !== 'matriculada' && i.status !== 'desistiu' ? `<button class="btn sm primary" data-act="insc-matricular" data-id="${i.id}">Matricular</button>` : ''}
-            <button class="btn sm ghost" data-act="insc-open" data-id="${i.id}">Editar</button></div>
-        </div>`; }).join('')}</div>` : `<div class="empty"><h3>Nenhuma inscrição ${S.inscStatus !== 'todas' ? 'nesta situação' : 'ainda'}</h3></div>`}`;
+    const q = S.inscQ.trim().toLowerCase();
+    const all = alunosList().sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
+    const rows = all.filter((a) => !q || [a.nome, a.responsavel, a.telefone, a.cpf, a.bairro].some((v) => String(v || '').toLowerCase().includes(q)));
+    const d = S.qDraft;
+    const opt = (v, l, cur) => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(l)}</option>`;
+    return header('Cadastro de pessoas', 'Inscrições', 'Escreva aqui cada pessoa nova. Ela entra automaticamente em Alunos, na situação escolhida.', `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha</button>`) + notices() + `
+      <section class="card pad">
+        <div class="section-title"><h2>Nova inscrição</h2><span>só o nome é obrigatório</span></div>
+        <div class="form-grid">
+          <label class="field full"><span>Nome completo</span><input class="input" id="q-nome" value="${esc(d['q-nome'] || '')}" autocomplete="off" placeholder="Nome da pessoa"></label>
+          <label class="field"><span>Data de nascimento</span><input class="input" type="date" id="q-nasc" value="${esc(d['q-nasc'] || '')}"></label>
+          <label class="field"><span>Telefone / WhatsApp</span><input class="input" id="q-tel" inputmode="tel" value="${esc(d['q-tel'] || '')}"></label>
+          <label class="field"><span>Responsável (se menor)</span><input class="input" id="q-resp" value="${esc(d['q-resp'] || '')}"></label>
+          <label class="field"><span>Bairro</span><input class="input" id="q-bairro" value="${esc(d['q-bairro'] || '')}"></label>
+          <label class="field"><span>Turma</span><select class="select" id="q-turma">${opt('', 'A definir', d['q-turma'] || '')}${turmasList().map((t) => opt(t.id, t.nome, d['q-turma'] || '')).join('')}</select></label>
+          <label class="field"><span>Situação</span><select class="select" id="q-sit">${Object.entries(SIT).map(([k, [l]]) => opt(k, l, d['q-sit'] || 'matriculado')).join('')}</select></label>
+          <label class="field"><span>Como conheceu</span><select class="select" id="q-origem">${opt('', 'Não informado', d['q-origem'] || '')}${['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro'].map((o) => opt(o, o, d['q-origem'] || '')).join('')}</select></label>
+        </div>
+        <div class="row wrapx" style="margin-top:14px;justify-content:flex-end">
+          <button class="btn" data-act="q-save" data-ficha="1">Salvar e completar ficha</button>
+          <button class="btn primary" data-act="q-save">${icon('plus')}Salvar inscrição</button>
+        </div>
+      </section>
+      <section>
+        <div class="section-title"><h2>Todas as inscrições</h2><span>${plural(all.length, 'pessoa', 'pessoas')} · mais recentes primeiro</span></div>
+        <input class="input" id="insc-q" type="search" placeholder="Buscar por nome, telefone, CPF ou bairro" value="${esc(S.inscQ)}" style="margin-bottom:10px">
+        ${rows.length ? `<div class="card list">${rows.map((a) => { const ts = (a.turmaIds || []).map((id) => get('turmas', id)?.nome).filter(Boolean).join(', '); return `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 40)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">Inscrito em ${fmtDate((a.criadoEm || '').slice(0, 10))} · ${esc(ts || 'turma a definir')}${a.telefone ? ' · ' + esc(a.telefone) : ''}</span></div>${sitPill(a)}</button>`; }).join('')}</div>`
+          : `<div class="empty">${all.length ? 'Ninguém encontrado com essa busca.' : 'Nenhuma inscrição ainda. Use o formulário acima.'}</div>`}
+      </section>`;
+  }
+
+  async function quickSave(openFicha) {
+    const d = S.qDraft;
+    const nome = (d['q-nome'] || '').trim();
+    if (!nome) { toast('Escreva o nome da pessoa.'); document.getElementById('q-nome')?.focus(); return; }
+    const id = uid();
+    const situacao = d['q-sit'] || 'matriculado';
+    const body = {
+      nome, nascimento: d['q-nasc'] || '', telefone: (d['q-tel'] || '').trim(), responsavel: (d['q-resp'] || '').trim(), bairro: (d['q-bairro'] || '').trim(),
+      turmaIds: d['q-turma'] ? [d['q-turma']] : [], status: situacao, comoConheceu: d['q-origem'] || '',
+      matriculaEm: situacao === 'matriculado' ? today() : '', autorizaImagem: 'Pendente', termoAssinado: 'Pendente', criadoEm: new Date().toISOString(),
+    };
+    if (await guard(() => put('alunos', id, body), `${nome} inscrito(a) como "${SIT[situacao][0]}". Já aparece em Alunos.`)) {
+      S.qDraft = {};
+      render();
+      if (openFicha) alunoModal(id); else document.getElementById('q-nome')?.focus();
+    }
   }
 
   // ───────────── Finanças ─────────────
@@ -997,7 +1034,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
 
   function alunoModal(id, presetTurma) {
     if (id && !get('alunos', id)) return;
-    const a = id ? get('alunos', id) : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'ativo', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };
+    const a = id ? { ...get('alunos', id), status: sit(get('alunos', id)) } : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'matriculado', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };
     const s = id ? freqStats()[id] : null;
     const miss = id ? missingFields(a) : [];
     const photo = id ? `<div class="photo-edit">${avatar(a, 84)}<div class="stack" style="gap:6px">${S.canUpload ? `<label class="btn sm">${icon('cam')}${a.fotoId ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/*" class="hide" data-photo="${id}"></label>` : `<span class="small muted">Para enviar fotos é preciso acesso de Editor.</span>`}
@@ -1018,7 +1055,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const body = { ...(id ? S.data.alunos[id] : { criadoEm: new Date().toISOString() }) };
     for (const [key, , type] of FICHA_FIELDS) body[key] = type === 'number' ? (val('f-' + key) === '' ? '' : Number(val('f-' + key))) : val('f-' + key);
     body.turmaIds = [...document.querySelectorAll('input[name="f-turma"]:checked')].map((x) => x.value);
-    body.status = body.status || 'ativo';
+    body.status = body.status || 'matriculado';
     body.atualizadoEm = new Date().toISOString();
     const newId = id || uid();
     if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Aluno cadastrado. Agora adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }
@@ -1037,21 +1074,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       ${al.length ? `<div class="list card">${al.map((x) => `<button type="button" class="item" data-act="aluno-open" data-id="${x.id}">${avatar(x, 32)}<div class="grow"><strong>${esc(x.nome)}</strong></div></button>`).join('')}</div>` : '<p class="small muted">Nenhum aluno marcado nesta turma ainda.</p>'}
       <button type="button" class="btn sm" style="margin-top:10px" data-act="aluno-new" data-t="${id}">${icon('plus')}Cadastrar aluno nesta turma</button></div>`; })() : ''}`, `${id ? confirmBtn('del-turma', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="turma-save" data-id="${id || ''}">Salvar</button>`);
     $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'turma', id });
-  }
-
-  function inscModal(id) {
-    const i = id ? get('inscricoes', id) : { nome: '', status: 'nova', origem: 'Instagram' };
-    openModal(id ? 'Editar inscrição' : 'Nova inscrição', `<div class="form-grid">
-      <label class="field full"><span>Nome</span><input class="input" id="i-nome" value="${esc(i.nome)}"></label>
-      <label class="field"><span>Data de nascimento</span><input class="input" type="date" id="i-nasc" value="${esc(i.nascimento || '')}"></label>
-      <label class="field"><span>Telefone / WhatsApp</span><input class="input" id="i-tel" inputmode="tel" value="${esc(i.telefone || '')}"></label>
-      <label class="field"><span>Responsável</span><input class="input" id="i-resp" value="${esc(i.responsavel || '')}"></label>
-      <label class="field"><span>Bairro</span><input class="input" id="i-bairro" value="${esc(i.bairro || '')}"></label>
-      <label class="field"><span>Turma de interesse</span><select class="select" id="i-turma"><option value="">A definir</option>${turmasList().map((t) => `<option value="${t.id}"${i.turmaId === t.id ? ' selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      <label class="field"><span>Como conheceu</span><select class="select" id="i-origem">${['Instagram', 'Indicação', 'WhatsApp', 'Na rua / evento', 'Outro'].map((o) => `<option${i.origem === o ? ' selected' : ''}>${o}</option>`).join('')}</select></label>
-      <label class="field full"><span>Observações</span><textarea class="textarea" id="i-obs">${esc(i.obs || '')}</textarea></label>
-    </div>`, `${id ? confirmBtn('del-insc', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="insc-save" data-id="${id || ''}">Salvar</button>`);
-    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'insc', id });
   }
 
   function lancModal(id) {
@@ -1122,21 +1144,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     }
   }
 
-  async function saveInsc(id) {
-    const nome = val('i-nome');
-    if (!nome) return toast('Informe o nome.');
-    const body = { ...(id ? S.data.inscricoes[id] : { status: 'nova', criadoEm: new Date().toISOString() }), nome, nascimento: val('i-nasc'), telefone: val('i-tel'), responsavel: val('i-resp'), bairro: val('i-bairro'), turmaId: val('i-turma'), origem: val('i-origem'), obs: val('i-obs') };
-    if (await guard(() => put('inscricoes', id || uid(), body), id ? 'Inscrição atualizada.' : 'Inscrição registrada.')) closeModal();
-  }
-
-  async function matricular(id) {
-    const i = get('inscricoes', id); if (!i) return;
-    const alunoId = uid();
-    const aluno = { nome: i.nome, nascimento: i.nascimento || '', telefone: i.telefone || '', responsavel: i.responsavel || '', bairro: i.bairro || '', comoConheceu: i.origem || '', autorizaImagem: 'Pendente', termoAssinado: 'Pendente', turmaIds: i.turmaId ? [i.turmaId] : [], matriculaEm: today(), status: 'ativo', obs: i.obs || '', criadoEm: new Date().toISOString(), inscricaoId: id };
-    const ok = await guard(async () => { await put('alunos', alunoId, aluno); await patch('inscricoes', id, { status: 'matriculada', alunoId }); }, `${i.nome} matriculado(a).`);
-    if (ok) alunoModal(alunoId);
-  }
-
   async function saveLanc(id) {
     const m = $('#modal-root .modal');
     const valor = Number(val('l-valor').replace(/\./g, '').replace(',', '.'));
@@ -1163,17 +1170,12 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   }
   function csvAlunos() {
     const st = freqStats();
-    const rows = [[...FICHA_FIELDS.map((f) => f[1]), 'Idade', 'Turmas', 'Ficha completa', 'Aulas registradas', 'Presenças', 'Faltas', 'Justificadas', 'Frequência']];
+    const rows = [[...FICHA_FIELDS.map((f) => f[1]), 'Inscrito em', 'Idade', 'Turmas', 'Ficha completa', 'Aulas registradas', 'Presenças', 'Faltas', 'Justificadas', 'Frequência']];
     for (const a of alunosList()) {
       const s = st[a.id] || {};
-      rows.push([...FICHA_FIELDS.map(([k, , t, o]) => (k === 'status' ? (a.status === 'inativo' ? 'Inativo' : 'Ativo') : a[k] ?? '')), age(a.nascimento) ?? '', (a.turmaIds || []).map((id) => get('turmas', id)?.nome).filter(Boolean).join(', '), missingFields(a).length ? 'Não' : 'Sim', s.total || 0, s.pres || 0, s.faltas || 0, s.just || 0, s.total ? pct(s.rate) : '']);
+      rows.push([...FICHA_FIELDS.map(([k]) => (k === 'status' ? SIT[sit(a)][0] : a[k] ?? '')), (a.criadoEm || '').slice(0, 10), age(a.nascimento) ?? '', (a.turmaIds || []).map((id) => get('turmas', id)?.nome).filter(Boolean).join(', '), missingFields(a).length ? 'Não' : 'Sim', s.total || 0, s.pres || 0, s.faltas || 0, s.just || 0, s.total ? pct(s.rate) : '']);
     }
     saveFile(`alunos-instituto-iris-${today()}.csv`, csv(rows));
-  }
-  function csvInsc() {
-    const rows = [['Nome', 'Nascimento', 'Responsável', 'Telefone', 'Turma de interesse', 'Como conheceu', 'Situação', 'Inscrito em', 'Observações']];
-    for (const i of list('inscricoes')) rows.push([i.nome, i.nascimento, i.responsavel, i.telefone, get('turmas', i.turmaId)?.nome || '', i.origem, INSC[i.status]?.[0] || i.status, (i.criadoEm || '').slice(0, 10), i.obs]);
-    saveFile(`inscricoes-instituto-iris-${today()}.csv`, csv(rows));
   }
   function csvFin() {
     const rows = [['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor']];
@@ -1198,7 +1200,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const E = ['Fundamental incompleto', 'Médio incompleto', 'Médio completo', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto'];
     const RENDA = ['Até 1 salário mínimo', '1 a 2 salários', 'Até 1 salário mínimo', 'Até 1 salário mínimo', '1 a 2 salários', '', 'Até 1 salário mínimo', '2 a 3 salários', 'Até 1 salário mínimo'];
     nomes.forEach(([nome, t, nasc], k) => (alunos[`ex-aluno-${k}`] = {
-      nome, turmaIds: [t], nascimento: nasc, status: 'ativo', matriculaEm: back(60 - k * 6), genero: G[k], corRaca: k === 5 ? '' : R[k], bairro: B[k], cidade: 'Exemplo',
+      nome, turmaIds: [t], nascimento: nasc, status: 'matriculado', matriculaEm: back(60 - k * 6), criadoEm: new Date(Date.now() - (60 - k * 6) * 864e5).toISOString(), genero: G[k], corRaca: k === 5 ? '' : R[k], bairro: B[k], cidade: 'Exemplo',
       telefone: k === 4 ? '' : '(21) 90000-000' + k, endereco: k % 3 === 2 ? '' : 'Rua Exemplo, ' + (10 + k), responsavel: age(nasc) < 18 ? 'Responsável de ' + nome.split(' ')[0] : '', parentesco: age(nasc) < 18 ? 'Mãe' : '',
       escolaridade: E[k], rendaFamiliar: RENDA[k], beneficio: k % 2 ? 'Bolsa Família' : 'Nenhum', deficiencia: k === 3 ? 'TEA (autismo)' : 'Não', emergenciaNome: 'Contato de exemplo', emergenciaTel: k === 7 ? '' : '(21) 90000-1111',
       autorizaImagem: k === 1 ? 'Não' : k === 6 ? 'Pendente' : 'Sim', termoAssinado: 'Sim', comoConheceu: k % 2 ? 'Instagram' : 'Indicação', exemplo: true,
@@ -1213,10 +1215,13 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
         chamadas[`${tid}_${dt}`] = { turmaId: tid, data: dt, registros: reg, atualizadoEm: new Date().toISOString(), exemplo: true };
       }
     }
-    const inscricoes = {
-      'ex-insc-1': { nome: 'Luana Ferreira', turmaId: t1, telefone: '(21) 90000-0000', origem: 'Instagram', status: 'nova', criadoEm: new Date().toISOString(), exemplo: true },
-      'ex-insc-2': { nome: 'Miguel Oliveira', turmaId: t3, origem: 'Indicação', status: 'contato', criadoEm: new Date(Date.now() - 3 * 864e5).toISOString(), exemplo: true },
-    };
+    Object.assign(alunos, {
+      'ex-aluno-i1': { nome: 'Luana Ferreira', turmaIds: [], telefone: '(21) 90000-0000', bairro: 'Éden', comoConheceu: 'Instagram', status: 'inscrito', criadoEm: new Date().toISOString(), exemplo: true },
+      'ex-aluno-i2': { nome: 'Miguel Oliveira', turmaIds: [t3], nascimento: '2013-05-12', bairro: 'Centro', comoConheceu: 'Indicação', status: 'inscrito', criadoEm: new Date(Date.now() - 3 * 864e5).toISOString(), exemplo: true },
+      'ex-aluno-f1': { nome: 'Paula Reis', turmaIds: [t1], nascimento: '1995-08-02', genero: 'Feminino', bairro: 'Éden', status: 'formado', matriculaEm: back(200), saidaEm: back(30), criadoEm: new Date(Date.now() - 200 * 864e5).toISOString(), exemplo: true },
+      'ex-aluno-d1': { nome: 'Rafael Dias', turmaIds: [t2], nascimento: '2012-02-20', genero: 'Masculino', bairro: 'Vila Nova', status: 'desistiu', matriculaEm: back(90), saidaEm: back(50), criadoEm: new Date(Date.now() - 90 * 864e5).toISOString(), exemplo: true },
+      'ex-aluno-s1': { nome: 'Sofia Cardoso', turmaIds: [t3], nascimento: '2011-10-09', genero: 'Feminino', bairro: 'Jardim', status: 'saiu', matriculaEm: back(120), saidaEm: back(20), obs: 'Mudou de cidade.', criadoEm: new Date(Date.now() - 120 * 864e5).toISOString(), exemplo: true },
+    });
     const m0 = ym(d), m1 = addMonths(m0, -1), m2 = addMonths(m0, -2);
     const lancamentos = {
       'ex-l1': { tipo: 'entrada', descricao: 'Doação de apoiador', valor: 500, data: back(5), categoria: 'Doação', exemplo: true },
@@ -1227,7 +1232,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       'ex-l6': { tipo: 'entrada', descricao: 'Patrocínio comércio local', valor: 300, data: m2 + '-08', categoria: 'Patrocínio', exemplo: true },
       'ex-l7': { tipo: 'saida', descricao: 'Transporte de passeio', valor: 260, data: m2 + '-20', categoria: 'Transporte', exemplo: true },
     };
-    return { turmas, alunos, chamadas, inscricoes, lancamentos };
+    return { turmas, alunos, chamadas, lancamentos };
   }
   async function seed() {
     const ex = exampleData();
@@ -1249,7 +1254,9 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       case 'cal-prev': S.calMes = addMonths(S.calMes, -1); render(); break;
       case 'cal-next': S.calMes = addMonths(S.calMes, 1); render(); break;
       case 'alunos-modo': S.alunosModo = t.dataset.v; try { localStorage.setItem('iris:alunosModo', S.alunosModo); } catch {} render(); break;
-      case 'alunos-incompletos': S.alunosIncompletos = true; S.alunosStatus = 'ativo'; S.view = 'alunos'; render(); window.scrollTo?.(0, 0); break;
+      case 'q-save': quickSave(!!t.dataset.ficha); break;
+      case 'alunos-sit': S.alunosStatus = t.dataset.v; render(); break;
+      case 'alunos-incompletos': S.alunosIncompletos = true; S.alunosStatus = 'matriculado'; S.view = 'alunos'; render(); window.scrollTo?.(0, 0); break;
       case 'ficha-jump': document.getElementById('ficha-' + t.dataset.i)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
       case 'modal-bg': case 'modal-close': closeModal(); break;
       case 'confirm': {
@@ -1260,7 +1267,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
         if (key === 'apagar-exemplos') { await deleteExamples(); return; }
         if (key === 'del-aluno') { if (await guard(() => del('alunos', ctx.id), 'Aluno excluído.')) closeModal(); }
         if (key === 'del-turma') { if (await guard(() => del('turmas', ctx.id), 'Turma excluída.')) closeModal(); }
-        if (key === 'del-insc') { if (await guard(() => del('inscricoes', ctx.id), 'Inscrição excluída.')) closeModal(); }
         if (key === 'del-lanc') { if (await guard(() => del('lancamentos', ctx.id), 'Lançamento excluído.')) closeModal(); }
         break;
       }
@@ -1279,11 +1285,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       case 'turma-open': turmaModal(t.dataset.id); break;
       case 'turma-save': saveTurma(t.dataset.id); break;
       case 'turma-quick': quickTurma(); break;
-      case 'insc-new': inscModal(null); break;
-      case 'insc-open': inscModal(t.dataset.id); break;
-      case 'insc-save': saveInsc(t.dataset.id); break;
-      case 'insc-filter': S.inscStatus = t.dataset.s; render(); break;
-      case 'insc-matricular': matricular(t.dataset.id); break;
       case 'lanc-new': lancModal(null); break;
       case 'lanc-open': lancModal(t.dataset.id); break;
       case 'lanc-save': saveLanc(t.dataset.id); break;
@@ -1296,28 +1297,29 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       case 'fin-prev': S.finMes = addMonths(S.finMes, -1); render(); break;
       case 'fin-next': S.finMes = addMonths(S.finMes, 1); render(); break;
       case 'csv-alunos': csvAlunos(); break;
-      case 'csv-insc': csvInsc(); break;
       case 'csv-fin': csvFin(); break;
     }
   });
 
   document.addEventListener('input', (e) => {
     if (e.target.id === 'alunos-q') { S.alunosQ = e.target.value; render(); }
+    else if (e.target.id === 'insc-q') { S.inscQ = e.target.value; render(); }
+    else if (e.target.id && e.target.id.startsWith('q-')) S.qDraft[e.target.id] = e.target.value;
   });
   document.addEventListener('change', (e) => {
     const el = e.target;
     if (el.id === 'alunos-turma') { S.alunosTurma = el.value; render(); }
-    else if (el.id === 'alunos-status') { S.alunosStatus = el.value; render(); }
+    else if (el.id && el.id.startsWith('q-')) S.qDraft[el.id] = el.value;
     else if (el.id === 'alunos-bairro') { S.alunosBairro = el.value; render(); }
     else if (el.id === 'alunos-faixa') { S.alunosFaixa = el.value; render(); }
     else if (el.id === 'alunos-incompletos') { S.alunosIncompletos = el.checked; render(); }
     else if (el.id === 'ch-data') { flushChamada(); S.chamada.data = el.value || today(); render(); }
-    else if (el.dataset.inscStatus) guard(() => patch('inscricoes', el.dataset.inscStatus, { status: el.value }), 'Situação atualizada.');
     else if (el.dataset.photo) uploadPhoto(el.dataset.photo, el.files && el.files[0]);
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && $('#modal-root .modal')) closeModal();
     if (e.key === 'Enter' && e.target.matches && e.target.matches('tr[data-act]')) e.target.click();
+    if (e.key === 'Enter' && e.target.matches && e.target.matches('input[id^="q-"]')) { S.qDraft[e.target.id] = e.target.value; quickSave(false); }
   });
 
   // ───────────── Inicialização ─────────────
