@@ -176,15 +176,6 @@ button.item:hover { background: var(--surface-2); }
 .empty h3 { font-size: 17px; color: var(--ink); }
 
 /* ── Chamada ── */
-.roll { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-@media (min-width: 640px) { .roll { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 1000px) { .roll { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.rcard { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); text-align: center; transition: border-color .15s, background .15s; }
-.rcard b { font-size: 14px; line-height: 1.25; }
-.rcard .state { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
-.rcard.P { border-color: var(--green); background: var(--green-soft); } .rcard.P .state { color: var(--green); }
-.rcard.F { border-color: var(--red); background: var(--red-soft); } .rcard.F .state { color: var(--red); }
-.rcard.J { border-color: var(--amber); background: var(--amber-soft); } .rcard.J .state { color: var(--amber); }
 .savebar { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(20, 28, 64, .14); }
 @media (min-width: 960px) { .savebar { bottom: 16px; } }
 .tally { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -277,6 +268,27 @@ table.sheet td, table.sheet th { white-space: nowrap; }
 table.sheet tbody tr { cursor: pointer; }
 table.sheet tbody tr:hover td { background: var(--surface-2); }
 table.sheet th { position: sticky; top: 0; background: var(--surface); }
+/* ── Chamada: escolher turma e lista de presença ── */
+.turma-pick { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.tp { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; text-align: left; border-left: 5px solid var(--c); }
+.tp:hover { border-color: var(--faint); border-left-color: var(--c); }
+.tp .row { width: 100%; }
+.date-chips .chip:disabled { opacity: .4; }
+.roll-list { overflow: hidden; }
+.roll-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; transition: background .15s; }
+.roll-row.P { background: color-mix(in srgb, var(--green-soft) 60%, transparent); }
+.roll-row.F { background: color-mix(in srgb, var(--red-soft) 60%, transparent); }
+.roll-row.J { background: color-mix(in srgb, var(--amber-soft) 60%, transparent); }
+.roll-n { width: 20px; text-align: right; font-size: 12.5px; }
+.roll-name { border: 0; background: none; text-align: left; font-weight: 700; font-size: 15px; padding: 4px 0; min-width: 120px; }
+.roll-btns { display: flex; gap: 6px; }
+.rb { min-height: 40px; min-width: 76px; padding: 0 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 700; font-size: 13.5px; color: var(--muted); }
+.rb.j { min-width: 54px; }
+.rb.p.on { background: var(--green); border-color: var(--green); color: #fff; }
+.rb.f.on { background: var(--red); border-color: var(--red); color: #fff; }
+.rb.j.on { background: var(--amber); border-color: var(--amber); color: #fff; }
+.rb:disabled { opacity: .4; cursor: not-allowed; }
+@media (max-width: 520px) { .roll-btns { width: 100%; padding-left: 78px; } .rb { flex: 1; min-width: 0; } }
 </style>
 
 <div class="app">
@@ -306,6 +318,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const fmtDate = (s) => (s ? parseYmd(s).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : '—');
   const fmtLong = (s) => parseYmd(s).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtWeekday = (s) => (s ? parseYmd(s).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '').replace(/^./, (c) => c.toUpperCase()) : '—');
+  const addDays = (s, k) => { const d = parseYmd(s); d.setDate(d.getDate() + k); return ymd(d); };
   const monthLabel = (m) => { const [y, mo] = m.split('-').map(Number); return `${MESES[mo - 1]}/${y}`; };
   const addMonths = (m, k) => { const [y, mo] = m.split('-').map(Number); return ym(new Date(y, mo - 1 + k, 1)); };
   const age = (nasc) => { if (!nasc) return null; const b = parseYmd(nasc), n = new Date(); let a = n.getFullYear() - b.getFullYear(); if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--; return a >= 0 && a < 120 ? a : null; };
@@ -347,7 +361,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     calMes: ym(new Date()), calDia: ymd(new Date()),
     inscStatus: 'todas',
     finMes: ym(new Date()),
-    chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false },
+    chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false, rev: 0, status: '' },
     confirm: null,
   };
   try { const v = localStorage.getItem('iris:view'); if (v) S.view = v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
@@ -685,59 +699,136 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   }
 
   // ───────────── Chamada ─────────────
+  // Datas de aula de uma turma (pelos dias da semana cadastrados).
+  function classDates(t, fromYmd, n, dir) {
+    const out = []; const dias = t.dias || [];
+    if (!dias.length) return out;
+    const d = parseYmd(fromYmd);
+    for (let i = 0; i < 400 && out.length < n; i++) {
+      if (dias.includes(d.getDay())) out.push(ymd(d));
+      d.setDate(d.getDate() + dir);
+    }
+    return out;
+  }
+  // Data padrão ao abrir a chamada: hoje, se tem aula; senão a última aula que já passou.
+  function defaultClassDate(t) {
+    const hoje = today();
+    if ((t.dias || []).includes(new Date().getDay())) return hoje;
+    return classDates(t, hoje, 1, -1)[0] || hoje;
+  }
+
+  function openChamada(turmaId, data) {
+    flushChamada();
+    const t = get('turmas', turmaId); if (!t) return;
+    S.chamada = { turmaId, data: data || defaultClassDate(t), registros: {}, key: '', dirty: false, rev: 0, status: '' };
+    S.view = 'chamada'; render(); window.scrollTo?.(0, 0);
+  }
+
   function syncChamadaDraft() {
     const ch = S.chamada;
-    const turmas = turmasList();
-    if (!ch.turmaId || !get('turmas', ch.turmaId)) {
-      const dow = parseYmd(ch.data).getDay();
-      ch.turmaId = (turmas.find((t) => (t.dias || []).includes(dow)) || turmas[0] || {}).id || '';
-    }
     const key = `${ch.turmaId}_${ch.data}`;
     if (ch.key !== key) {
-      ch.key = key;
-      ch.registros = { ...(get('chamadas', key)?.registros || {}) };
-      ch.dirty = false;
+      ch.key = key; ch.registros = { ...(get('chamadas', key)?.registros || {}) }; ch.dirty = false; ch.status = '';
     } else if (!ch.dirty) {
       ch.registros = { ...(get('chamadas', key)?.registros || {}) };
     }
   }
 
+  function vChamadaTurmas() {
+    const turmas = turmasList();
+    const hoje = today(); const dow = new Date().getDay();
+    if (!turmas.length) return header('Frequência', 'Chamada', '') + notices() + `<div class="empty card"><h3>Nenhuma turma ainda</h3><p>Crie uma turma e cadastre os alunos para fazer a chamada.</p><button class="btn primary" data-act="turma-new">${icon('plus')}Criar turma</button></div>`;
+    const ordered = [...turmas].sort((a, b) => Number((b.dias || []).includes(dow)) - Number((a.dias || []).includes(dow)) || String(a.horario).localeCompare(String(b.horario)) || sortByName(a, b));
+    return header('Frequência', 'Chamada', 'Escolha a turma para marcar a presença dos alunos.') + notices() + `
+      <div class="turma-pick">${ordered.map((t) => {
+        const n = alunosDaTurma(t.id).length;
+        const temHoje = (t.dias || []).includes(dow);
+        const c = get('chamadas', `${t.id}_${hoje}`);
+        const pres = c ? Object.values(c.registros || {}).filter((v) => v !== 'F').length : 0;
+        const prox = classDates(t, hoje, 1, 1)[0];
+        const status = !(t.dias || []).length ? '<span class="pill">Sem dias definidos</span>'
+          : temHoje ? (c ? `<span class="pill green num">Hoje: ${pres}/${n} presentes</span>` : '<span class="pill gold">Aula hoje · chamada pendente</span>')
+          : `<span class="pill">Próxima aula: ${fmtWeekday(prox)}</span>`;
+        return `<button class="card tp" data-act="ch-turma" data-t="${t.id}" style="--c:${esc(t.cor || '#1c2d6b')}">
+          <div class="row"><b class="grow" style="font-size:17px;font-family:var(--display)">${esc(t.nome)}</b><span class="faint">${icon('right')}</span></div>
+          <span class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || '—'}${t.horario ? ' · ' + esc(t.horario) : ''} · ${plural(n, 'aluno', 'alunos')}</span>
+          ${status}
+        </button>`;
+      }).join('')}</div>`;
+  }
+
   function vChamada() {
+    if (!S.chamada.turmaId || !get('turmas', S.chamada.turmaId)) { S.chamada.turmaId = ''; return vChamadaTurmas(); }
     syncChamadaDraft();
     const ch = S.chamada;
-    const turmas = turmasList();
-    if (!turmas.length) return header('Frequência', 'Chamada', '') + notices() + `<div class="empty card"><h3>Nenhuma turma ainda</h3><p>Crie uma turma e cadastre os alunos para fazer a chamada.</p><button class="btn primary" data-act="turma-new">${icon('plus')}Criar turma</button></div>`;
     const t = get('turmas', ch.turmaId);
-    const alunos = alunosDaTurma(ch.turmaId);
-    const saved = get('chamadas', ch.key);
+    const alunos = alunosDaTurma(ch.turmaId); // já em ordem alfabética
     const count = { P: 0, F: 0, J: 0 };
     for (const a of alunos) if (ch.registros[a.id]) count[ch.registros[a.id]]++;
     const sem = alunos.length - count.P - count.F - count.J;
     const diaOk = (t.dias || []).includes(parseYmd(ch.data).getDay());
-    const hist = list('chamadas').filter((c) => c.turmaId === ch.turmaId).sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
-    const LBL = { P: 'Presente', F: 'Falta', J: 'Justificada' };
+    const hoje = today();
+    const datas = [...classDates(t, ch.data, 4, -1).reverse(), ...classDates(t, addDays(ch.data, 1), 2, 1)].filter((d, i, arr) => arr.indexOf(d) === i);
+    const saved = get('chamadas', ch.key);
+    const statusTxt = ch.status === 'salvando' ? 'Salvando…' : ch.status === 'pendente' ? 'Salvando…' : ch.status === 'erro' ? '<b style="color:var(--red)">Não salvou — toque de novo</b>' : saved ? '✓ Salvo automaticamente' : 'Marque os alunos — salva sozinho';
+    const futuro = ch.data > hoje;
 
-    return header('Frequência', 'Chamada', 'Toque no aluno para marcar: presente, falta ou falta justificada.') + notices() + `
-      <div class="card pad stack">
-        <div class="chips" role="tablist" aria-label="Turma">${turmas.map((x) => `<button class="chip${x.id === ch.turmaId ? ' on' : ''}" data-act="ch-turma" data-t="${x.id}"><span class="dotc" style="background:${esc(x.cor || '#1c2d6b')}"></span>${esc(x.nome)}</button>`).join('')}</div>
-        <div class="row wrapx">
-          <label class="field" style="max-width:200px"><span>Data da aula</span><input class="input" type="date" id="ch-data" value="${esc(ch.data)}" max="${today()}"></label>
-          <div class="grow small muted" style="padding-top:18px">${esc(t.nome)} · ${(t.dias || []).map((d) => DIAS[d]).join(', ') || 'sem dias definidos'} ${esc(t.horario || '')}${diaOk ? '' : ' · <b style="color:var(--amber)">não é dia desta turma</b>'}</div>
-        </div>
+    return `<div class="mobile-head brand">${LOGO}<div><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div></div>
+      <button class="btn ghost sm" style="align-self:flex-start;margin-left:-8px" data-act="ch-back">${icon('left')}Todas as turmas</button>
+      <div class="page-head"><div><div class="eyebrow" style="color:var(--muted)"><span class="dotc" style="display:inline-block;background:${esc(t.cor || '#1c2d6b')};margin-right:6px;vertical-align:middle"></span>${esc(t.nome)}${t.horario ? ' · ' + esc(t.horario) : ''}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
+        <h1>${fmtLong(ch.data).replace(/^./, (c) => c.toUpperCase())}</h1>
+        <p>${ch.data === hoje ? 'Aula de hoje' : futuro ? 'Aula futura' : 'Aula anterior'}${diaOk ? '' : ' · <b style="color:var(--amber)">não é dia de aula desta turma</b>'}</p></div></div>
+      ${notices()}
+      <div class="card pad stack" style="gap:10px">
+        <span class="small muted" style="font-weight:700">Dias de aula</span>
+        <div class="chips date-chips">${datas.map((d) => `<button class="chip${d === ch.data ? ' on' : ''}" data-act="ch-date" data-d="${d}"${d > hoje ? ' disabled' : ''}>${d === hoje ? 'Hoje' : fmtWeekday(d)}</button>`).join('')}
+          <label class="chip" style="cursor:pointer;position:relative;overflow:hidden">Outra data…<input type="date" id="ch-data" value="${esc(ch.data)}" max="${hoje}" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" aria-label="Escolher outra data"></label></div>
       </div>
       ${alunos.length ? `
-      <div class="stack" style="gap:8px">
-        <div class="tally"><span class="pill green num">${plural(count.P, 'presente', 'presentes')}</span><span class="pill red num">${plural(count.F, 'falta', 'faltas')}</span><span class="pill amber num">${plural(count.J, 'justificada', 'justificadas')}</span>${sem ? `<span class="pill num">${sem} sem marcação</span>` : ''}</div>
-        <div class="row"><button class="btn sm" data-act="ch-all">Todos presentes</button><button class="btn sm ghost" data-act="ch-clear">Limpar</button></div>
+      <div class="row wrapx" style="gap:8px">
+        <div class="tally grow"><span class="pill green num">${plural(count.P, 'presente', 'presentes')}</span><span class="pill red num">${plural(count.F, 'falta', 'faltas')}</span>${count.J ? `<span class="pill amber num">${plural(count.J, 'justificada', 'justificadas')}</span>` : ''}${sem ? `<span class="pill num">${sem} sem marcação</span>` : ''}</div>
+        <button class="btn sm" data-act="ch-all" ${futuro ? 'disabled' : ''}>Todos presentes</button>
       </div>
-      <div class="roll">${alunos.map((a) => { const v = ch.registros[a.id] || ''; return `<button class="rcard ${v}" data-act="ch-mark" data-id="${a.id}" aria-label="${esc(a.nome)}: ${v ? LBL[v] : 'sem marcação'}">${avatar(a, 64)}<b>${esc(a.nome)}</b><span class="state">${v ? LBL[v] : 'Toque para marcar'}</span></button>`; }).join('')}</div>
-      <div class="savebar"><div class="grow small">${ch.dirty ? '<b>Alterações não salvas</b>' : saved ? `<span class="muted">Chamada salva${saved.atualizadoEm ? ' · ' + new Date(saved.atualizadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>` : '<span class="muted">Ainda não salva</span>'}</div>
-        <button class="btn gold" data-act="ch-save" ${ch.dirty && S.canWrite ? '' : 'disabled'}>Salvar chamada</button></div>`
-      : `<div class="empty"><h3>Nenhum aluno nesta turma</h3><p>Cadastre alunos e marque esta turma no cadastro.</p><button class="btn primary" data-act="aluno-new" data-t="${t.id}">${icon('plus')}Cadastrar aluno</button></div>`}
-      <section><div class="section-title"><h2>Últimas chamadas desta turma</h2></div>
-        <div class="card list">${hist.length ? hist.map((c) => { const vals = Object.values(c.registros || {}); const p = vals.filter((v) => v !== 'F').length; return `<button class="item" data-act="ch-open" data-d="${c.data}"><div class="grow"><strong>${fmtLong(c.data)}</strong><span class="sub num">${plural(vals.filter((v) => v === 'P').length, 'presente', 'presentes')} · ${plural(vals.filter((v) => v === 'F').length, 'falta', 'faltas')} · ${plural(vals.filter((v) => v === 'J').length, 'justificada', 'justificadas')}</span></div><span class="pill ${vals.length && p / vals.length < 0.75 ? 'red' : 'green'} num">${vals.length ? pct(p / vals.length) : '—'}</span></button>`; }).join('') : '<div class="pad small muted">Nenhuma chamada registrada ainda.</div>'}</div>
-      </section>`;
+      <div class="card list roll-list">${alunos.map((a, i) => { const v = ch.registros[a.id] || ''; return `<div class="roll-row ${v}">
+          <span class="faint num roll-n">${i + 1}</span>${avatar(a, 38)}
+          <button type="button" class="grow roll-name" data-act="aluno-open" data-id="${a.id}">${esc(a.nome)}</button>
+          <div class="roll-btns" role="group" aria-label="Frequência de ${esc(a.nome)}">
+            <button class="rb p${v === 'P' ? ' on' : ''}" data-act="ch-set" data-id="${a.id}" data-v="P" ${futuro ? 'disabled' : ''} aria-pressed="${v === 'P'}">Presente</button>
+            <button class="rb f${v === 'F' ? ' on' : ''}" data-act="ch-set" data-id="${a.id}" data-v="F" ${futuro ? 'disabled' : ''} aria-pressed="${v === 'F'}">Falta</button>
+            <button class="rb j${v === 'J' ? ' on' : ''}" data-act="ch-set" data-id="${a.id}" data-v="J" ${futuro ? 'disabled' : ''} aria-pressed="${v === 'J'}" title="Falta justificada">Just.</button>
+          </div></div>`; }).join('')}</div>
+      <div class="savebar"><span class="grow small">${statusTxt}</span><span class="small muted num">${count.P + count.J}/${alunos.length} presentes</span></div>`
+      : `<div class="empty"><h3>Nenhum aluno nesta turma</h3><p>Cadastre alunos e marque esta turma na ficha.</p><button class="btn primary" data-act="aluno-new" data-t="${t.id}">${icon('plus')}Cadastrar aluno nesta turma</button></div>`}`;
   }
+
+  // Salvamento automático: junta toques seguidos e grava um de cada vez.
+  let chTimer = 0, chSaving = null;
+  function markChamada(alunoId, v) {
+    const ch = S.chamada;
+    ch.registros[alunoId] = ch.registros[alunoId] === v ? '' : v;
+    ch.dirty = true; ch.rev = (ch.rev || 0) + 1; ch.status = 'pendente';
+    clearTimeout(chTimer); chTimer = setTimeout(flushChamada, 600);
+    render();
+  }
+  async function flushChamada() {
+    clearTimeout(chTimer);
+    const ch = S.chamada;
+    if (!ch.dirty || !ch.turmaId) return;
+    if (chSaving) { await chSaving; if (S.chamada !== ch || !ch.dirty) return; }
+    const rev = ch.rev;
+    const ids = alunosDaTurma(ch.turmaId).map((a) => a.id);
+    const registros = Object.fromEntries(Object.entries(ch.registros).filter(([k, v]) => v && ids.includes(k)));
+    const body = { turmaId: ch.turmaId, data: ch.data, registros, atualizadoEm: new Date().toISOString() };
+    ch.status = 'salvando'; schedule();
+    chSaving = guard(() => put('chamadas', ch.key, body));
+    const ok = await chSaving; chSaving = null;
+    if (!ok) { ch.status = 'erro'; schedule(); return; }
+    if (ch.rev === rev) { ch.dirty = false; ch.status = ''; }
+    else flushChamada();
+    schedule();
+  }
+  window.addEventListener('pagehide', () => flushChamada());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushChamada(); });
 
   // ───────────── Alunos ─────────────
   function filteredAlunos() {
@@ -1055,14 +1146,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     if (await guard(() => put('lancamentos', id || uid(), body), 'Lançamento salvo.')) { closeModal(); S.finMes = body.data.slice(0, 7); schedule(); }
   }
 
-  async function saveChamada() {
-    const ch = S.chamada;
-    const alunos = alunosDaTurma(ch.turmaId).map((a) => a.id);
-    const registros = Object.fromEntries(Object.entries(ch.registros).filter(([k, v]) => v && alunos.includes(k)));
-    const body = { turmaId: ch.turmaId, data: ch.data, registros, atualizadoEm: new Date().toISOString() };
-    if (await guard(() => put('chamadas', ch.key, body), 'Chamada salva.')) { ch.dirty = false; schedule(); }
-  }
-
   async function deleteExamples() {
     const ops = [];
     for (const c of COLS) for (const [id, d] of Object.entries(S.data[c])) if (d.exemplo) ops.push([c, id]);
@@ -1160,8 +1243,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     if (act === 'modal-bg' && e.target !== t) return;
     if (act !== 'confirm' && S.confirm) { S.confirm = null; refreshModalFoot(); schedule(); }
     switch (act) {
-      case 'nav': S.view = t.dataset.v; try { localStorage.setItem('iris:view', S.view); } catch {} render(); window.scrollTo?.(0, 0); break;
-      case 'go-chamada': S.chamada.turmaId = t.dataset.t; S.chamada.data = t.dataset.d || today(); S.chamada.key = ''; S.view = 'chamada'; render(); window.scrollTo?.(0, 0); break;
+      case 'nav': flushChamada(); if (t.dataset.v === 'chamada' && S.view === 'chamada') S.chamada.turmaId = ''; S.view = t.dataset.v; try { localStorage.setItem('iris:view', S.view); } catch {} render(); window.scrollTo?.(0, 0); break;
+      case 'go-chamada': openChamada(t.dataset.t, t.dataset.d); break;
       case 'cal-dia': S.calDia = t.dataset.d; if (t.dataset.d.slice(0, 7) !== S.calMes) S.calMes = t.dataset.d.slice(0, 7); render(); break;
       case 'cal-prev': S.calMes = addMonths(S.calMes, -1); render(); break;
       case 'cal-next': S.calMes = addMonths(S.calMes, 1); render(); break;
@@ -1183,12 +1266,11 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       }
       case 'seed': seed(); break;
       // Chamada
-      case 'ch-turma': S.chamada.turmaId = t.dataset.t; render(); break;
-      case 'ch-open': S.chamada.data = t.dataset.d; render(); window.scrollTo?.(0, 0); break;
-      case 'ch-mark': { const r = S.chamada.registros; const cur = r[t.dataset.id] || ''; r[t.dataset.id] = { '': 'P', P: 'F', F: 'J', J: 'P' }[cur]; S.chamada.dirty = true; render(); break; }
-      case 'ch-all': for (const a of alunosDaTurma(S.chamada.turmaId)) S.chamada.registros[a.id] = 'P'; S.chamada.dirty = true; render(); break;
-      case 'ch-clear': S.chamada.registros = {}; S.chamada.dirty = true; render(); break;
-      case 'ch-save': saveChamada(); break;
+      case 'ch-turma': openChamada(t.dataset.t); break;
+      case 'ch-back': flushChamada(); S.chamada.turmaId = ''; render(); window.scrollTo?.(0, 0); break;
+      case 'ch-date': flushChamada(); S.chamada.data = t.dataset.d; render(); break;
+      case 'ch-set': markChamada(t.dataset.id, t.dataset.v); break;
+      case 'ch-all': for (const a of alunosDaTurma(S.chamada.turmaId)) S.chamada.registros[a.id] = 'P'; S.chamada.dirty = true; S.chamada.rev++; S.chamada.status = 'pendente'; clearTimeout(chTimer); chTimer = setTimeout(flushChamada, 300); render(); break;
       // Alunos / turmas / inscrições / finanças
       case 'aluno-new': alunoModal(null, t.dataset.t); break;
       case 'aluno-open': alunoModal(t.dataset.id); break;
@@ -1229,10 +1311,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     else if (el.id === 'alunos-bairro') { S.alunosBairro = el.value; render(); }
     else if (el.id === 'alunos-faixa') { S.alunosFaixa = el.value; render(); }
     else if (el.id === 'alunos-incompletos') { S.alunosIncompletos = el.checked; render(); }
-    else if (el.id === 'ch-data') {
-      if (S.chamada.dirty && !window.__chWarn) { window.__chWarn = 1; toast('A chamada anterior não foi salva.'); }
-      S.chamada.data = el.value || today(); render();
-    }
+    else if (el.id === 'ch-data') { flushChamada(); S.chamada.data = el.value || today(); render(); }
     else if (el.dataset.inscStatus) guard(() => patch('inscricoes', el.dataset.inscStatus, { status: el.value }), 'Situação atualizada.');
     else if (el.dataset.photo) uploadPhoto(el.dataset.photo, el.files && el.files[0]);
   });
