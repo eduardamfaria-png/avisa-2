@@ -64,7 +64,7 @@ button { cursor: pointer; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand b { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .01em; }
 .brand small { display: block; font-size: 12px; color: var(--muted); line-height: 1.2; }
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(6, 1fr);
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 2px 8px; border: 0; background: none; color: var(--faint);
   font-size: 10.5px; font-weight: 600; position: relative; }
@@ -362,13 +362,13 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     canWrite: true,
     canUpload: false,
     view: 'painel',
-    alunosQ: '', alunosTurma: '', alunosStatus: 'matriculado', inscQ: '', qDraft: {}, alunosBairro: '', alunosFaixa: '', alunosIncompletos: false, alunosModo: 'lista',
+    alunosQ: '', alunosTurma: '', alunosStatus: 'todos', qOpen: false, inscQ: '', qDraft: {}, alunosBairro: '', alunosFaixa: '', alunosIncompletos: false, alunosModo: 'lista',
     calMes: ym(new Date()), calDia: ymd(new Date()),
     finMes: ym(new Date()),
     chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false, rev: 0, status: '' },
     confirm: null,
   };
-  try { const v = localStorage.getItem('iris:view'); if (v) S.view = v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
+  try { const v = localStorage.getItem('iris:view'); if (v) S.view = v === 'alunos' ? 'inscricoes' : v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
 
   let db = null, assets = null, downloads = null;
 
@@ -509,7 +509,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   const NAV = [
     ['painel', 'Painel', 'home'],
     ['chamada', 'Chamada', 'check'],
-    ['alunos', 'Alunos', 'users'],
     ['turmas', 'Turmas', 'book'],
     ['inscricoes', 'Inscrições', 'form'],
     ['financas', 'Finanças', 'cash'],
@@ -551,7 +550,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       $('#view').innerHTML = header('Instituto Íris', 'Carregando dados…', 'Buscando alunos, turmas e chamadas.');
       return;
     }
-    const v = { painel: vPainel, chamada: vChamada, alunos: vAlunos, turmas: vTurmas, inscricoes: vInscricoes, financas: vFinancas }[S.view] || vPainel;
+    const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, financas: vFinancas }[S.view] || vPainel;
     $('#view').innerHTML = v();
     if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   }
@@ -848,7 +847,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       (S.alunosStatus === 'todos' || sit(a) === S.alunosStatus));
   }
 
-  function vAlunos() {
+  // Lista de todas as pessoas, separada por situação (usada dentro de Inscrições).
+  function alunosPanel() {
     const st = freqStats();
     const rows = filteredAlunos();
     const turmas = turmasList();
@@ -862,14 +862,14 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
         ? `<div class="card table-wrap"><table class="sheet"><thead><tr><th>Aluno</th><th>Idade</th><th>Gênero</th><th>Cor/raça</th><th>Bairro</th><th>Telefone</th><th>Responsável</th><th>Turmas</th><th>Escolaridade</th><th>Deficiência</th><th>Imagem</th><th>Situação</th><th>Ficha</th><th>Freq.</th></tr></thead><tbody>${rows.map((a) => { const miss = missingFields(a).length; return `<tr data-act="aluno-open" data-id="${a.id}" tabindex="0"><td><div class="row" style="gap:8px">${avatar(a, 28)}<b>${esc(a.nome)}</b></div></td><td class="num">${age(a.nascimento) ?? '—'}</td><td>${esc(a.genero || '—')}</td><td>${esc(a.corRaca || '—')}</td><td>${esc(a.bairro || '—')}</td><td class="num" style="white-space:nowrap">${esc(a.telefone || a.telefoneResp || '—')}</td><td>${esc(a.responsavel || '—')}</td><td>${esc(turmaNomes(a) || '—')}</td><td>${esc(a.escolaridade || '—')}</td><td>${esc(a.deficiencia || '—')}</td><td>${esc(a.autorizaImagem || 'Pendente')}</td><td>${sitPill(a)}</td><td>${miss ? `<span class="pill amber num">faltam ${miss}</span>` : '<span class="pill green">completa</span>'}</td><td>${freqPill(a)}</td></tr>`; }).join('')}</tbody></table></div>`
         : `<div class="card list">${rows.map((a) => { const idade = age(a.nascimento); const miss = missingFields(a).length; return `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 46)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">${idade != null ? idade + ' anos · ' : ''}${esc(turmaNomes(a) || 'Sem turma')}${a.bairro ? ' · ' + esc(a.bairro) : ''}</span></div>${miss ? `<span class="pill amber num" title="Campos faltando na ficha">ficha ${miss}</span>` : ''}${freqPill(a)}</button>`; }).join('')}</div>`;
 
-    return header('Banco de dados', 'Alunos', `${plural(alunosList().filter(isAtivo).length, 'matriculado', 'matriculados')} · ${plural(alunosList().length, 'cadastro', 'cadastros')} no total`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button><button class="btn primary" data-act="nav" data-v="inscricoes">${icon('plus')}Nova inscrição</button>`) + notices() + `
+    return `
+      <div class="chips" role="tablist" aria-label="Situação">${[...Object.entries(SIT).map(([k, [l]]) => [k, k === 'desistiu' ? 'Desistentes' : k === 'formado' ? 'Formados' : k === 'matriculado' ? 'Matriculados' : l]), ['todos', 'Todos']].map(([k, l]) => `<button class="chip${S.alunosStatus === k ? ' on' : ''}" data-act="alunos-sit" data-v="${k}">${l} <i class="num">${k === 'todos' ? alunosList().length : alunosList().filter((a) => sit(a) === k).length}</i></button>`).join('')}</div>
       <div class="card pad form-grid filters">
         <label class="field full"><span>Buscar</span><input class="input" id="alunos-q" type="search" placeholder="Nome, responsável, CPF, telefone ou bairro" value="${esc(S.alunosQ)}"></label>
         <label class="field"><span>Turma</span><select class="select" id="alunos-turma">${opt('', 'Todas', S.alunosTurma)}${turmas.map((t) => opt(t.id, t.nome, S.alunosTurma)).join('')}</select></label>
         <label class="field"><span>Bairro</span><select class="select" id="alunos-bairro">${opt('', 'Todos', S.alunosBairro)}${bairros.map((b) => opt(b, b, S.alunosBairro)).join('')}</select></label>
         <label class="field"><span>Faixa etária</span><select class="select" id="alunos-faixa">${opt('', 'Todas', S.alunosFaixa)}${[...FAIXAS.map((f) => f[0]), 'Sem data'].map((f) => opt(f, f, S.alunosFaixa)).join('')}</select></label>
       </div>
-      <div class="chips" role="tablist" aria-label="Situação">${[...Object.entries(SIT).map(([k, [l]]) => [k, k === 'desistiu' ? 'Desistentes' : k === 'formado' ? 'Formados' : k === 'matriculado' ? 'Matriculados' : l]), ['todos', 'Todos']].map(([k, l]) => `<button class="chip${S.alunosStatus === k ? ' on' : ''}" data-act="alunos-sit" data-v="${k}">${l} <i class="num">${k === 'todos' ? alunosList().length : alunosList().filter((a) => sit(a) === k).length}</i></button>`).join('')}</div>
       <div class="row wrapx">
         <div class="seg" role="tablist" aria-label="Modo de visualização"><button class="${S.alunosModo !== 'tabela' ? 'on' : ''}" data-act="alunos-modo" data-v="lista">Lista</button><button class="${S.alunosModo === 'tabela' ? 'on' : ''}" data-act="alunos-modo" data-v="tabela">Tabela</button></div>
         <label class="check" style="padding:6px 10px"><input type="checkbox" id="alunos-incompletos"${S.alunosIncompletos ? ' checked' : ''}>Só fichas incompletas</label>
@@ -898,16 +898,15 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   }
 
   // ───────────── Inscrições (porta de entrada do cadastro) ─────────────
-  // Inscrição e aluno são o mesmo registro: quem é inscrito aparece em Alunos, na situação escolhida.
+  // Inscrição e aluno são o mesmo registro: a aba reúne o formulário e todas as pessoas por situação.
   function vInscricoes() {
-    const q = S.inscQ.trim().toLowerCase();
-    const all = alunosList().sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
-    const rows = all.filter((a) => !q || [a.nome, a.responsavel, a.telefone, a.cpf, a.bairro].some((v) => String(v || '').toLowerCase().includes(q)));
+    const total = alunosList().length;
+    const aberto = S.qOpen || !total;
     const d = S.qDraft;
     const opt = (v, l, cur) => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(l)}</option>`;
-    return header('Cadastro de pessoas', 'Inscrições', 'Escreva aqui cada pessoa nova. Ela entra automaticamente em Alunos, na situação escolhida.', `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha</button>`) + notices() + `
+    return header('Banco de dados', 'Inscrições', `${plural(total, 'pessoa inscrita', 'pessoas inscritas')} · ${plural(alunosList().filter(isAtivo).length, 'matriculada', 'matriculadas')}`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button>${aberto ? '' : `<button class="btn primary" data-act="q-open">${icon('plus')}Nova inscrição</button>`}`) + notices() + (aberto ? `
       <section class="card pad">
-        <div class="section-title"><h2>Nova inscrição</h2><span>só o nome é obrigatório</span></div>
+        <div class="section-title"><h2>Nova inscrição</h2>${total ? `<button class="btn sm ghost" data-act="q-close">Fechar</button>` : '<span>só o nome é obrigatório</span>'}</div>
         <div class="form-grid">
           <label class="field full"><span>Nome completo</span><input class="input" id="q-nome" value="${esc(d['q-nome'] || '')}" autocomplete="off" placeholder="Nome da pessoa"></label>
           <label class="field"><span>Data de nascimento</span><input class="input" type="date" id="q-nasc" value="${esc(d['q-nasc'] || '')}"></label>
@@ -922,13 +921,9 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
           <button class="btn" data-act="q-save" data-ficha="1">Salvar e completar ficha</button>
           <button class="btn primary" data-act="q-save">${icon('plus')}Salvar inscrição</button>
         </div>
-      </section>
-      <section>
-        <div class="section-title"><h2>Todas as inscrições</h2><span>${plural(all.length, 'pessoa', 'pessoas')} · mais recentes primeiro</span></div>
-        <input class="input" id="insc-q" type="search" placeholder="Buscar por nome, telefone, CPF ou bairro" value="${esc(S.inscQ)}" style="margin-bottom:10px">
-        ${rows.length ? `<div class="card list">${rows.map((a) => { const ts = (a.turmaIds || []).map((id) => get('turmas', id)?.nome).filter(Boolean).join(', '); return `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 40)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">Inscrito em ${fmtDate((a.criadoEm || '').slice(0, 10))} · ${esc(ts || 'turma a definir')}${a.telefone ? ' · ' + esc(a.telefone) : ''}</span></div>${sitPill(a)}</button>`; }).join('')}</div>`
-          : `<div class="empty">${all.length ? 'Ninguém encontrado com essa busca.' : 'Nenhuma inscrição ainda. Use o formulário acima.'}</div>`}
-      </section>`;
+      </section>` : '') + `
+      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>
+      ${alunosPanel()}`;
   }
 
   async function quickSave(openFicha) {
@@ -942,8 +937,8 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       turmaIds: d['q-turma'] ? [d['q-turma']] : [], status: situacao, comoConheceu: d['q-origem'] || '',
       matriculaEm: situacao === 'matriculado' ? today() : '', autorizaImagem: 'Pendente', termoAssinado: 'Pendente', criadoEm: new Date().toISOString(),
     };
-    if (await guard(() => put('alunos', id, body), `${nome} inscrito(a) como "${SIT[situacao][0]}". Já aparece em Alunos.`)) {
-      S.qDraft = {};
+    if (await guard(() => put('alunos', id, body), `${nome} inscrito(a) como "${SIT[situacao][0]}". Já está na lista.`)) {
+      S.qDraft = {}; S.alunosStatus = 'todos';
       render();
       if (openFicha) alunoModal(id); else document.getElementById('q-nome')?.focus();
     }
@@ -1138,7 +1133,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const cor = document.querySelector('input[name="t-cor"]:checked')?.value || '#1c2d6b';
     const body = { ...(id ? S.data.turmas[id] : { criadoEm: new Date().toISOString() }), nome, dias, horario: val('t-hora'), capacidade: Number(val('t-cap')) || 0, professor: val('t-prof'), cor };
     const newId = id || uid();
-    if (await guard(() => put('turmas', newId, body), id ? 'Turma atualizada.' : `Turma "${nome}" salva. Ela já aparece na Chamada e na ficha dos alunos.`)) {
+    if (await guard(() => put('turmas', newId, body), id ? 'Turma atualizada.' : `Turma "${nome}" salva. Ela já aparece na Chamada e nas fichas.`)) {
       closeModal();
       if (!id) { S.view = 'turmas'; render(); }
     }
@@ -1256,7 +1251,9 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       case 'alunos-modo': S.alunosModo = t.dataset.v; try { localStorage.setItem('iris:alunosModo', S.alunosModo); } catch {} render(); break;
       case 'q-save': quickSave(!!t.dataset.ficha); break;
       case 'alunos-sit': S.alunosStatus = t.dataset.v; render(); break;
-      case 'alunos-incompletos': S.alunosIncompletos = true; S.alunosStatus = 'matriculado'; S.view = 'alunos'; render(); window.scrollTo?.(0, 0); break;
+      case 'q-open': S.qOpen = true; render(); document.getElementById('q-nome')?.focus(); break;
+      case 'q-close': S.qOpen = false; S.qDraft = {}; render(); break;
+      case 'alunos-incompletos': S.alunosIncompletos = true; S.alunosStatus = 'matriculado'; S.view = 'inscricoes'; try { localStorage.setItem('iris:view', S.view); } catch {} render(); window.scrollTo?.(0, 0); break;
       case 'ficha-jump': document.getElementById('ficha-' + t.dataset.i)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
       case 'modal-bg': case 'modal-close': closeModal(); break;
       case 'confirm': {
