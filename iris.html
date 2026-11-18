@@ -367,17 +367,18 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   };
 
   // ───────────── Persistência ─────────────
+  // Grava no banco e já reflete na tela (o retorno do banco confirma em seguida).
   async function put(col, id, body) {
     if (S.mode === 'db') await db.collection(col).doc(id).set(body);
-    else { S.data[col][id] = body; schedule(); }
+    S.data[col] = { ...S.data[col], [id]: body }; schedule();
   }
   async function patch(col, id, body) {
     if (S.mode === 'db') await db.collection(col).doc(id).update(body);
-    else { S.data[col][id] = { ...S.data[col][id], ...body }; schedule(); }
+    S.data[col] = { ...S.data[col], [id]: { ...S.data[col][id], ...body } }; schedule();
   }
   async function del(col, id) {
     if (S.mode === 'db') await db.collection(col).doc(id).delete();
-    else { delete S.data[col][id]; schedule(); }
+    const next = { ...S.data[col] }; delete next[id]; S.data[col] = next; schedule();
   }
   async function guard(fn, ok) {
     if (!S.canWrite) return toast('Você tem acesso só para ver. Peça acesso de edição a quem administra a página.');
@@ -792,6 +793,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
           <h3 style="font-size:19px">${esc(t.nome)}</h3>
           <div class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || 'Sem dias'} · ${esc(t.horario || '--:--')}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
           <div class="row small"><span class="grow">Alunos</span><b class="num">${al.length}${cap ? ' / ' + cap : ''}</b></div>
+          <div class="row" style="gap:0">${al.slice(0, 8).map((x) => `<span style="margin-right:-6px;border:2px solid var(--surface);border-radius:50%">${avatar(x, 28)}</span>`).join('')}${al.length > 8 ? `<span class="small muted" style="margin-left:12px">+${al.length - 8}</span>` : ''}${al.length ? '' : '<span class="small muted">Nenhum aluno ainda</span>'}</div>
           <div class="meter${cap && al.length >= cap ? ' gold' : ''}"><i style="width:${cap ? Math.min(100, Math.round((al.length / cap) * 100)) : 0}%"></i></div>
           <div class="row small"><span class="grow">Frequência (30 dias)</span><b class="num" style="color:${tot && pres / tot < 0.75 ? 'var(--red)' : 'inherit'}">${tot ? pct(pres / tot) : '—'}</b></div>
         </button>`;
@@ -869,12 +871,28 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   const closeModal = () => { $('#modal-root').innerHTML = ''; S.confirm = null; };
   const val = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
+  const turmaCheck = (t, on) => `<label class="check"><input type="checkbox" name="f-turma" value="${t.id}"${on ? ' checked' : ''}><span class="dotc" style="background:${esc(t.cor || '#1c2d6b')}"></span>${esc(t.nome)}</label>`;
+  const CORES = ['#1c2d6b', '#d99a12', '#17885a', '#c8403a', '#7a4fc4', '#1d8bb5'];
+
+  async function quickTurma() {
+    const nome = val('f-nova-turma');
+    if (!nome) return toast('Escreva o nome da turma.');
+    const id = uid();
+    const body = { nome, dias: [], horario: '', capacidade: 0, professor: '', cor: CORES[turmasList().length % CORES.length], criadoEm: new Date().toISOString() };
+    if (await guard(() => put('turmas', id, body), `Turma "${nome}" criada e marcada para este aluno.`)) {
+      document.getElementById('f-turmas-vazio')?.remove();
+      document.getElementById('f-turmas-box')?.insertAdjacentHTML('beforeend', turmaCheck({ id, ...body }, true));
+      document.getElementById('f-nova-turma').value = '';
+    }
+  }
+
   function fieldHtml([key, label, type, opts, full], a) {
     const id = 'f-' + key; const v = a[key] ?? '';
     const wrap = (inner) => `<label class="field${full ? ' full' : ''}"><span>${esc(label)}</span>${inner}</label>`;
     if (type === 'turmas') {
       const ts = turmasList();
-      return `<div class="field full"><span>${esc(label)}</span><div class="form-grid">${ts.map((t) => `<label class="check"><input type="checkbox" name="f-turma" value="${t.id}"${(a.turmaIds || []).includes(t.id) ? ' checked' : ''}><span class="dotc" style="background:${esc(t.cor || '#1c2d6b')}"></span>${esc(t.nome)}</label>`).join('') || '<span class="small muted">Crie uma turma primeiro.</span>'}</div></div>`;
+      return `<div class="field full"><span>${esc(label)}</span><div class="form-grid" id="f-turmas-box">${ts.map((t) => turmaCheck(t, (a.turmaIds || []).includes(t.id))).join('') || '<span class="small muted" id="f-turmas-vazio">Nenhuma turma criada ainda. Crie abaixo.</span>'}</div>
+        <div class="row" style="margin-top:8px"><input class="input grow" id="f-nova-turma" placeholder="Nome de uma nova turma" autocomplete="off"><button type="button" class="btn" data-act="turma-quick">${icon('plus')}Criar turma</button></div></div>`;
     }
     if (type === 'select') {
       const options = opts.map((o) => { const [val, lab] = o.includes(':') ? o.split(':') : [o, o]; return `<option value="${esc(val)}"${String(v) === val ? ' selected' : ''}>${esc(lab)}</option>`; });
@@ -887,6 +905,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
   }
 
   function alunoModal(id, presetTurma) {
+    if (id && !get('alunos', id)) return;
     const a = id ? get('alunos', id) : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'ativo', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };
     const s = id ? freqStats()[id] : null;
     const miss = id ? missingFields(a) : [];
@@ -916,7 +935,6 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
 
   function turmaModal(id) {
     const t = id ? get('turmas', id) : { nome: '', dias: [], horario: '', capacidade: 20, cor: '#1c2d6b' };
-    const CORES = ['#1c2d6b', '#d99a12', '#17885a', '#c8403a', '#7a4fc4', '#1d8bb5'];
     openModal(id ? 'Editar turma' : 'Nova turma', `<div class="form-grid">
       <label class="field full"><span>Nome da turma / curso</span><input class="input" id="t-nome" value="${esc(t.nome)}" placeholder="Ex.: Informática básica — tarde"></label>
       <div class="field full"><span>Dias de aula</span><div class="chips">${DIAS.map((d, i) => `<label class="check" style="padding:6px 10px"><input type="checkbox" name="t-dia" value="${i}"${(t.dias || []).includes(i) ? ' checked' : ''}>${d}</label>`).join('')}</div></div>
@@ -924,7 +942,9 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       <label class="field"><span>Vagas</span><input class="input" type="number" min="0" id="t-cap" value="${esc(t.capacidade ?? '')}"></label>
       <label class="field full"><span>Professor(a)</span><input class="input" id="t-prof" value="${esc(t.professor || '')}"></label>
       <div class="field full"><span>Cor</span><div class="chips">${CORES.map((c) => `<label class="check" style="padding:6px 10px"><input type="radio" name="t-cor" value="${c}"${(t.cor || '#1c2d6b') === c ? ' checked' : ''}><span class="dotc" style="background:${c};width:16px;height:16px"></span></label>`).join('')}</div></div>
-    </div>`, `${id ? confirmBtn('del-turma', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="turma-save" data-id="${id || ''}">Salvar</button>`);
+    </div>${id ? (() => { const al = alunosDaTurma(id); return `<div class="ficha-sec" style="border-top:1px solid var(--line);padding-top:16px;margin-top:18px"><div class="section-title"><h2 style="font-size:16px">Alunos desta turma</h2><span>${plural(al.length, 'aluno', 'alunos')}</span></div>
+      ${al.length ? `<div class="list card">${al.map((x) => `<button type="button" class="item" data-act="aluno-open" data-id="${x.id}">${avatar(x, 32)}<div class="grow"><strong>${esc(x.nome)}</strong></div></button>`).join('')}</div>` : '<p class="small muted">Nenhum aluno marcado nesta turma ainda.</p>'}
+      <button type="button" class="btn sm" style="margin-top:10px" data-act="aluno-new" data-t="${id}">${icon('plus')}Cadastrar aluno nesta turma</button></div>`; })() : ''}`, `${id ? confirmBtn('del-turma', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="turma-save" data-id="${id || ''}">Salvar</button>`);
     $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'turma', id });
   }
 
@@ -1004,7 +1024,11 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
     const dias = [...document.querySelectorAll('input[name="t-dia"]:checked')].map((x) => Number(x.value));
     const cor = document.querySelector('input[name="t-cor"]:checked')?.value || '#1c2d6b';
     const body = { ...(id ? S.data.turmas[id] : { criadoEm: new Date().toISOString() }), nome, dias, horario: val('t-hora'), capacidade: Number(val('t-cap')) || 0, professor: val('t-prof'), cor };
-    if (await guard(() => put('turmas', id || uid(), body), id ? 'Turma atualizada.' : 'Turma criada.')) closeModal();
+    const newId = id || uid();
+    if (await guard(() => put('turmas', newId, body), id ? 'Turma atualizada.' : `Turma "${nome}" salva. Ela já aparece na Chamada e na ficha dos alunos.`)) {
+      closeModal();
+      if (!id) { S.view = 'turmas'; render(); }
+    }
   }
 
   async function saveInsc(id) {
@@ -1172,6 +1196,7 @@ table.sheet th { position: sticky; top: 0; background: var(--surface); }
       case 'turma-new': turmaModal(null); break;
       case 'turma-open': turmaModal(t.dataset.id); break;
       case 'turma-save': saveTurma(t.dataset.id); break;
+      case 'turma-quick': quickTurma(); break;
       case 'insc-new': inscModal(null); break;
       case 'insc-open': inscModal(t.dataset.id); break;
       case 'insc-save': saveInsc(t.dataset.id); break;
