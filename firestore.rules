@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // E-mails da coordenação: sempre têm acesso e liberam os demais pelo botão "Equipe".
-    function donos() { return ['eduardamfaria@gmail.com', 'ffaria.edu@gmail.com', 'albudanejoao5@gmail.com']; }
+    function donos() { return ['eduardamfaria@gmail.com', 'ffaria.edu@gmail.com', 'albudanejoao5@gmail.com', 'phpaixaodossantos@gmail.com']; }
 
     function emailVerificado() {
       return request.auth != null && request.auth.token.email != null && request.auth.token.email_verified == true;
