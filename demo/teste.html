@@ -263,6 +263,8 @@ td.r, th.r { text-align: right; }
 .ficha-nav { position: sticky; top: -18px; z-index: 2; background: var(--surface); padding: 8px 0 10px; margin-bottom: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 .ficha-nav .chip { min-height: 32px; font-size: 12.5px; white-space: nowrap; }
 .ficha-sec { border: 0; padding: 0; margin: 0 0 18px; scroll-margin-top: 60px; }
+.consent { align-items: flex-start; line-height: 1.4; }
+.consent input { margin-top: 2px; flex: none; }
 .ficha-sec legend { font-family: var(--display); font-weight: 700; font-size: 16px; padding: 0 0 10px; color: var(--navy); }
 .ficha-sec + .ficha-sec { border-top: 1px solid var(--line); padding-top: 16px; }
 table.sheet { font-size: 13.5px; }
@@ -462,7 +464,6 @@ body.gated .app { grid-template-columns: 1fr; }
       ['genero', 'Gênero', 'select', ['Feminino', 'Masculino', 'Não binário', 'Prefere não dizer']],
       ['corRaca', 'Cor ou raça (IBGE)', 'select', ['Preta', 'Parda', 'Branca', 'Amarela', 'Indígena', 'Prefere não dizer']],
       ['cpf', 'CPF', 'text'],
-      ['rg', 'RG ou certidão de nascimento', 'text'],
     ]],
     ['Contato e endereço', [
       ['telefone', 'Telefone / WhatsApp', 'tel'],
@@ -481,17 +482,12 @@ body.gated .app { grid-template-columns: 1fr; }
       ['telefoneResp', 'Telefone do responsável', 'tel'],
       ['cpfResp', 'CPF do responsável', 'text'],
     ]],
-    ['Escola e trabalho', [
+    ['Escola, trabalho e benefício', [
       ['escolaridade', 'Escolaridade', 'select', ['Não alfabetizado', 'Fundamental incompleto', 'Fundamental completo', 'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo']],
-      ['escola', 'Escola onde estuda', 'text'],
       ['serie', 'Série / ano', 'text'],
       ['turnoEscola', 'Turno da escola', 'select', ['Manhã', 'Tarde', 'Noite', 'Integral', 'Não estuda']],
       ['trabalha', 'Trabalha?', 'select', ['Não', 'Sim, com carteira', 'Sim, informal', 'Procurando emprego']],
-    ]],
-    ['Família e renda', [
-      ['pessoasCasa', 'Pessoas na casa', 'number'],
-      ['rendaFamiliar', 'Renda familiar', 'select', ['Até 1 salário mínimo', '1 a 2 salários', '2 a 3 salários', 'Mais de 3 salários', 'Prefere não dizer']],
-      ['beneficio', 'Benefício social', 'select', ['Nenhum', 'Bolsa Família', 'BPC', 'Outro']],
+      ['beneficio', 'Recebe benefício social?', 'select', ['Nenhum', 'Bolsa Família', 'BPC', 'Outro']],
     ]],
     ['Saúde e inclusão', [
       ['deficiencia', 'Deficiência ou neurodivergência', 'select', ['Não', 'Física', 'Visual', 'Auditiva', 'Intelectual', 'TEA (autismo)', 'TDAH', 'Múltipla', 'Outra']],
@@ -504,6 +500,7 @@ body.gated .app { grid-template-columns: 1fr; }
     ['Autorizações', [
       ['autorizaImagem', 'Autoriza uso de imagem?', 'select', ['Pendente', 'Sim', 'Não']],
       ['termoAssinado', 'Ficha / termo assinado?', 'select', ['Pendente', 'Sim']],
+      ['aceitaComunicacoes', 'Aceito receber comunicações do Instituto Íris sobre novos cursos, novidades e conteúdos por e-mail, WhatsApp ou SMS. Posso cancelar quando quiser.', 'consent', null, 1],
     ]],
     ['No instituto', [
       ['__turmas', 'Turmas', 'turmas', null, 1],
@@ -723,8 +720,8 @@ body.gated .app { grid-template-columns: 1fr; }
         <div><b class="num">${turmas.length}</b><span>${turmas.length === 1 ? 'turma' : 'turmas'}</span></div>
         <div><b class="num">${vagas}</b><span>vagas livres</span></div>
         <div><b class="num">${pcd}</b><span>com deficiência ou neurodivergência</span></div>
-        <div><b class="num">${beneficio}</b><span>famílias com benefício social</span></div>
         <div><b class="num">${aniversariantes.length}</b><span>aniversariantes em ${MESES[mesAtual]}</span></div>
+        <div><b class="num">${alunos.filter((a) => a.aceitaComunicacoes === 'Sim').length}</b><span>aceitam receber novidades</span></div>
         <div><b class="num">${ativos.length ? Math.round((completas / ativos.length) * 100) : 0}%</b><span>fichas completas</span></div>
       </div>
       <div class="grid2">
@@ -752,7 +749,7 @@ body.gated .app { grid-template-columns: 1fr; }
           <div class="card pad"><h3 class="ph">Gênero</h3>${barList(countBy(ativos, (a) => a.genero), ativos.length)}</div>
           <div class="card pad"><h3 class="ph">Cor ou raça</h3>${barList(countBy(ativos, (a) => a.corRaca), ativos.length)}</div>
           <div class="card pad"><h3 class="ph">Escolaridade</h3>${barList(countBy(ativos, (a) => a.escolaridade), ativos.length)}</div>
-          <div class="card pad"><h3 class="ph">Renda familiar</h3>${barList(countBy(ativos, (a) => a.rendaFamiliar), ativos.length)}</div>
+          <div class="card pad"><h3 class="ph">Benefício social</h3>${barList(countBy(ativos, (a) => a.beneficio), ativos.length)}</div>
         </div>
         ${semImagem ? `<p class="small muted" style="margin-top:10px">${plural(semImagem, 'aluno não autoriza', 'alunos não autorizam')} uso de imagem — cuidado ao postar fotos das aulas.</p>` : ''}
       </section>
@@ -1057,6 +1054,7 @@ body.gated .app { grid-template-columns: 1fr; }
       return wrap(`<select class="select" id="${id}">${hasDefault ? '' : `<option value=""${v ? '' : ' selected'}>Não informado</option>`}${options.join('')}</select>`);
     }
     if (type === 'textarea') return wrap(`<textarea class="textarea" id="${id}">${esc(v)}</textarea>`);
+    if (type === 'consent') return `<label class="check full consent"><input type="checkbox" id="${id}"${v === 'Sim' ? ' checked' : ''}><span>${esc(label)}</span></label>`;
     if (type === 'cep') return wrap(`<input class="input" id="${id}" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" value="${esc(v)}" autocomplete="postal-code"><small class="hint" id="cep-msg"></small>`);
     const extra = type === 'tel' ? ' inputmode="tel"' : type === 'number' ? ' inputmode="numeric" min="0"' : '';
     return wrap(`<input class="input" id="${id}" type="${type === 'tel' ? 'text' : type}" value="${esc(v)}"${extra} autocomplete="off">`);
@@ -1109,7 +1107,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const nome = val('f-nome');
     if (!nome) return toast('Informe o nome do aluno.');
     const body = { ...(id ? S.data.alunos[id] : { criadoEm: new Date().toISOString() }) };
-    for (const [key, , type] of FICHA_FIELDS) body[key] = type === 'number' ? (val('f-' + key) === '' ? '' : Number(val('f-' + key))) : val('f-' + key);
+    for (const [key, , type] of FICHA_FIELDS) body[key] = type === 'consent' ? (document.getElementById('f-' + key)?.checked ? 'Sim' : 'Não') : type === 'number' ? (val('f-' + key) === '' ? '' : Number(val('f-' + key))) : val('f-' + key);
     body.turmaIds = [...document.querySelectorAll('input[name="f-turma"]:checked')].map((x) => x.value);
     body.status = body.status || 'matriculado';
     body.atualizadoEm = new Date().toISOString();
@@ -1284,11 +1282,10 @@ body.gated .app { grid-template-columns: 1fr; }
     const R = ['Parda', 'Preta', 'Parda', 'Preta', 'Branca', 'Parda', 'Preta', 'Parda', 'Indígena'];
     const B = ['Éden', 'Éden', 'Centro', 'Éden', 'Vila Nova', 'Centro', 'Éden', 'Jardim', 'Éden'];
     const E = ['Fundamental incompleto', 'Médio incompleto', 'Médio completo', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto', 'Fundamental incompleto'];
-    const RENDA = ['Até 1 salário mínimo', '1 a 2 salários', 'Até 1 salário mínimo', 'Até 1 salário mínimo', '1 a 2 salários', '', 'Até 1 salário mínimo', '2 a 3 salários', 'Até 1 salário mínimo'];
     nomes.forEach(([nome, t, nasc], k) => (alunos[`ex-aluno-${k}`] = {
       nome, turmaIds: [t], nascimento: nasc, status: 'matriculado', matriculaEm: back(60 - k * 6), criadoEm: new Date(Date.now() - (60 - k * 6) * 864e5).toISOString(), genero: G[k], corRaca: k === 5 ? '' : R[k], bairro: B[k], cidade: 'Exemplo',
       telefone: k === 4 ? '' : '(21) 90000-000' + k, endereco: k % 3 === 2 ? '' : 'Rua Exemplo, ' + (10 + k), responsavel: age(nasc) < 18 ? 'Responsável de ' + nome.split(' ')[0] : '', parentesco: age(nasc) < 18 ? 'Mãe' : '',
-      escolaridade: E[k], rendaFamiliar: RENDA[k], beneficio: k % 2 ? 'Bolsa Família' : 'Nenhum', deficiencia: k === 3 ? 'TEA (autismo)' : 'Não', emergenciaNome: 'Contato de exemplo', emergenciaTel: k === 7 ? '' : '(21) 90000-1111',
+      escolaridade: E[k], aceitaComunicacoes: k % 3 ? 'Sim' : 'Não', beneficio: k % 2 ? 'Bolsa Família' : 'Nenhum', deficiencia: k === 3 ? 'TEA (autismo)' : 'Não', emergenciaNome: 'Contato de exemplo', emergenciaTel: k === 7 ? '' : '(21) 90000-1111',
       autorizaImagem: k === 1 ? 'Não' : k === 6 ? 'Pendente' : 'Sim', termoAssinado: 'Sim', comoConheceu: k % 2 ? 'Instagram' : 'Indicação', exemplo: true,
     }));
     const chamadas = {};
