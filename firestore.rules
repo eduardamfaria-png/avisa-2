@@ -2,8 +2,8 @@ rules_version = '2';
 // Só a equipe do Instituto Íris lê e escreve. Ninguém mais vê nenhum dado.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // E-mail principal do instituto: sempre tem acesso (troque pelo e-mail da coordenação).
-    function donos() { return ['EMAIL_DA_COORDENACAO']; }
+    // E-mails da coordenação: sempre têm acesso e liberam os demais pelo botão "Equipe".
+    function donos() { return ['eduardamfaria@gmail.com', 'ffaria.edu@gmail.com', 'albudanejoao5@gmail.com']; }
 
     function emailVerificado() {
       return request.auth != null && request.auth.token.email != null && request.auth.token.email_verified == true;

@@ -22,7 +22,7 @@ O site não aparece em buscas do Google (tem dados pessoais de alunos).
 3. **Firestore Database → Criar banco de dados** → modo de produção → local `southamerica-east1` (São Paulo).
 4. **Configurações do projeto → Seus apps → Web (</>)** → registre o app e copie o
    bloco `firebaseConfig` para `gestao/firebase-config.js`.
-5. Em `firestore.rules`, troque `EMAIL_DA_COORDENACAO` pelo e-mail da coordenação.
+5. Os e-mails da coordenação ficam em `firestore.rules` (função `donos`).
 6. **Configurações do projeto → Contas de serviço → Gerar nova chave privada** (baixa um .json).
    No GitHub do repositório: **Settings → Secrets and variables → Actions**:
    - *Secrets* → `FIREBASE_SERVICE_ACCOUNT` = conteúdo inteiro do .json
