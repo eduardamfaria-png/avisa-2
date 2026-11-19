@@ -1176,7 +1176,13 @@ body.gated .app { grid-template-columns: 1fr; }
   }
   async function setEquipe(emails) {
     const clean = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
-    if (await guard(() => put('config', 'acesso', { emails: clean, atualizadoEm: new Date().toISOString() }), 'Lista da equipe atualizada.')) equipeModal();
+    const antes = S.data.config?.acesso?.emails || [];
+    const removidos = antes.filter((e) => !clean.includes(e));
+    const ok = await guard(async () => {
+      await put('config', 'acesso', { emails: clean, atualizadoEm: new Date().toISOString() });
+      if (backend?.syncPermitidos) await backend.syncPermitidos(clean, removidos);
+    }, 'Lista da equipe atualizada.');
+    if (ok) equipeModal();
   }
 
   // Re-renderiza só o rodapé do modal (botões de confirmação).
@@ -1421,6 +1427,9 @@ body.gated .app { grid-template-columns: 1fr; }
       S.login.busy = true; render();
       try {
         if (S.login.needEmail) await backend.completeLink(email);
+        else if (backend.isAllowedEmail && !(await backend.isAllowedEmail(email))) {
+          S.login.error = 'Este e-mail não tem acesso ao sistema. Se você faz parte da equipe, peça à coordenação para liberar seu e-mail.';
+        }
         else { await backend.sendLink(email); S.login.sent = email; }
       } catch (err) { S.login.error = loginErro(err); }
       S.login.busy = false; render();
@@ -1493,7 +1502,11 @@ body.gated .app { grid-template-columns: 1fr; }
       const ok = await backend.isMember();
       if (!ok) { S.gate = 'denied'; render(); return; }
       S.gate = ''; S.mode = 'db';
-      if (!subscribed) { subscribed = true; subscribeAll(['fotos', 'config']); }
+      if (!subscribed) {
+        subscribed = true; subscribeAll(['fotos', 'config']);
+        // Completa a lista de e-mails liberados (para quem foi liberado antes da checagem prévia existir).
+        setTimeout(() => { const em = S.data.config?.acesso?.emails || []; if (em.length && backend.syncPermitidos) backend.syncPermitidos(em, []).catch(() => {}); }, 4000);
+      }
       render();
     });
   }

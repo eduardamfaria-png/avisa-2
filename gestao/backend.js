@@ -9,6 +9,19 @@ import {
   getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
+// "Impressão digital" (SHA-256) dos e-mails da coordenação, os mesmos de firestore.rules.
+// Permite conferir um e-mail antes de mandar o link sem deixar os e-mails escritos no site.
+const DONOS = [
+  '03a067252babae4d64c0ac339111f8e4b206d1d31186a47204a447569241ec60',
+  '32afe39baaa612fa373ac4bfbed3baaee6dc5d44aa4616eec51b2cf6493a1d47',
+  '864005209240bd63e9649f1da3c7a22c4e3a4ede539bf195bfeaa624c04f8c27',
+];
+async function hashEmail(email) {
+  const bytes = new TextEncoder().encode(String(email).trim().toLowerCase());
+  const d = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 const EMAIL_KEY = 'iris:loginEmail';
 const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -61,6 +74,17 @@ function create(config) {
     googleSignIn: () => signInWithPopup(auth, new GoogleAuthProvider()),
     signOut: () => signOut(auth),
     // Quem não está na lista da equipe recebe "permissão negada" do servidor.
+    // Confere se o e-mail está liberado ANTES de mandar o link (coleção "permitidos": só leitura de um item, sem listar).
+    async isAllowedEmail(email) {
+      const h = await hashEmail(email);
+      if (DONOS.includes(h)) return true;
+      try { return (await getDoc(doc(fs, 'permitidos', h))).exists(); } catch { return true; }
+    },
+    // Mantém a coleção "permitidos" igual à lista da equipe.
+    async syncPermitidos(emails, removidos) {
+      for (const e of emails) await setDoc(doc(fs, 'permitidos', await hashEmail(e)), { ok: true });
+      for (const e of removidos) await deleteDoc(doc(fs, 'permitidos', await hashEmail(e)));
+    },
     async isMember() {
       try { await getDoc(doc(fs, 'config', 'acesso')); return true; }
       catch (e) { if (e.code === 'permission-denied') return false; throw e; }

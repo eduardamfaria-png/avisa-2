@@ -18,5 +18,11 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if membro();
     }
+
+    // Só a "impressão digital" dos e-mails liberados: qualquer um pode perguntar por UM
+    // e-mail (para avisar antes de mandar o link), mas ninguém de fora lista ou altera.
+    match /permitidos/{hash} {
+      allow get: if true;
+    }
   }
 }
