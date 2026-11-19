@@ -541,7 +541,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
     $('#tabs').innerHTML = NAV.map((n) => btn(...n)).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28">` : ''}<span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.platform === 'firebase' ? `<div class="row" style="gap:6px;margin-bottom:10px"><button class="btn sm" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? 'Visualização local: nada é salvo.' : 'Carregando…'}</div>`;
+    $('#side').innerHTML = `<div class="brand">${LOGO}<div><b>Instituto Íris</b><small>Gestão das aulas</small></div></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28">` : ''}<span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.platform === 'firebase' ? `<div class="row" style="gap:6px;margin-bottom:10px"><button class="btn sm" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? (S.demo ? 'Versão de teste: nada é salvo.' : 'Visualização local: nada é salvo.') : 'Carregando…'}</div>`;
   }
 
   function header(eyebrow, title, sub, actions = '') {
@@ -552,7 +552,9 @@ body.gated .app { grid-template-columns: 1fr; }
 
   function notices() {
     let out = '';
-    if (S.mode === 'local') out += `<div class="banner">${icon('info')}<span><b>Visualização local com dados de exemplo.</b> Abra pelo link do Claude para salvar e compartilhar com a equipe.</span></div>`;
+    if (S.mode === 'local') out += S.demo
+      ? `<div class="banner">${icon('info')}<span><b>Versão de teste com dados de exemplo.</b> Pode mexer à vontade: nada do que você fizer é salvo, e ao recarregar tudo volta ao início.</span></div>`
+      : `<div class="banner">${icon('info')}<span><b>Visualização local com dados de exemplo.</b> Abra pelo link do Claude para salvar e compartilhar com a equipe.</span></div>`;
     if (S.mode === 'db' && S.slow && S.loaded.size < COLS.length) out += `<div class="banner">${icon('info')}<span>Os dados estão demorando para carregar. O que aparece pode estar desatualizado.</span></div>`;
     if (S.mode === 'db' && !S.canWrite) out += `<div class="banner">${icon('info')}<span>Você está vendo sem permissão de edição. Para registrar chamadas e cadastros, peça acesso de Colaborador ou Editor.</span></div>`;
     const ex = COLS.some((c) => Object.values(S.data[c]).some((d) => d.exemplo));
@@ -1481,6 +1483,8 @@ body.gated .app { grid-template-columns: 1fr; }
   }
 
   async function boot() {
+    // Versão de teste (para mostrar a quem não tem acesso): só dados de exemplo, nada é salvo.
+    if (window.IRIS_DEMO) { S.demo = true; startLocal(); return; }
     if (window.irisBackend) return bootFirebase();
     const c = window.claude;
     if (!c || typeof c.use !== 'function') { startLocal(); return; }
