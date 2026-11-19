@@ -459,7 +459,6 @@ body.gated .app { grid-template-columns: 1fr; }
   const FICHA = [
     ['Dados pessoais', [
       ['nome', 'Nome completo', 'text', null, 1],
-      ['nomeSocial', 'Nome social (se houver)', 'text'],
       ['nascimento', 'Data de nascimento', 'date'],
       ['genero', 'Gênero', 'select', ['Feminino', 'Masculino', 'Não binário', 'Prefere não dizer']],
       ['corRaca', 'Cor ou raça (IBGE)', 'select', ['Preta', 'Parda', 'Branca', 'Amarela', 'Indígena', 'Prefere não dizer']],
@@ -906,7 +905,7 @@ body.gated .app { grid-template-columns: 1fr; }
   function filteredAlunos() {
     const q = S.alunosQ.trim().toLowerCase();
     return alunosList().filter((a) =>
-      (!q || [a.nome, a.nomeSocial, a.responsavel, a.cpf, a.telefone, a.bairro].some((v) => String(v || '').toLowerCase().includes(q))) &&
+      (!q || [a.nome, a.responsavel, a.cpf, a.telefone, a.bairro].some((v) => String(v || '').toLowerCase().includes(q))) &&
       (!S.alunosTurma || (a.turmaIds || []).includes(S.alunosTurma)) &&
       (!S.alunosBairro || (a.bairro || '').trim() === S.alunosBairro) &&
       (!S.alunosFaixa || faixa(a) === S.alunosFaixa) &&
