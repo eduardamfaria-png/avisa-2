@@ -218,6 +218,7 @@ td.r, th.r { text-align: right; }
 .hide { display: none !important; }
 .today { display: grid; gap: 10px; }
 .lesson { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.lesson .time small.time-end { display: block; font-family: var(--body); font-size: 11.5px; font-weight: 600; color: var(--muted); }
 .lesson .time { font-family: var(--display); font-weight: 800; font-size: 18px; min-width: 56px; font-variant-numeric: tabular-nums; }
 .steps { counter-reset: s; display: grid; gap: 10px; text-align: left; width: 100%; max-width: 420px; }
 .steps div { display: flex; gap: 10px; align-items: center; }
@@ -339,6 +340,7 @@ body.gated .app { grid-template-columns: 1fr; }
   const initials = (name) => { const p = String(name || '?').trim().split(/\s+/); return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '?'; };
   const hueOf = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+  const horarioTxt = (t) => (t.horario ? (t.horarioFim ? `${t.horario}–${t.horarioFim}` : t.horario) : '');
   const sortByName = (a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
 
   const ICON = {
@@ -665,7 +667,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const n = alunosDaTurma(t.id).length;
     const pres = c ? Object.values(c.registros || {}).filter((v) => v === 'P').length : 0;
     const futuro = dia > today();
-    return `<div class="lesson"><span class="time">${esc(t.horario || '--:--')}</span><span class="dotc" style="background:${esc(t.cor || '#1c2d6b')}"></span>
+    return `<div class="lesson"><span class="time">${esc(t.horario || '--:--')}${t.horarioFim ? `<small class="time-end">até ${esc(t.horarioFim)}</small>` : ''}</span><span class="dotc" style="background:${esc(t.cor || '#1c2d6b')}"></span>
       <div class="grow"><b>${esc(t.nome)}</b><div class="small muted">${plural(n, 'aluno', 'alunos')}${t.professor ? ' · ' + esc(t.professor) : ''}</div></div>
       ${c ? `<button class="pill green num" style="border:0" data-act="go-chamada" data-t="${t.id}" data-d="${dia}">${pres}/${n} presentes</button>` : futuro ? '<span class="pill">agendada</span>' : `<button class="btn sm primary" data-act="go-chamada" data-t="${t.id}" data-d="${dia}">Fazer chamada</button>`}</div>`;
   }
@@ -818,7 +820,7 @@ body.gated .app { grid-template-columns: 1fr; }
           : `<span class="pill">Próxima aula: ${fmtWeekday(prox)}</span>`;
         return `<button class="card tp" data-act="ch-turma" data-t="${t.id}" style="--c:${esc(t.cor || '#1c2d6b')}">
           <div class="row"><b class="grow" style="font-size:17px;font-family:var(--display)">${esc(t.nome)}</b><span class="faint">${icon('right')}</span></div>
-          <span class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || '—'}${t.horario ? ' · ' + esc(t.horario) : ''} · ${plural(n, 'aluno', 'alunos')}</span>
+          <span class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || '—'}${horarioTxt(t) ? ' · ' + esc(horarioTxt(t)) : ''} · ${plural(n, 'aluno', 'alunos')}</span>
           ${status}
         </button>`;
       }).join('')}</div>`;
@@ -842,7 +844,7 @@ body.gated .app { grid-template-columns: 1fr; }
 
     return `<div class="mobile-head brand">${LOGO}<div><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div></div>
       <button class="btn ghost sm" style="align-self:flex-start;margin-left:-8px" data-act="ch-back">${icon('left')}Todas as turmas</button>
-      <div class="page-head"><div><div class="eyebrow" style="color:var(--muted)"><span class="dotc" style="display:inline-block;background:${esc(t.cor || '#1c2d6b')};margin-right:6px;vertical-align:middle"></span>${esc(t.nome)}${t.horario ? ' · ' + esc(t.horario) : ''}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
+      <div class="page-head"><div><div class="eyebrow" style="color:var(--muted)"><span class="dotc" style="display:inline-block;background:${esc(t.cor || '#1c2d6b')};margin-right:6px;vertical-align:middle"></span>${esc(t.nome)}${horarioTxt(t) ? ' · ' + esc(horarioTxt(t)) : ''}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
         <h1>${fmtLong(ch.data).replace(/^./, (c) => c.toUpperCase())}</h1>
         <p>${ch.data === hoje ? 'Aula de hoje' : futuro ? 'Aula futura' : 'Aula anterior'}${diaOk ? '' : ' · <b style="color:var(--amber)">não é dia de aula desta turma</b>'}</p></div></div>
       ${notices()}
@@ -950,7 +952,7 @@ body.gated .app { grid-template-columns: 1fr; }
         let pres = 0, tot = 0; for (const a of al) { const s = st[a.id]; if (s) { pres += s.pres + s.just; tot += s.total; } }
         return `<button class="card pad stack" style="text-align:left;border-top:4px solid ${esc(t.cor || '#1c2d6b')}" data-act="turma-open" data-id="${t.id}">
           <h3 style="font-size:19px">${esc(t.nome)}</h3>
-          <div class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || 'Sem dias'} · ${esc(t.horario || '--:--')}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
+          <div class="small muted">${(t.dias || []).map((d) => DIAS[d]).join(', ') || 'Sem dias'} · ${esc(horarioTxt(t) || '--:--')}${t.professor ? ' · ' + esc(t.professor) : ''}</div>
           <div class="row small"><span class="grow">Alunos</span><b class="num">${al.length}${cap ? ' / ' + cap : ''}</b></div>
           <div class="row" style="gap:0">${al.slice(0, 8).map((x) => `<span style="margin-right:-6px;border:2px solid var(--surface);border-radius:50%">${avatar(x, 28)}</span>`).join('')}${al.length > 8 ? `<span class="small muted" style="margin-left:12px">+${al.length - 8}</span>` : ''}${al.length ? '' : '<span class="small muted">Nenhum aluno ainda</span>'}</div>
           <div class="meter${cap && al.length >= cap ? ' gold' : ''}"><i style="width:${cap ? Math.min(100, Math.round((al.length / cap) * 100)) : 0}%"></i></div>
@@ -1123,7 +1125,8 @@ body.gated .app { grid-template-columns: 1fr; }
     openModal(id ? 'Editar turma' : 'Nova turma', `<div class="form-grid">
       <label class="field full"><span>Nome da turma / curso</span><input class="input" id="t-nome" value="${esc(t.nome)}" placeholder="Ex.: Informática básica — tarde"></label>
       <div class="field full"><span>Dias de aula</span><div class="chips">${DIAS.map((d, i) => `<label class="check" style="padding:6px 10px"><input type="checkbox" name="t-dia" value="${i}"${(t.dias || []).includes(i) ? ' checked' : ''}>${d}</label>`).join('')}</div></div>
-      <label class="field"><span>Horário</span><input class="input" type="time" id="t-hora" value="${esc(t.horario || '')}"></label>
+      <label class="field"><span>Início da aula</span><input class="input" type="time" id="t-hora" value="${esc(t.horario || '')}"></label>
+      <label class="field"><span>Término da aula</span><input class="input" type="time" id="t-hora-fim" value="${esc(t.horarioFim || '')}"></label>
       <label class="field"><span>Vagas</span><input class="input" type="number" min="0" id="t-cap" value="${esc(t.capacidade ?? '')}"></label>
       <label class="field full"><span>Professor(a)</span><input class="input" id="t-prof" value="${esc(t.professor || '')}"></label>
       <div class="field full"><span>Cor</span><div class="chips">${CORES.map((c) => `<label class="check" style="padding:6px 10px"><input type="radio" name="t-cor" value="${c}"${(t.cor || '#1c2d6b') === c ? ' checked' : ''}><span class="dotc" style="background:${c};width:16px;height:16px"></span></label>`).join('')}</div></div>
@@ -1212,9 +1215,10 @@ body.gated .app { grid-template-columns: 1fr; }
   async function saveTurma(id) {
     const nome = val('t-nome');
     if (!nome) return toast('Informe o nome da turma.');
+    if (val('t-hora') && val('t-hora-fim') && val('t-hora-fim') <= val('t-hora')) return toast('O término precisa ser depois do início da aula.');
     const dias = [...document.querySelectorAll('input[name="t-dia"]:checked')].map((x) => Number(x.value));
     const cor = document.querySelector('input[name="t-cor"]:checked')?.value || '#1c2d6b';
-    const body = { ...(id ? S.data.turmas[id] : { criadoEm: new Date().toISOString() }), nome, dias, horario: val('t-hora'), capacidade: Number(val('t-cap')) || 0, professor: val('t-prof'), cor };
+    const body = { ...(id ? S.data.turmas[id] : { criadoEm: new Date().toISOString() }), nome, dias, horario: val('t-hora'), horarioFim: val('t-hora-fim'), capacidade: Number(val('t-cap')) || 0, professor: val('t-prof'), cor };
     const newId = id || uid();
     if (await guard(() => put('turmas', newId, body), id ? 'Turma atualizada.' : `Turma "${nome}" salva. Ela já aparece na Chamada e nas fichas.`)) {
       closeModal();
@@ -1272,9 +1276,9 @@ body.gated .app { grid-template-columns: 1fr; }
     const d = new Date(); const back = (n) => { const x = new Date(d); x.setDate(x.getDate() - n); return ymd(x); };
     const t1 = 'ex-turma-info', t2 = 'ex-turma-reforco', t3 = 'ex-turma-danca';
     const turmas = {
-      [t1]: { nome: 'Informática básica', dias: [1, 3], horario: '14:00', capacidade: 15, professor: 'Prof. Carla', cor: '#1c2d6b', exemplo: true },
-      [t2]: { nome: 'Reforço escolar', dias: [2, 4], horario: '09:00', capacidade: 20, professor: 'Prof. Marcos', cor: '#d99a12', exemplo: true },
-      [t3]: { nome: 'Dança', dias: [6], horario: '10:00', capacidade: 25, professor: 'Prof. Bia', cor: '#17885a', exemplo: true },
+      [t1]: { nome: 'Informática básica', dias: [1, 3], horario: '14:00', horarioFim: '16:00', capacidade: 15, professor: 'Prof. Carla', cor: '#1c2d6b', exemplo: true },
+      [t2]: { nome: 'Reforço escolar', dias: [2, 4], horario: '09:00', horarioFim: '11:00', capacidade: 20, professor: 'Prof. Marcos', cor: '#d99a12', exemplo: true },
+      [t3]: { nome: 'Dança', dias: [6], horario: '10:00', horarioFim: '11:30', capacidade: 25, professor: 'Prof. Bia', cor: '#17885a', exemplo: true },
     };
     const nomes = [['Ana Clara Souza', t1, '2012-04-10'], ['Bruno Lima', t1, '2010-09-22'], ['Camila Rocha', t1, '1988-02-14'], ['Davi Santos', t2, '2014-06-03'], ['Eduarda Alves', t2, '2013-11-29'], ['Felipe Costa', t2, '2015-01-18'], ['Gabriela Nunes', t3, '2011-07-07'], ['Heitor Ramos', t3, '2012-12-01'], ['Isabela Melo', t2, '2014-03-25']];
     const alunos = {};
