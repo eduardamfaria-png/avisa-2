@@ -1,9 +1,10 @@
 // Configuração do projeto Firebase do Instituto Íris.
-// No console do Firebase: Configurações do projeto → Seus apps → app da Web → "Configuração do SDK".
 // Estes valores NÃO são senhas: a proteção dos dados está nas regras (firestore.rules).
 window.IRIS_FIREBASE_CONFIG = {
-  apiKey: 'COLE_AQUI',
-  authDomain: 'COLE_AQUI.firebaseapp.com',
-  projectId: 'COLE_AQUI',
-  appId: 'COLE_AQUI',
+  apiKey: 'AIzaSyAcqwMOuRcwwAjJTQybsaer0pCc8gcrsuQ',
+  authDomain: 'instituto-iris.firebaseapp.com',
+  projectId: 'instituto-iris',
+  storageBucket: 'instituto-iris.firebasestorage.app',
+  messagingSenderId: '24135324388',
+  appId: '1:24135324388:web:2504fc1654f728d43d52f1',
 };
