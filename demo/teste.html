@@ -1250,6 +1250,7 @@ body.gated .app { grid-template-columns: 1fr; }
     return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
   }
   async function saveFile(filename, data) {
+    if (S.demo) return toast('Na versão de teste não dá para baixar planilhas. No sistema oficial, este botão baixa a planilha.');
     if (!downloads) {
       // Fora do Claude: download comum do navegador.
       const url = URL.createObjectURL(new Blob([data], { type: 'text/csv;charset=utf-8' }));
