@@ -22,7 +22,7 @@
     const p = pendentes('pedidos').sort((a, b) => String(a.enviadoEm).localeCompare(String(b.enviadoEm)));
     if (!p.length) return '';
     return `<section><div class="section-title"><h2>Pedidos pelo Portal do Aluno</h2><span>${plural(p.length, 'aguardando aprovação', 'aguardando aprovação')}</span></div>
-      <div class="card list">${p.map((x) => `<button class="item" data-act="ped-open" data-id="${x.id}">${avatar(get('alunos', x.alunoId), 36)}<div class="grow"><strong>${esc(nomeAluno(x.alunoId))}</strong><span class="sub">Quer entrar em <b>${esc(turmaNome(x.turmaId))}</b> · <span class="num">${esc(x.telefone || '')}</span></span></div><span class="pill amber">Avaliar</span></button>`).join('')}</div></section>`;
+      <div class="card list">${p.map((x) => `<button class="item" data-act="ped-open" data-id="${x.id}">${avatar(get('alunos', x.alunoId) || { nome: x.nome }, 36)}<div class="grow"><strong>${esc(nomePedido(x))}</strong><span class="sub">Quer entrar em <b>${esc(cursoPedido(x))}</b>${x.alunoId ? '' : ' · pessoa nova'}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(x.telefone || '—')}</span></div><span class="pill amber">Avaliar</span></button>`).join('')}</div></section>`;
   }
 
   function vPortal() {
@@ -174,28 +174,48 @@
     if (ok) closeModal();
   }
 
+  const cursoDe = (t) => t.curso || t.nome;
+  const cursosList = () => [...new Set(turmasList().map(cursoDe))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const turmasDoCurso = (c) => turmasList().filter((t) => cursoDe(t) === c);
+  const vagasTxt = (t) => { const cap = Number(t.capacidade) || 0; if (!cap) return 'vagas não definidas'; const l = cap - alunosDaTurma(t.id).length; return l > 0 ? plural(l, 'vaga', 'vagas') : 'lotada'; };
+  const nomePedido = (p) => (p.alunoId ? nomeAluno(p.alunoId) : p.nome || 'Sem nome');
+  const cursoPedido = (p) => p.curso || (get('turmas', p.turmaId) ? cursoDe(get('turmas', p.turmaId)) : '—');
+  const waLink = (tel) => { let d = String(tel || '').replace(/\D/g, ''); if (d.length <= 11) d = '55' + d; return `https://wa.me/${d}`; };
+
   function pedidoModal(id) {
     const p = get('pedidos', id); if (!p) return;
-    const a = get('alunos', p.alunoId);
-    const t = get('turmas', p.turmaId); const n = t ? alunosDaTurma(t.id).length : 0; const cap = Number(t?.capacidade) || 0;
-    openModal('Pedido de inscrição', `<div class="row" style="margin-bottom:14px">${avatar(a, 44)}<div class="grow"><b>${esc(nomeAluno(p.alunoId))}</b><div class="small muted">Enviado pelo Portal do Aluno em ${fmtDate((p.enviadoEm || '').slice(0, 10))}</div></div><button class="btn sm" data-act="aluno-open" data-id="${p.alunoId}">Ver ficha</button></div>
-      <dl class="kv"><dt>Curso pedido</dt><dd>${esc(turmaNome(p.turmaId))}${t ? ` · ${cap ? (cap - n > 0 ? plural(cap - n, 'vaga livre', 'vagas livres') : 'sem vagas') : ''}` : ''}</dd>
-        <dt>Telefone</dt><dd class="num">${esc(p.telefone || '—')}</dd>${p.obs ? `<dt>Observação</dt><dd style="font-weight:400">${esc(p.obs)}</dd>` : ''}</dl>
+    const a = p.alunoId ? get('alunos', p.alunoId) : null;
+    const curso = cursoPedido(p);
+    const ts = turmasDoCurso(curso);
+    const sel = p.turmaId || ts[0]?.id || '';
+    openModal('Pedido de inscrição', `<div class="row" style="margin-bottom:14px">${avatar(a || { nome: p.nome }, 44)}<div class="grow"><b>${esc(nomePedido(p))}</b><div class="small muted">${a ? 'Já é aluno(a) do instituto' : 'Pessoa nova: ainda não tem ficha'} · pedido em ${fmtDate((p.enviadoEm || '').slice(0, 10))}</div></div>${a ? `<button class="btn sm" data-act="aluno-open" data-id="${a.id}">Ver ficha</button>` : ''}</div>
+      <div class="card pad" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--green-soft);border-color:transparent;box-shadow:none">
+        <div class="grow"><div class="small" style="color:var(--green);font-weight:700">Telefone / WhatsApp</div><div class="num" style="font-family:var(--display);font-size:22px;font-weight:800;white-space:nowrap">${esc(p.telefone || '—')}</div></div>
+        <a class="btn primary" style="background:var(--green);border-color:var(--green);text-decoration:none" href="${esc(waLink(p.telefone))}" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      </div>
+      <dl class="kv" style="margin-top:14px"><dt>Curso pedido</dt><dd>${esc(curso)}</dd>${p.nascimento ? `<dt>Nascimento</dt><dd>${fmtDate(p.nascimento)} · ${age(p.nascimento)} anos</dd>` : ''}${p.obs ? `<dt>Recado</dt><dd style="font-weight:400">${esc(p.obs)}</dd>` : ''}</dl>
       <div class="form-grid" style="margin-top:16px">
-        <label class="field full"><span>Colocar na turma</span><select class="select" id="p-turma">${turmaOptions(p.turmaId)}</select></label>
-        <label class="field full"><span>Resposta para o aluno (opcional)</span><input class="input" id="p-resp" placeholder="Ex.: as aulas começam no dia 3"></label>
-      </div>`, `<span class="grow"></span><button class="btn danger" data-act="ped-dec" data-id="${id}" data-v="recusado">Recusar</button><button class="btn primary" data-act="ped-dec" data-id="${id}" data-v="aprovado">Aprovar e matricular</button>`);
+        <label class="field"><span>Curso</span><select class="select" id="p-curso">${cursosList().map((c) => `<option${c === curso ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        <label class="field"><span>Turma</span><select class="select" id="p-turma">${ts.map((t) => `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.nome)} · ${esc(vagasTxt(t))}</option>`).join('')}</select></label>
+      </div>
+      <p class="small muted" style="margin-top:12px">Combine com o aluno pelo WhatsApp e depois toque em <b>Matricular e preencher ficha</b>: a ficha completa abre já com o nome, o telefone e a turma, para você terminar de preencher com os dados que ele passar.</p>
+      <label class="field" style="margin-top:12px"><span>Se for recusar: motivo para o aluno (opcional)</span><input class="input" id="p-resp" placeholder="Ex.: turma lotada, abriremos nova turma em março"></label>`,
+      `<button class="btn danger" data-act="ped-dec" data-id="${id}" data-v="recusado">Recusar</button><span class="grow"></span><button class="btn" data-act="modal-close">Depois</button><button class="btn primary" data-act="ped-ficha" data-id="${id}">Matricular e preencher ficha</button>`);
+  }
+  function fichaDoPedido(id) {
+    const p = get('pedidos', id); if (!p) return;
+    const turmaId = val('p-turma');
+    if (!turmaId) return toast('Escolha a turma.');
+    patch('pedidos', id, { turmaEscolhida: turmaId });
+    const a = p.alunoId ? get('alunos', p.alunoId) : null;
+    const t = get('turmas', turmaId);
+    const campos = a
+      ? { turmaIds: [...new Set([...(a.turmaIds || []), turmaId])], status: 'matriculado', matriculaEm: a.matriculaEm || today(), telefone: a.telefone || p.telefone }
+      : { nome: p.nome || '', nascimento: p.nascimento || '', telefone: p.telefone || '', turmaIds: [turmaId], status: 'matriculado', matriculaEm: today(), comoConheceu: 'Outro', obs: p.obs ? 'Recado no pedido pelo portal: ' + p.obs : '' };
+    const banner = `<div class="banner" style="margin-bottom:14px">${icon('info')}<span class="grow">Matrícula em <b>${esc(cursoDe(t))} · ${esc(t.nome)}</b>. Telefone: <b class="num">${esc(p.telefone || '—')}</b> <a href="${esc(waLink(p.telefone))}" target="_blank" rel="noopener" style="color:inherit;font-weight:700">(abrir WhatsApp)</a>. Preencha a ficha com os dados que o aluno passar e toque em <b>Salvar ficha</b> para concluir.</span></div>`;
+    alunoModal(p.alunoId || null, null, { pedidoId: id, campos, banner });
   }
   async function decidirPedido(id, status) {
-    const p = get('pedidos', id); if (!p) return;
-    const turmaId = val('p-turma'); const resposta = val('p-resp');
-    const a = get('alunos', p.alunoId);
-    const ok = await guard(async () => {
-      await patch('pedidos', id, { status, resposta, turmaFinal: status === 'aprovado' ? turmaId : '', avaliadoEm: new Date().toISOString() });
-      if (status === 'aprovado' && a) {
-        const turmaIds = [...new Set([...(a.turmaIds || []), turmaId])];
-        await patch('alunos', a.id, { turmaIds, status: 'matriculado', ...(a.telefone ? {} : { telefone: p.telefone }) });
-      }
-    }, status === 'aprovado' ? `${nomeAluno(p.alunoId).split(' ')[0]} foi matriculado(a) em ${turmaNome(turmaId)}.` : 'Pedido recusado.');
-    if (ok) closeModal();
+    const resposta = val('p-resp');
+    if (await guard(() => patch('pedidos', id, { status, resposta, avaliadoEm: new Date().toISOString() }), 'Pedido recusado.')) closeModal();
   }

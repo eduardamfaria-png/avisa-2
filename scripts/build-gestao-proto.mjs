@@ -56,6 +56,33 @@ rep(`      \${notices()}
 rep(`      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2>`, `      \${pedidosSec()}
       <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2>`);
 
+// Turma ganha o campo "Curso" (um curso pode ter várias turmas, ex.: manhã e tarde).
+rep(`      <label class="field full"><span>Nome da turma / curso</span><input class="input" id="t-nome" value="\${esc(t.nome)}" placeholder="Ex.: Informática básica — tarde"></label>`,
+`      <label class="field"><span>Curso</span><input class="input" id="t-curso" list="dl-cursos" value="\${esc(t.curso || '')}" placeholder="Ex.: Informática básica"><datalist id="dl-cursos">\${cursosList().map((c) => \`<option value="\${esc(c)}">\`).join('')}</datalist></label>
+      <label class="field"><span>Nome da turma</span><input class="input" id="t-nome" value="\${esc(t.nome)}" placeholder="Ex.: Informática básica — tarde"></label>`);
+rep(`professor: val('t-prof'), cor };`, `professor: val('t-prof'), cor, curso: val('t-curso') || nome };`);
+
+// Ficha: pode abrir já preenchida a partir de um pedido do portal, e ao salvar conclui o pedido.
+rep(`  function alunoModal(id, presetTurma) {
+    if (id && !get('alunos', id)) return;
+    const a = id ? { ...get('alunos', id), status: sit(get('alunos', id)) } : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'matriculado', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };`,
+`  function alunoModal(id, presetTurma, pre) {
+    if (id && !get('alunos', id)) return;
+    const a = id ? { ...get('alunos', id), status: sit(get('alunos', id)) } : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'matriculado', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };
+    if (pre) Object.assign(a, pre.campos);`);
+rep(`    openModal(id ? esc(a.nome) : 'Nova inscrição', \`\${photo}\${nav}`, `    openModal(pre ? 'Matrícula: ficha do aluno' : id ? esc(a.nome) : 'Nova inscrição', \`\${pre ? pre.banner : ''}\${photo}\${nav}`);
+rep(`    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'aluno', id });`, `    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'aluno', id, pedidoId: pre ? pre.pedidoId : '' });`);
+rep(`    const newId = id || uid();
+    if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Inscrição salva. Se quiser, adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }`,
+`    const newId = id || uid();
+    const pedidoId = JSON.parse($('#modal-root .modal')?.dataset.ctx || '{}').pedidoId;
+    if (pedidoId) {
+      const turmaFinal = body.turmaIds.find((t) => t === get('pedidos', pedidoId)?.turmaEscolhida) || body.turmaIds[0] || '';
+      if (await guard(async () => { await put('alunos', newId, body); await patch('pedidos', pedidoId, { status: 'aprovado', alunoId: newId, turmaFinal, avaliadoEm: new Date().toISOString() }); }, \`Matrícula concluída: \${nome.split(' ')[0]} está em \${turmaNome(turmaFinal)}.\`)) closeModal();
+      return;
+    }
+    if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Inscrição salva. Se quiser, adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }`);
+
 // Visões e janelas novas.
 rep(`  // ───────────── Finanças ─────────────`, readFileSync('portal/coord-ext.js', 'utf8') + `\n  // ───────────── Finanças ─────────────`);
 
@@ -77,14 +104,20 @@ rep(`      case 'csv-alunos': csvAlunos(); break;`, `      case 'csv-alunos': cs
       case 'just-open': justModal(t.dataset.id); break;
       case 'just-dec': decidirJust(t.dataset.id, t.dataset.v); break;
       case 'ped-open': pedidoModal(t.dataset.id); break;
-      case 'ped-dec': decidirPedido(t.dataset.id, t.dataset.v); break;`);
+      case 'ped-dec': decidirPedido(t.dataset.id, t.dataset.v); break;
+      case 'ped-ficha': fichaDoPedido(t.dataset.id); break;`);
 rep(`        if (key === 'del-lanc')`, `        if (key === 'del-portal') { if (await guard(() => del(ctx.col, ctx.id), 'Removido.')) closeModal(); }
         if (key === 'del-lanc')`);
 rep(`  document.addEventListener('input', (e) => {`, `  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') lerFotoMural(e.target.files[0]); });
   document.addEventListener('input', (e) => {`);
 
+rep(`  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') lerFotoMural(e.target.files[0]); });`,
+`  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') lerFotoMural(e.target.files[0]); if (e.target.id === 'p-curso') { const sel = document.getElementById('p-turma'); sel.innerHTML = turmasDoCurso(e.target.value).map((t) => \`<option value="\${t.id}">\${esc(t.nome)} · \${esc(vagasTxt(t))}</option>\`).join(''); } });`);
+
 // Dados de exemplo do portal.
-rep(`    return { turmas, alunos, chamadas, lancamentos };`, `    Object.assign(turmas[t1], { portalAberto: true, portalDescricao: 'Computador, internet, e-mail, Word e Excel do zero.', portalQuem: 'A partir de 10 anos' });
+rep(`    return { turmas, alunos, chamadas, lancamentos };`, `    turmas[t1].curso = 'Informática básica'; turmas[t2].curso = 'Reforço escolar'; turmas[t3].curso = 'Dança';
+    turmas['ex-turma-info-manha'] = { nome: 'Informática básica — manhã', curso: 'Informática básica', dias: [2, 4], horario: '09:00', horarioFim: '11:00', capacidade: 12, professor: 'Prof. Carla', cor: '#1d8bb5', portalAberto: true, exemplo: true };
+    Object.assign(turmas[t1], { portalAberto: true, portalDescricao: 'Computador, internet, e-mail, Word e Excel do zero.', portalQuem: 'A partir de 10 anos' });
     Object.assign(turmas[t3], { portalAberto: true, portalDescricao: 'Ritmos variados, expressão corporal e apresentações ao longo do ano.', portalQuem: 'A partir de 7 anos' });
     const fwd = (n) => { const x = new Date(d); x.setDate(x.getDate() + n); return ymd(x); };
     const avisos = {
@@ -109,8 +142,8 @@ rep(`    return { turmas, alunos, chamadas, lancamentos };`, `    Object.assign(
       justificativas['ex-ju' + k] = { alunoId: f.aid, turmaId: f.c.turmaId, data: f.c.data, motivo, anexo, status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true };
     });
     const pedidos = {
-      'ex-pe1': { alunoId: 'ex-aluno-3', turmaId: t3, telefone: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente', enviadoEm: new Date(Date.now() - 864e5).toISOString(), exemplo: true },
-      'ex-pe2': { alunoId: 'ex-aluno-6', turmaId: t1, telefone: '(21) 97777-1234', obs: '', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true },
+      'ex-pe1': { alunoId: 'ex-aluno-3', curso: 'Dança', turmaId: t3, telefone: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente', enviadoEm: new Date(Date.now() - 864e5).toISOString(), exemplo: true },
+      'ex-pe2': { alunoId: '', nome: 'Lívia Santos', nascimento: '2016-03-08', curso: 'Informática básica', turmaId: '', telefone: '(21) 97777-1234', obs: 'Sou mãe do Davi, quero inscrever a irmã dele. Prefiro de manhã.', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true },
     };
     return { turmas, alunos, chamadas, lancamentos, avisos, mural, oportunidades, justificativas, pedidos };`);
 
