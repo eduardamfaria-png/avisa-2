@@ -1603,8 +1603,8 @@ body.gated .app { grid-template-columns: 1fr; }
       justificativas['ex-ju' + k] = { alunoId: f.aid, turmaId: f.c.turmaId, data: f.c.data, motivo, anexo, status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true };
     });
     const pedidos = {
-      'ex-pe1': { alunoId: 'ex-aluno-3', curso: 'Dança', turmaId: t3, telefone: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente', enviadoEm: new Date(Date.now() - 864e5).toISOString(), exemplo: true },
-      'ex-pe2': { alunoId: '', nome: 'Lívia Santos', nascimento: '2016-03-08', curso: 'Informática básica', turmaId: '', telefone: '(21) 97777-1234', obs: 'Sou mãe do Davi, quero inscrever a irmã dele. Prefiro de manhã.', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true },
+      'ex-pe1': { alunoId: 'ex-aluno-1', curso: 'Reforço escolar', turmaId: t2, telefone: '(21) 98765-4321', obs: 'Quero reforço de matemática para o ENEM.', status: 'pendente', enviadoEm: new Date(Date.now() - 864e5).toISOString(), exemplo: true },
+      'ex-pe2': { alunoId: 'ex-aluno-2', curso: 'Dança', turmaId: t3, telefone: '(21) 97777-1234', obs: 'Só consigo aos sábados.', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true },
     };
     return { turmas, alunos, chamadas, lancamentos, avisos, mural, oportunidades, justificativas, pedidos };
   }
