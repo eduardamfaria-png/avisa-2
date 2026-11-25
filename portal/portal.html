@@ -176,6 +176,25 @@ textarea.input { resize: vertical; }
 .install { display: flex; gap: 12px; align-items: center; padding: 14px; }
 .install svg { flex: none; width: 26px; height: 26px; color: var(--navy); }
 .post .foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Site aberto */
+.btn svg { width: 18px; height: 18px; flex: none; }
+.feed { align-items: start; }
+.user-btn { margin-left: auto; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; border: 0; background: none; color: var(--navy); font-size: 11.5px; font-weight: 700; padding: 4px 6px; }
+.user-btn svg { width: 30px; height: 30px; padding: 5px; border-radius: 50%; background: var(--navy-soft); }
+.hero { padding: 20px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
+.hero h1 { font-size: 26px; font-weight: 800; margin-top: 4px; } .hero p { margin-top: 6px; opacity: .9; }
+.hero .eyebrow { color: var(--gold); }
+.btn.gold { background: var(--gold); border-color: var(--gold); color: #1a1405; }
+.btn.on-navy { background: transparent; border-color: color-mix(in srgb, var(--navy-ink) 45%, transparent); color: var(--navy-ink); }
+.cta { border-left: 5px solid var(--gold); }
+.cta h3 { font-size: 17px; }
+.logos { display: flex; flex-wrap: wrap; gap: 8px; }
+.logo-chip { padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); font-weight: 700; font-size: 13.5px; }
+.parceiro { display: flex; gap: 12px; align-items: flex-start; }
+.parceiro .pl { width: 52px; height: 52px; border-radius: 14px; flex: none; display: grid; place-items: center; background: var(--c); color: #fff; font-family: var(--display); font-weight: 800; font-size: 18px; }
+.parceiro h3 { font-size: 16.5px; margin-top: 6px; }
+.passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 960px) { .user-btn { display: none; } }
 /* Entrada */
 body.gated .app, body.gated .tabs { display: none; }
 body:not(.gated) #gate { display: none; }
@@ -239,6 +258,8 @@ body:not(.gated) #gate { display: none; }
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v5h1"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
   };
   const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
@@ -404,7 +425,7 @@ body:not(.gated) #gate { display: none; }
   }
 
   function modalInsc(cid) {
-    const c = CURSOS.find((x) => x.id === cid); const int = S.auth?.tipo === 'interessado'; const a = int ? INTERESSADOS[S.auth.email] : aluno();
+    const c = CURSOS.find((x) => x.id === cid); const int = false; const a = aluno();
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
       <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)}</p>
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
@@ -445,158 +466,207 @@ body:not(.gated) #gate { display: none; }
         <div><button class="btn primary" data-saber="${esc(o.link || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
-  // ───── Entrada (3 caminhos) e área de quem ainda não é aluno ─────
-  // No site de verdade estes e-mails vêm das fichas (alunos), da lista da equipe e dos cadastros de interessados.
+  // ───── Site aberto (sem login) para quem ainda não é aluno · login só para aluno e equipe ─────
+  // No site de verdade estes e-mails vêm das fichas (alunos) e da lista da equipe.
   const EMAIL_ALUNOS = { 'familia.souza@exemplo.com': ['ana', 'davi'] };
   const EMAIL_EQUIPE = ['coordenacao@exemplo.com'];
-  const INTERESSADOS = { 'maria.lima@exemplo.com': { nome: 'Maria Lima', telefone: '(21) 98888-1111', nascimento: '2004-05-10', bairro: 'Éden', comoConheceu: 'Instagram' } };
-  const PEDIDOS_INT = { 'maria.lima@exemplo.com': [{ curso: 'danca', status: 'analise', em: ymd(addDays(hoje, -2)), tel: '(21) 98888-1111' }] };
+  const GESTAO_URL = 'https://claude.ai/artifact/TfqAExNJhaTgr9ba39c9az';
   const BAIRROS = ['Éden', 'Vilar dos Teles', 'Coelho da Rocha', 'Jardim Meriti', 'Centro'];
   const COMO = ['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro'];
-  S.auth = null; S.iview = 'i-cursos';
-  const novoLogin = () => ({ modo: '', etapa: 'email', email: '', erro: '', dados: {}, destino: '' });
-  S.login = novoLogin();
+  const SOBRE = 'O Instituto Íris oferece cursos gratuitos para a comunidade de Éden e região: informática, dança, reforço escolar e novos cursos ao longo do ano. Acreditamos que oportunidade é para todos. (Texto de exemplo: a coordenação escreve o texto real no site de gestão.)';
+  const PARCEIROS = [
+    { nome: 'Mercado Bom Preço', tipo: 'Patrocinador', texto: 'Apoia o lanche das turmas.', cor: '#17885a' },
+    { nome: 'Papelaria Central', tipo: 'Parceiro', texto: 'Doa material escolar para o reforço.', cor: '#d99a12' },
+    { nome: 'Escola de Idiomas Parceira', tipo: 'Parceiro', texto: 'Professores voluntários de inglês.', cor: '#1c2d6b' },
+    { nome: 'Loja de Informática do Éden', tipo: 'Apoiador', texto: 'Doou 5 computadores para o laboratório.', cor: '#7a4fd1' },
+  ];
+  const AJUDA = ['Patrocínio', 'Doação (dinheiro ou materiais)', 'Parceria com empresa', 'Ser voluntário(a)', 'Outro'];
+
+  const lerLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  // Quem entrou fica salvo no aparelho: na próxima vez o site já abre na tela certa.
+  S.auth = lerLS('portal:auth', null);
+  if (S.auth?.tipo === 'aluno' && EMAIL_ALUNOS[S.auth.email]) S.aluno = EMAIL_ALUNOS[S.auth.email][0];
+  else if (S.auth && S.auth.tipo !== 'equipe') S.auth = null;
+  // Visitante: cadastro e inscrições ficam guardados no aparelho para acompanhar.
+  S.vis = lerLS('portal:visitante', { dados: null, pedidos: [] });
+  S.pview = 'p-inicio';
+  const salvarVis = () => gravarLS('portal:visitante', S.vis);
   const okEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-  const voltarBtn = '<button class="btn ghost sm" data-login="voltar">← Voltar</button>';
-  const testeHint = () => `<div class="banner">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · já cadastrado <b>maria.lima@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>. Outros e-mails mostram o aviso de e-mail não encontrado.</span></div>`;
-  const choice = (m, ic, t, sub) => `<button class="choice" data-login="${m}"><span class="ic">${icon(ic)}</span><span class="grow"><b>${t}</b><small>${sub}</small></span></button>`;
+  const ERR = (h) => `<div class="banner err"><span>${h}</span></div>`;
 
-  function loginScreen() {
-    const L = S.login; let body;
-    if (L.etapa === 'enviado') body = `${voltarBtn}<h1>Confira seu e-mail</h1><p>Enviamos um link de acesso para <b>${esc(L.email)}</b>. Toque nele para entrar. Depois disso você continua conectado(a) neste aparelho.</p>
-      <button class="btn primary block" data-login="abrir">Simular: abrir o link do e-mail</button><p class="small faint">No protótipo não chega e-mail de verdade: use o botão acima.</p>`;
-    else if (L.etapa === 'equipe') body = `${voltarBtn}<h1>Área da equipe</h1><p>No site de verdade, aqui você entraria direto no <b>site de gestão</b>: Painel, Chamada, Turmas, Inscrições, Portal e Finanças.</p>`;
-    else if (!L.modo) body = `<h1>Entrar</h1><p class="muted">Como você quer entrar?</p><div class="stack">
-      ${choice('aluno', 'book', 'Sou aluno', 'Já estudo no Instituto Íris')}${choice('cadastro', 'plus', 'Ainda não sou aluno', 'Quero ver os cursos com vaga e me inscrever')}${choice('equipe', 'check', 'Sou da equipe', 'Coordenação e professores')}</div>${testeHint()}`;
-    else if (L.etapa === 'cadastro') body = cadastroForm();
-    else body = emailForm();
-    return `<div class="gate"><div class="card gate-card"><div class="gate-logo">${LOGO}</div>${body}</div></div>`;
-  }
-  function emailForm() {
-    const L = S.login;
-    const t = { aluno: ['Sou aluno', 'Digite o e-mail que você deu na sua ficha de inscrição.'], equipe: ['Sou da equipe', 'Digite seu e-mail da equipe.'], novo: ['Já tenho cadastro', 'Digite o e-mail que você usou no cadastro.'] }[L.modo];
-    return `${voltarBtn}<h1>${t[0]}</h1><p class="muted">${t[1]} Vamos enviar um link para você entrar, sem senha.</p>
-      <form id="form-login" class="stack" novalidate><input class="input" type="email" id="login-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email)}"><button class="btn primary block">Receber link de acesso</button></form>
-      ${L.erro ? `<div class="banner err"><span>${L.erro}</span></div>` : ''}
-      ${L.modo === 'aluno' ? '<button class="btn ghost sm" data-login="cadastro">Ainda não sou aluno: fazer cadastro</button>' : L.modo === 'novo' ? '<button class="btn ghost sm" data-login="cadastro">Não tenho cadastro: criar agora</button>' : ''}${testeHint()}`;
-  }
-  function cadastroForm() {
-    const L = S.login; const d = L.dados;
-    const f = (id, label, input, req) => `<label class="field"><span>${label}${req ? ' <b class="req">*</b>' : ''}</span>${input}</label>`;
-    return `${voltarBtn}<h1>Cadastro rápido</h1><p class="muted">Leva menos de um minuto. Depois você já vê os cursos com vaga e pode se inscrever.</p>
-      <form id="form-cad" class="stack" novalidate>
-        ${f('c-nome', 'Nome completo', `<input class="input" id="c-nome" autocomplete="name" value="${esc(d.nome || '')}">`, 1)}
-        ${f('c-email', 'E-mail', `<input class="input" type="email" id="c-email" autocomplete="email" placeholder="seu@email.com" value="${esc(d.email || '')}">`, 1)}
-        ${f('c-tel', 'WhatsApp', `<input class="input" type="tel" id="c-tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${esc(d.tel || '')}">`, 1)}
-        ${f('c-nasc', 'Data de nascimento', `<input class="input" type="date" id="c-nasc" value="${esc(d.nasc || '')}">`, 1)}
-        ${f('c-bairro', 'Bairro onde mora', `<input class="input" id="c-bairro" list="dl-bairros" placeholder="Ex.: Éden" value="${esc(d.bairro || '')}"><datalist id="dl-bairros">${BAIRROS.map((b) => `<option value="${b}">`).join('')}</datalist>`, 1)}
-        ${f('c-como', 'Como conheceu o Íris', `<select class="input" id="c-como"><option value="">Escolha (opcional)</option>${COMO.map((c) => `<option${d.como === c ? ' selected' : ''}>${c}</option>`).join('')}</select>`)}
-        <label class="check"><input type="checkbox" id="c-aceite"${d.aceite ? ' checked' : ''}><span class="small">Aceito receber comunicações do Instituto Íris sobre novos cursos e novidades por e-mail ou WhatsApp. Posso cancelar quando quiser.</span></label>
-        ${L.erro ? `<div class="banner err"><span>${L.erro}</span></div>` : ''}
-        <button class="btn primary block">Criar cadastro</button>
-      </form>
-      <button class="btn ghost sm" data-login="novo">Já tenho cadastro: entrar</button>`;
-  }
-  function loginSubmit(email) {
-    const L = S.login; L.email = email; L.erro = '';
-    if (!okEmail(email)) { L.erro = 'Digite um e-mail válido, como nome@gmail.com.'; return render(); }
-    const ehAluno = !!EMAIL_ALUNOS[email], ehInt = !!INTERESSADOS[email], ehEquipe = EMAIL_EQUIPE.includes(email);
-    if (L.modo === 'aluno') {
-      if (ehAluno) { L.etapa = 'enviado'; L.destino = 'aluno'; }
-      else if (ehInt) L.erro = 'Este e-mail tem um cadastro de quem ainda não é aluno. Volte e entre por <b>"Ainda não sou aluno"</b>.';
-      else L.erro = '<b>Este e-mail não está na ficha de nenhum aluno.</b><br>Confira se digitou certo. Se continuar dando erro, fale com a coordenação para conferir o e-mail da sua ficha.';
-    } else if (L.modo === 'equipe') {
-      if (ehEquipe) { L.etapa = 'enviado'; L.destino = 'equipe'; }
-      else L.erro = '<b>Este e-mail não tem acesso à área da equipe.</b><br>Confira se digitou certo.';
-    } else {
-      if (ehInt) { L.etapa = 'enviado'; L.destino = 'interessado'; }
-      else if (ehAluno) L.erro = 'Este e-mail é de um aluno. Volte e entre por <b>"Sou aluno"</b>.';
-      else L.erro = '<b>Não encontramos cadastro com este e-mail.</b><br>Confira se digitou certo ou crie seu cadastro abaixo.';
-    }
-    render();
-  }
-  function cadastroSubmit() {
-    const L = S.login; const g = (id) => document.getElementById(id);
-    const d = L.dados = { nome: g('c-nome').value.trim(), email: g('c-email').value.trim().toLowerCase(), tel: g('c-tel').value.trim(), nasc: g('c-nasc').value, bairro: g('c-bairro').value.trim(), como: g('c-como').value, aceite: g('c-aceite').checked };
-    const dig = d.tel.replace(/\D/g, '');
-    const falta = [!d.nome && 'nome', !okEmail(d.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !d.nasc && 'data de nascimento', !d.bairro && 'bairro'].filter(Boolean);
-    L.erro = '';
-    if (falta.length) L.erro = `Preencha: ${falta.join(', ')}.`;
-    else if (EMAIL_ALUNOS[d.email]) L.erro = 'Este e-mail já é de um aluno. Volte e entre por <b>"Sou aluno"</b>.';
-    else if (INTERESSADOS[d.email]) L.erro = 'Você já tem cadastro com este e-mail. Toque em <b>"Já tenho cadastro: entrar"</b>.';
-    else {
-      INTERESSADOS[d.email] = { nome: d.nome, telefone: fmtTel(dig), nascimento: d.nasc, bairro: d.bairro, comoConheceu: d.como, aceitaComunicacoes: d.aceite ? 'Sim' : 'Não' };
-      L.email = d.email; L.etapa = 'enviado'; L.destino = 'interessado';
-    }
-    render();
-  }
-
-  // Área de quem ainda não é aluno
-  const interessado = () => INTERESSADOS[S.auth.email];
-  function headerInt(eyebrow, title, sub) {
-    return `<div class="top">${LOGO}<div class="grow"><b>Portal Íris</b><small>${esc(interessado().nome)}</small></div><button class="btn sm sair-m" data-sair="1">Sair</button></div>
-      <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
+  function pHeader() {
+    return `<div class="top">${LOGO}<div class="grow"><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div><button class="user-btn" data-entrar="1" aria-label="Entrar (alunos e equipe)">${icon('user')}<span>Entrar</span></button></div>`;
   }
   const STI = { enviada: 0, analise: 1, matriculado: 2 };
-  function vICursos() {
-    const meus = PEDIDOS_INT[S.auth.email] || [];
-    const abertos = CURSOS.filter((c) => c.vagas > 0);
-    return headerInt('Cursos do Íris', `Olá, ${esc(interessado().nome.split(' ')[0])}!`, 'Cursos gratuitos com vagas abertas agora. Escolha e faça sua inscrição.') + (abertos.length ? `<div class="feed">${abertos.map((c) => {
-      const p = meus.find((x) => x.curso === c.id && x.status !== 'recusado');
-      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill green">${plural(c.vagas, 'vaga', 'vagas')}</span></div>
-        <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
-        <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-        <div>${p ? '<button class="btn" data-nav="i-minhas">Inscrição enviada · acompanhar</button>' : `<button class="btn primary" data-insc="${c.id}">Quero me inscrever</button>`}</div></article>`;
-    }).join('')}</div>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>');
-  }
-  function vIMinhas() {
-    const meus = (PEDIDOS_INT[S.auth.email] || []).map((p, i) => ({ ...p, i }));
-    const tel = interessado().telefone;
-    return headerInt('Minhas inscrições', 'Acompanhe sua inscrição', '') + (meus.length ? `<div class="stack">${meus.reverse().map((p) => {
+  function minhasInsc() {
+    const ps = S.vis.pedidos; if (!ps.length) return '';
+    return `<section><div class="section-title"><h2>Sua inscrição</h2><span>${esc(S.vis.dados?.nome?.split(' ')[0] || '')}</span></div><div class="stack">${ps.map((p, i) => ({ ...p, i })).reverse().map((p) => {
       const c = CURSOS.find((x) => x.id === p.curso); const k = STI[p.status];
-      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(p.tel || tel)}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! No próximo acesso, entre por <b>"Sou aluno"</b> com este mesmo e-mail para ver suas aulas e sua frequência.', recusado: 'Não foi possível desta vez.' }[p.status];
-      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:18px">${esc(c.nome)}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
-        ${p.status === 'recusado' ? '<span class="pill red" style="margin-top:8px">Não aprovada</span>' : `<div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>`}
+      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, no topo, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
+      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
+        <div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
         <p class="small" style="margin-top:10px">${txt}</p>
-        ${p.status !== 'matriculado' && p.status !== 'recusado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
-    }).join('')}</div>` : `<div class="empty">Você ainda não se inscreveu em nenhum curso.<br><button class="btn primary" style="margin-top:12px" data-nav="i-cursos">Ver cursos com vaga</button></div>`);
+        ${p.status !== 'matriculado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
+    }).join('')}</div></section>`;
   }
-  const NAV_INT = [['i-cursos', 'Cursos com vaga', 'plus'], ['i-minhas', 'Minhas inscrições', 'check']];
+  function cursoCard(c) {
+    const p = S.vis.pedidos.find((x) => x.curso === c.id);
+    return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : ''}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Sem vagas no momento'}</span></div>
+      <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
+      <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
+      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe no Início</span>' : c.vagas ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
+  }
+  function postCard(m) {
+    return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
+      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
+  }
+  function vPInicio() {
+    const abertos = CURSOS.filter((c) => c.vagas > 0);
+    return pHeader() + `
+      <section class="card hero"><div class="eyebrow">Oportunidade para todos</div><h1>Cursos gratuitos em Éden</h1><p>Informática, dança, reforço escolar e muito mais. Faça sua inscrição em poucos minutos.</p>
+        <div class="row wrapx" style="margin-top:12px"><button class="btn gold" data-nav="p-cursos">Ver cursos com vaga</button><button class="btn on-navy" data-nav="p-associado">Seja um associado</button></div></section>
+      ${minhasInsc()}
+      <div class="feed">
+        ${abertos[0] ? `<div class="stack"><span class="eyebrow">Inscrições abertas</span>${cursoCard(abertos[0])}</div>` : ''}
+        ${MURAL[0] ? postCard(MURAL[0]) : ''}
+        ${MURAL[1] ? postCard(MURAL[1]) : ''}
+        ${abertos[1] ? `<div class="stack"><span class="eyebrow">Inscrições abertas</span>${cursoCard(abertos[1])}</div>` : ''}
+        <article class="card pad cta"><h3>Quer ajudar o Íris a crescer?</h3><p class="muted">Empresas e pessoas podem patrocinar, doar ou ser parceiras do instituto.</p><button class="btn primary" data-nav="p-associado" style="margin-top:10px">Seja um associado</button></article>
+        ${MURAL.slice(2).map(postCard).join('')}
+      </div>
+      <section><div class="section-title"><h2>Quem apoia o Íris</h2><button class="btn sm" data-nav="p-parceiros">Ver todos</button></div><div class="logos">${PARCEIROS.map((p) => `<span class="logo-chip" style="--c:${p.cor}">${esc(p.nome)}</span>`).join('')}</div></section>`;
+  }
+  function vPCursos() {
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Cursos do Íris</div><h1>Nossos cursos</h1><p>Todos gratuitos. Escolha um curso com vaga e faça sua inscrição.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(!!b.vagas) - Number(!!a.vagas)).map(cursoCard).join('')}</div>`;
+  }
+  function vPSobre() {
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Sobre</div><h1>Instituto Íris</h1></div>
+      <section class="card pad"><p>${esc(SOBRE)}</p></section>
+      <section class="card pad"><h2 style="font-size:18px;margin-bottom:10px">Como se inscrever</h2><ol class="passos"><li><b>Escolha um curso com vaga</b> na aba Cursos.</li><li><b>Preencha o cadastro rápido</b>: nome, contato, nascimento e bairro.</li><li><b>A coordenação fala com você no WhatsApp</b> para combinar a turma.</li></ol><button class="btn primary" data-nav="p-cursos" style="margin-top:12px">Ver cursos</button></section>
+      <section class="card pad row wrapx"><span class="grow">Acompanhe as novidades no Instagram <b>@instituto__iris</b></span><button class="btn" data-insta="1">Abrir Instagram ↗</button></section>`;
+  }
+  function vPParceiros() {
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Parceiros</div><h1>Quem apoia o Íris</h1><p>Empresas e pessoas que tornam os cursos gratuitos possíveis. (Exemplos: a coordenação cadastra os parceiros reais.)</p></div>
+      <div class="feed">${PARCEIROS.map((p) => `<article class="card pad parceiro" style="--c:${p.cor}"><span class="pl">${esc(p.nome.split(' ').map((w) => w[0]).slice(0, 2).join(''))}</span><div class="grow"><span class="pill">${esc(p.tipo)}</span><h3>${esc(p.nome)}</h3><p class="small muted">${esc(p.texto)}</p></div></article>`).join('')}</div>
+      <article class="card pad cta"><h3>Sua empresa também pode apoiar</h3><button class="btn primary" data-nav="p-associado" style="margin-top:10px">Seja um associado</button></article>`;
+  }
+  function vPAssociado() {
+    if (S.assocEnviado) return pHeader() + `<section class="card pad" style="text-align:center"><h1 style="font-size:24px">Obrigado!</h1><p class="muted" style="margin-top:6px">Recebemos seu contato. A coordenação vai falar com você em breve.</p><button class="btn" data-nav="p-inicio" style="margin-top:14px">Voltar ao início</button></section>`;
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Seja um associado</div><h1>Apoie o Instituto Íris</h1><p>Patrocine, doe, seja parceiro ou voluntário. Deixe seu contato e a coordenação fala com você.</p></div>
+      <section class="card pad"><form id="form-assoc" class="stack" novalidate>
+        <label class="field"><span>Seu nome <b class="req">*</b></span><input class="input" id="as-nome" autocomplete="name"></label>
+        <label class="field"><span>Empresa (se for o caso)</span><input class="input" id="as-emp" autocomplete="organization"></label>
+        <label class="field"><span>WhatsApp <b class="req">*</b></span><input class="input" type="tel" id="as-tel" inputmode="tel" placeholder="(21) 99999-9999" maxlength="16"></label>
+        <label class="field"><span>E-mail</span><input class="input" type="email" id="as-email" placeholder="seu@email.com"></label>
+        <label class="field"><span>Como quer ajudar</span><select class="input" id="as-ajuda">${AJUDA.map((a) => `<option>${a}</option>`).join('')}</select></label>
+        <label class="field"><span>Mensagem (opcional)</span><textarea class="input" id="as-msg" rows="3"></textarea></label>
+        ${S.assocErro ? ERR(S.assocErro) : ''}
+        <button class="btn primary block">Enviar</button></form></section>`;
+  }
+
+  // Inscrição de quem ainda não é aluno: cadastro rápido junto com a inscrição (sem login).
+  function modalPInsc(cid) {
+    const c = CURSOS.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
+    const v = (k) => esc(t[k] ?? d[k] ?? '');
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
+      <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${plural(c.vagas, 'vaga', 'vagas')}</p>
+      <form id="form-pinsc" class="stack" data-c="${esc(cid)}" novalidate>
+        ${d.nome ? `<p class="small muted">Seus dados do cadastro já estão preenchidos. Confira e envie.</p>` : '<p class="small muted">Cadastro rápido: leva menos de um minuto.</p>'}
+        <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
+        <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
+        <label class="field"><span>WhatsApp <b class="req">*</b></span><input class="input" type="tel" id="pi-tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${v('telefone')}"></label>
+        <label class="field"><span>Data de nascimento <b class="req">*</b></span><input class="input" type="date" id="pi-nasc" value="${v('nascimento')}"></label>
+        <label class="field"><span>Bairro onde mora <b class="req">*</b></span><input class="input" id="pi-bairro" list="dl-bairros" placeholder="Ex.: Éden" value="${v('bairro')}"><datalist id="dl-bairros">${BAIRROS.map((b) => `<option value="${b}">`).join('')}</datalist></label>
+        <label class="field"><span>Como conheceu o Íris</span><select class="input" id="pi-como"><option value="">Escolha (opcional)</option>${COMO.map((x) => `<option${(t.comoConheceu ?? d.comoConheceu) === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="check"><input type="checkbox" id="pi-aceite"${(t.aceite ?? d.aceite) ? ' checked' : ''}><span class="small">Aceito receber comunicações do Instituto Íris sobre novos cursos e novidades por e-mail ou WhatsApp. Posso cancelar quando quiser.</span></label>
+        ${S.modal.erro ? ERR(S.modal.erro) : ''}
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
+      </form></div></div>`;
+  }
+  function enviarPInsc(form) {
+    const g = (id) => document.getElementById(id).value.trim();
+    const t = S.modal.tmp = { nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
+    const dig = t.telefone.replace(/\D/g, '');
+    const falta = [!t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
+    S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, no topo, para se inscrever pelo Portal do Aluno.' : '';
+    if (S.modal.erro) return render();
+    S.vis.dados = { ...t, telefone: fmtTel(dig) };
+    S.vis.pedidos.push({ curso: form.dataset.c, status: 'enviada', em: H });
+    salvarVis(); S.modal = null; S.pview = 'p-inicio'; render(); try { window.scrollTo(0, 0); } catch {}
+    toast('Inscrição enviada! Acompanhe aqui no início do site.');
+  }
+
+  // Entrar (a "pessoinha"): só aluno e equipe.
+  function modalEntrar() {
+    const L = S.modal; let body;
+    const voltar = '<button class="btn ghost sm" data-ent="voltar">← Voltar</button>';
+    if (L.etapa === 'enviado') body = `${voltar}<h2>Confira seu e-mail</h2><p style="margin-top:6px">Enviamos um link de acesso para <b>${esc(L.email)}</b>. Toque nele para entrar. Depois disso você continua conectado(a) neste aparelho.</p>
+      <button class="btn primary block" data-ent="abrir" style="margin-top:14px">Simular: abrir o link do e-mail</button><p class="small faint" style="margin-top:6px">No protótipo não chega e-mail de verdade: use o botão acima.</p>`;
+    else if (!L.modo) body = `<h2>Entrar</h2><p class="muted small" style="margin:4px 0 14px">Área para alunos e equipe do Íris.</p><div class="stack">
+      <button class="choice" data-ent="aluno"><span class="ic">${icon('book')}</span><span class="grow"><b>Sou aluno</b><small>Ver minhas aulas, frequência e avisos</small></span></button>
+      <button class="choice" data-ent="equipe"><span class="ic">${icon('check')}</span><span class="grow"><b>Sou da equipe</b><small>Coordenação e professores</small></span></button></div>
+      <p class="small muted" style="margin-top:14px">Ainda não é aluno? Não precisa entrar: escolha um curso com vaga e faça sua inscrição.</p>`;
+    else body = `${voltar}<h2>${L.modo === 'aluno' ? 'Sou aluno' : 'Sou da equipe'}</h2><p class="muted small" style="margin:4px 0 14px">${L.modo === 'aluno' ? 'Digite o e-mail que você deu na sua ficha de inscrição.' : 'Digite seu e-mail da equipe.'} Vamos enviar um link para você entrar, sem senha.</p>
+      <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block">Receber link de acesso</button></form>
+      ${L.erro ? `<div style="margin-top:12px">${ERR(L.erro)}</div>` : ''}
+      <div class="banner" style="margin-top:12px">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>.</span></div>`;
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Entrar">${body}</div></div>`;
+  }
+  function enviarEntrar() {
+    const L = S.modal; L.email = document.getElementById('ent-email').value.trim().toLowerCase(); L.erro = '';
+    if (!okEmail(L.email)) L.erro = 'Digite um e-mail válido, como nome@gmail.com.';
+    else if (L.modo === 'aluno' && !EMAIL_ALUNOS[L.email]) L.erro = '<b>Este e-mail não está na ficha de nenhum aluno.</b><br>Confira se digitou certo. Se continuar dando erro, fale com a coordenação para conferir o e-mail da sua ficha.';
+    else if (L.modo === 'equipe' && !EMAIL_EQUIPE.includes(L.email)) L.erro = '<b>Este e-mail não tem acesso à área da equipe.</b><br>Confira se digitou certo.';
+    else L.etapa = 'enviado';
+    render();
+  }
+  function telaEquipe() {
+    return `<div class="gate"><div class="card gate-card"><div class="gate-logo">${LOGO}</div><div class="eyebrow">Área da equipe</div><h1>Olá, equipe!</h1>
+      <p>No site de verdade, a tela inteira vira o <b>site de gestão</b> (Painel, Chamada, Turmas, Inscrições, Portal e Finanças) e fica salva neste aparelho.</p>
+      <a class="btn primary block" href="${GESTAO_URL}" target="_blank" rel="noopener" style="text-decoration:none">Abrir o protótipo da gestão ↗</a>
+      <button class="btn block" data-sair="1">Sair</button></div></div>`;
+  }
 
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
-  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
+  const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Sobre', 'info'], ['p-parceiros', 'Parceiros', 'heart'], ['p-associado', 'Associe-se', 'plus']];
+  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris', 'p-associado': 'Seja um associado' };
   function render() {
-    document.body.classList.toggle('gated', !S.auth);
-    if (!S.auth) { $('#gate').innerHTML = loginScreen(); $('#modal-root').innerHTML = ''; return; }
-    $('#gate').innerHTML = '';
-    const int = S.auth.tipo === 'interessado';
-    const nav = int ? NAV_INT : NAV; const cur = int ? S.iview : S.view;
-    const dots = int ? {} : { inicio: avisosAtivos(aluno()).length };
+    const eq = S.auth?.tipo === 'equipe';
+    document.body.classList.toggle('gated', eq);
+    $('#gate').innerHTML = eq ? telaEquipe() : '';
+    if (eq) { $('#modal-root').innerHTML = ''; return; }
+    const pub = !S.auth;
+    const nav = pub ? PNAV : NAV; const cur = pub ? S.pview : S.view;
+    const dots = pub ? {} : { inicio: avisosAtivos(aluno()).length };
     const btn = ([id, l, ic]) => `<button class="tab${cur === id ? ' on' : ''}" data-nav="${id}" aria-current="${cur === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
     $('#tabs').innerHTML = nav.map(btn).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${int ? 'Portal Íris' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}<div class="side-foot"><button class="btn sm block" data-sair="1">Sair</button></div>`;
-    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'i-cursos': vICursos, 'i-minhas': vIMinhas };
-    $('#view').innerHTML = (V[cur] || (int ? vICursos : vInicio))();
-    $('#modal-root').innerHTML = S.modal ? (S.modal.tipo === 'just' ? modalJust(S.modal.k) : modalInsc(S.modal.c)) : '';
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}<div class="side-foot">${pub ? `<button class="btn block" data-entrar="1">${icon('user')}Entrar</button><p class="small faint" style="margin-top:6px">Para alunos e equipe</p>` : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
+    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros, 'p-associado': vPAssociado };
+    $('#view').innerHTML = (V[cur] || (pub ? vPInicio : vInicio))();
+    const M = S.modal;
+    $('#modal-root').innerHTML = !M ? '' : M.tipo === 'just' ? modalJust(M.k) : M.tipo === 'insc' ? modalInsc(M.c) : M.tipo === 'pinsc' ? modalPInsc(M.c) : modalEntrar();
   }
   function toast(m) { $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => ($('#toast-root').innerHTML = ''), 3000); }
 
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
-    if (nav) { if (S.auth?.tipo === 'interessado') S.iview = nav.dataset.nav; else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
-    const lg = e.target.closest('[data-login]');
-    if (lg) {
-      const v = lg.dataset.login; const L = S.login;
-      if (v === 'voltar') S.login = novoLogin();
-      else if (v === 'cadastro') { S.login = novoLogin(); S.login.modo = 'novo'; S.login.etapa = 'cadastro'; }
-      else if (v === 'abrir') { if (L.destino === 'equipe') L.etapa = 'equipe'; else { S.auth = { tipo: L.destino, email: L.email }; if (L.destino === 'aluno') S.aluno = EMAIL_ALUNOS[L.email][0]; S.iview = 'i-cursos'; } }
-      else { S.login = novoLogin(); S.login.modo = v; }
-      render(); try { window.scrollTo(0, 0); } catch {} document.getElementById('login-email')?.focus(); return;
+    if (nav) { if (!S.auth) { S.pview = nav.dataset.nav; S.assocEnviado = false; } else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
+    if (e.target.closest('[data-entrar]')) { S.modal = { tipo: 'entrar', modo: '', etapa: '' }; render(); return; }
+    const en = e.target.closest('[data-ent]');
+    if (en) {
+      const v = en.dataset.ent; const L = S.modal;
+      if (v === 'voltar') S.modal = { tipo: 'entrar', modo: '', etapa: '' };
+      else if (v === 'abrir') { S.auth = { tipo: L.modo, email: L.email }; gravarLS('portal:auth', S.auth); if (L.modo === 'aluno') { S.aluno = EMAIL_ALUNOS[L.email][0]; S.view = 'inicio'; } S.modal = null; try { window.scrollTo(0, 0); } catch {} }
+      else { L.modo = v; L.erro = ''; }
+      render(); document.getElementById('ent-email')?.focus(); return;
     }
-    if (e.target.closest('[data-sair]')) { S.auth = null; S.login = novoLogin(); render(); return; }
+    if (e.target.closest('[data-sair]')) { S.auth = null; gravarLS('portal:auth', null); S.pview = 'p-inicio'; render(); return; }
     const av = e.target.closest('[data-avancar]');
-    if (av) { const p = PEDIDOS_INT[S.auth.email][Number(av.dataset.avancar)]; p.status = p.status === 'enviada' ? 'analise' : 'matriculado'; render(); return; }
+    if (av) { const p = S.vis.pedidos[Number(av.dataset.avancar)]; p.status = p.status === 'enviada' ? 'analise' : 'matriculado'; salvarVis(); render(); return; }
+    const pi = e.target.closest('[data-pinsc]'); if (pi) { S.modal = { tipo: 'pinsc', c: pi.dataset.pinsc }; render(); return; }
+    if (e.target.closest('[data-insta]')) { toast('No site de verdade, abre o Instagram @instituto__iris.'); return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
     const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
@@ -606,8 +676,14 @@ body:not(.gated) #gate { display: none; }
   });
   document.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (e.target.id === 'form-login') return loginSubmit(document.getElementById('login-email').value.trim().toLowerCase());
-    if (e.target.id === 'form-cad') return cadastroSubmit();
+    if (e.target.id === 'form-entrar') return enviarEntrar();
+    if (e.target.id === 'form-pinsc') return enviarPInsc(e.target);
+    if (e.target.id === 'form-assoc') {
+      const g = (id) => document.getElementById(id).value.trim(); const dig = g('as-tel').replace(/\D/g, '');
+      S.assocErro = !g('as-nome') ? 'Escreva seu nome.' : (dig.length < 10 || dig.length > 11) ? 'Digite um WhatsApp com DDD.' : '';
+      if (!S.assocErro) S.assocEnviado = true;
+      render(); return;
+    }
     if (e.target.id === 'form-just') {
       const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
       const f = document.getElementById('just-arq').files[0];
@@ -618,7 +694,6 @@ body:not(.gated) #gate { display: none; }
       const tel = document.getElementById('insc-tel').value.trim(); const dig = tel.replace(/\D/g, '');
       if (dig.length < 10 || dig.length > 11) { document.getElementById('insc-tel-err').hidden = false; document.getElementById('insc-tel').focus(); return; }
       const obs = document.getElementById('insc-obs').value.trim();
-      if (S.auth.tipo === 'interessado') { (PEDIDOS_INT[S.auth.email] ||= []).push({ curso: e.target.dataset.c, status: 'enviada', em: H, tel: fmtTel(dig), obs }); S.modal = null; S.iview = 'i-minhas'; render(); toast('Inscrição enviada! Acompanhe em Minhas inscrições.'); return; }
       S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });

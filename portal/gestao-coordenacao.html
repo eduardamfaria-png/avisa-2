@@ -1258,11 +1258,11 @@ body.gated .app { grid-template-columns: 1fr; }
   const statusInt = (x) => x.alunoId ? ['Virou aluno', 'green'] : pendentes('pedidos').some((p) => p.interessadoId === x.id) ? ['Pedido em análise', 'amber'] : ['Só cadastro', ''];
   function interessadosPanel() {
     const l = list('interessados').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
-    if (!l.length) return '<div class="empty card"><h3>Nenhum interessado ainda</h3><p>Quem fizer o cadastro rápido no portal ("Ainda não sou aluno") aparece aqui.</p></div>';
+    if (!l.length) return '<div class="empty card"><h3>Nenhum interessado ainda</h3><p>Quem se inscrever num curso pelo site aberto (sem ser aluno) aparece aqui.</p></div>';
     const mes = ym(new Date());
     const viraram = l.filter((x) => x.alunoId).length;
     const porFaixa = countBy(l, (x) => faixa({ nascimento: x.nascimento })).sort((a, b) => FAIXAS.findIndex((f) => f[0] === a[0]) - FAIXAS.findIndex((f) => f[0] === b[0]));
-    return `<p class="small muted">Pessoas que fizeram o cadastro rápido no portal ("Ainda não sou aluno"). Mostram até onde a divulgação do Íris está chegando.</p>
+    return `<p class="small muted">Pessoas que ainda não são alunas e fizeram o cadastro rápido ao se inscrever pelo site aberto. Mostram até onde a divulgação do Íris está chegando.</p>
       <div class="minis">
         <div><b class="num">${l.length}</b><span>cadastros</span></div>
         <div><b class="num">${l.filter((x) => (x.criadoEm || '').startsWith(mes)).length}</b><span>novos em ${MESES[new Date().getMonth()]}</span></div>
