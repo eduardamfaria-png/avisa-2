@@ -1,4 +1,4 @@
-<title>Portal do Aluno Íris</title>
+<title>Site Instituto Íris</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
@@ -486,6 +486,8 @@ body:not(.gated) #gate { display: none; }
   const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   // Quem entrou fica salvo no aparelho: na próxima vez o site já abre na tela certa.
   S.auth = lerLS('portal:auth', null);
+  // Versão do protótipo que já abre na tela do aluno (link separado para mostrar à coordenação).
+  if (!S.auth && window.PORTAL_INICIO === 'aluno') S.auth = { tipo: 'aluno', email: 'familia.souza@exemplo.com' };
   if (S.auth?.tipo === 'aluno' && EMAIL_ALUNOS[S.auth.email]) S.aluno = EMAIL_ALUNOS[S.auth.email][0];
   else if (S.auth && S.auth.tipo !== 'equipe') S.auth = null;
   // Visitante: cadastro e inscrições ficam guardados no aparelho para acompanhar.
