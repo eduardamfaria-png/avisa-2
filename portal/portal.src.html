@@ -220,6 +220,7 @@ textarea.input { resize: vertical; }
   const DIAS_LONGO = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
   const fmtCurto = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   const fmtLongo = (d) => d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtTel = (d) => `(${d.slice(0, 2)}) ${d.slice(2, -4)}-${d.slice(-4)}`;
   const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
   const LOGO = '<img class="logo-img" src="%%LOGO%%" alt="Instituto Íris">';
   const ICON = {
@@ -289,7 +290,7 @@ textarea.input { resize: vertical; }
   try { S.view = localStorage.getItem('portal:view') || 'inicio'; } catch {}
   // Exemplos já enviados, para a coordenação ter o que avaliar.
   { const fd = ALUNOS[1].hist.reforco.filter((x) => x.v === 'F').pop(); if (fd) S.just[`davi|reforco|${fd.data}`] = { motivo: 'Estava com febre, fiquei em casa.', arquivo: 'atestado.jpg', status: 'pendente' }; }
-  S.insc['davi|danca'] = { obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente' };
+  S.insc['davi|danca'] = { tel: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente' };
   const aluno = () => ALUNOS.find((a) => a.id === S.aluno);
 
   function proximaAula(a) {
@@ -406,6 +407,7 @@ textarea.input { resize: vertical; }
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
         <p>Inscrever <b>${esc(a.nome)}</b> neste curso?</p>
         ${c.vagas ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
+        <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
         <label class="field"><span>Observação para a coordenação (opcional)</span><textarea class="input" id="insc-obs" rows="2" placeholder="Ex.: só posso no período da tarde"></textarea></label>
         <p class="small muted">A coordenação analisa a inscrição e avisa quando ela for aprovada e a turma definida.</p>
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
@@ -516,11 +518,11 @@ textarea.input { resize: vertical; }
       <section><div class="section-title"><h2>Para aprovar</h2><span>${plural(p.length, 'pedido', 'pedidos')}</span></div>
         ${p.length ? `<div class="stack">${p.map((x) => `<article class="card pad"><div class="row wrapx"><b class="grow">${esc(nomeAluno(x.aid))}</b><span class="pill ${x.c.vagas ? 'green' : 'amber'}">${x.c.vagas ? plural(x.c.vagas, 'vaga', 'vagas') : 'Sem vagas'}</span></div>
           <div class="small muted" style="margin-top:2px">Quer entrar em <b>${esc(x.c.nome)}</b> · ${esc(x.c.dias)} · ${esc(x.c.horario)}</div>
-          ${x.v.obs ? `<div class="quote">${esc(x.v.obs)}</div>` : ''}
+          <div class="quote"><b>Telefone / WhatsApp:</b> <span class="num">${esc(x.v.tel || '—')}</span>${x.v.obs ? `<div style="margin-top:4px">${esc(x.v.obs)}</div>` : ''}</div>
           <div class="grid-f" style="margin-top:10px"><label class="field"><span>Colocar na turma</span><select class="input" data-tsel="${esc(x.k)}">${turmaOpts(x.c.turma)}</select></label>
             <label class="field"><span>Resposta para o aluno (opcional)</span><input class="input" data-resp="${esc(x.k)}" placeholder="Ex.: as aulas começam dia 3"></label></div>
           <div class="acts" style="margin-top:10px;justify-content:flex-end"><button class="btn no" data-iav="recusada|${esc(x.k)}">Recusar</button><button class="btn ok" data-iav="aprovada|${esc(x.k)}">Aprovar e matricular</button></div></article>`).join('')}</div>` : vazio('Nenhum pedido de inscrição pendente.')}</section>
-      ${feitas.length ? `<section><div class="section-title"><h2>Já avaliadas</h2></div><div class="stack">${feitas.map((x) => `<article class="card item"><div class="grow"><h3>${esc(nomeAluno(x.aid))}</h3><div class="meta">${esc(x.c.nome)}${x.v.turma ? ' · turma ' + esc(TURMAS[x.v.turma].nome) : ''}</div></div><span class="pill ${x.v.status === 'aprovada' ? 'green' : 'red'}">${x.v.status === 'aprovada' ? 'Matriculado' : 'Recusada'}</span></article>`).join('')}</div></section>` : ''}`;
+      ${feitas.length ? `<section><div class="section-title"><h2>Já avaliadas</h2></div><div class="stack">${feitas.map((x) => `<article class="card item"><div class="grow"><h3>${esc(nomeAluno(x.aid))}</h3><div class="meta">${esc(x.c.nome)} · ${esc(x.v.tel || '')}${x.v.turma ? ' · turma ' + esc(TURMAS[x.v.turma].nome) : ''}</div></div><span class="pill ${x.v.status === 'aprovada' ? 'green' : 'red'}">${x.v.status === 'aprovada' ? 'Matriculado' : 'Recusada'}</span></article>`).join('')}</div></section>` : ''}`;
   }
 
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
@@ -580,7 +582,10 @@ textarea.input { resize: vertical; }
       S.just[e.target.dataset.k] = { motivo, arquivo: f ? f.name : '', status: 'pendente' }; S.modal = null; render();
       toast('Justificativa enviada para a coordenação avaliar.');
     }
-    if (e.target.id === 'form-insc') { S.insc[`${S.aluno}|${e.target.dataset.c}`] = { obs: document.getElementById('insc-obs').value.trim(), status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
+    if (e.target.id === 'form-insc') {
+      const tel = document.getElementById('insc-tel').value.trim(); const dig = tel.replace(/\D/g, '');
+      if (dig.length < 10 || dig.length > 11) { document.getElementById('insc-tel-err').hidden = false; document.getElementById('insc-tel').focus(); return; }
+      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs: document.getElementById('insc-obs').value.trim(), status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
   });
   document.addEventListener('submit', (e) => {
     const f = e.target; const d = Object.fromEntries(new FormData(f));
