@@ -175,25 +175,6 @@ textarea.input { resize: vertical; }
 .empty { text-align: center; padding: 22px; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
 .install { display: flex; gap: 12px; align-items: center; padding: 14px; }
 .install svg { flex: none; width: 26px; height: 26px; color: var(--navy); }
-/* Coordenação */
-.modebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); }
-.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
-.seg button { border: 0; background: none; min-height: 34px; padding: 0 12px; border-radius: 8px; font-weight: 700; font-size: 13.5px; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--navy); color: var(--navy-ink); }
-.grid-f { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .grid-f { grid-template-columns: 1fr 1fr; } }
-.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
-.check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--navy); }
-.item { padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
-.item h3 { font-size: 15.5px; }
-.item .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.item.off { opacity: .6; }
-.item .acts { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn.ok { background: var(--green); border-color: var(--green); color: #fff; }
-.btn.no { color: var(--red); }
-.pad .acts .btn { flex: 1 1 auto; }
-.btn.sm { min-height: 34px; font-size: 13px; padding: 0 11px; }
-.quote { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
 .post .foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .toast { position: fixed; z-index: 80; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; }
 @media (min-width: 960px) { .toast { bottom: 24px; left: auto; right: 24px; } }
@@ -286,10 +267,12 @@ textarea.input { resize: vertical; }
   [AVISOS, MURAL, OPORTUNIDADES].forEach((l) => l.forEach((x) => { x.id = nid(); }));
 
   // just[k]: { motivo, arquivo, status: 'pendente' | 'aceita' | 'recusada', obs }  ·  insc[k]: { obs, status: 'pendente' | 'aprovada' | 'recusada', resp, turma }
-  const S = { modo: 'aluno', view: 'inicio', cview: 'c-avisos', aluno: 'ana', opTipo: 'Todos', just: {}, insc: {}, modal: null };
+  const S = { view: 'inicio', aluno: 'ana', opTipo: 'Todos', just: {}, insc: {}, modal: null };
   try { S.view = localStorage.getItem('portal:view') || 'inicio'; } catch {}
   // Exemplos já enviados, para a coordenação ter o que avaliar.
   { const fd = ALUNOS[1].hist.reforco.filter((x) => x.v === 'F').pop(); if (fd) S.just[`davi|reforco|${fd.data}`] = { motivo: 'Estava com febre, fiquei em casa.', arquivo: 'atestado.jpg', status: 'pendente' }; }
+  { const fs = ALUNOS[0].hist.info.filter((x) => x.v === 'F'); if (fs[0]) S.just[`ana|info|${fs[0].data}`] = { motivo: 'Consulta médica.', arquivo: 'atestado.jpg', status: 'recusada', obs: 'Traga o atestado original na próxima aula, por favor.' }; }
+  { const js = ALUNOS[0].hist.danca.filter((x) => x.v === 'J'); if (js[0]) S.just[`ana|danca|${js[0].data}`] = { motivo: 'Estava com febre.', arquivo: '', status: 'aceita', obs: 'Melhoras!' }; }
   S.insc['davi|danca'] = { tel: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente' };
   const aluno = () => ALUNOS.find((a) => a.id === S.aluno);
 
@@ -308,12 +291,7 @@ textarea.input { resize: vertical; }
   const avisosAtivos = (a) => AVISOS.filter((x) => x.ate >= H && (!x.turma || a.turmas.includes(x.turma))).sort((x, y) => Number(!!y.urgente) - Number(!!x.urgente) || x.ate.localeCompare(y.ate));
 
   function header(eyebrow, title, sub) {
-    return modeBar() + `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}</div>
-      <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
-  }
-  const modeBar = () => `<div class="modebar"><span class="small muted grow"><b>Protótipo</b> · ver como:</span><div class="seg" role="group" aria-label="Ver como"><button data-modo="aluno" aria-pressed="${S.modo === 'aluno'}">Aluno</button><button data-modo="coord" aria-pressed="${S.modo === 'coord'}">Coordenação</button></div></div>`;
-  function coordHead(eyebrow, title, sub) {
-    return modeBar() + `<div class="top">${LOGO}<div class="grow"><b>Coordenação</b><small>Portal do Aluno · Instituto Íris</small></div></div>
+    return `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}</div>
       <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
   }
   function selector() {
@@ -442,131 +420,24 @@ textarea.input { resize: vertical; }
         <div><button class="btn primary" data-saber="${esc(o.link || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
-  // ───── Visão da coordenação ─────
-  const turmaOpts = (sel) => Object.entries(TURMAS).map(([id, t]) => `<option value="${id}"${id === sel ? ' selected' : ''}>${esc(t.nome)}</option>`).join('');
-  const nomeAluno = (id) => ALUNOS.find((a) => a.id === id)?.nome || id;
-  const pend = (o) => Object.values(o).filter((x) => x.status === 'pendente').length;
-  const vazio = (t) => `<div class="empty">${t}</div>`;
-  const delBtn = (lista, id) => `<button class="btn sm no" data-del="${lista}:${id}">Remover</button>`;
-
-  function vCAvisos() {
-    const l = AVISOS.slice().sort((a, b) => b.ate.localeCompare(a.ate));
-    return coordHead('Coordenação · Avisos', 'Avisos', 'Aparecem na tela inicial do aluno e somem sozinhos depois da data escolhida.') + `
-      <section class="card pad"><h2 style="font-size:18px;margin-bottom:12px">Novo aviso</h2>
-        <form id="f-aviso" class="stack">
-          <label class="field"><span>Título</span><input class="input" name="titulo" required maxlength="90" placeholder="Ex.: Sem aula na sexta-feira"></label>
-          <label class="field"><span>Mensagem</span><textarea class="input" name="texto" rows="3" required></textarea></label>
-          <div class="grid-f"><label class="field"><span>Para quem</span><select class="input" name="turma"><option value="">Todos os alunos</option>${turmaOpts()}</select></label>
-            <label class="field"><span>Mostrar até</span><input class="input" type="date" name="ate" required min="${H}" value="${ymd(addDays(hoje, 7))}"></label></div>
-          <label class="check"><input type="checkbox" name="urgente"><span>Importante: aparece em vermelho e no topo</span></label>
-          <div class="row" style="justify-content:flex-end"><button class="btn primary">Publicar aviso</button></div>
-        </form></section>
-      <section><div class="section-title"><h2>Publicados</h2><span>${plural(l.filter((x) => x.ate >= H).length, 'ativo', 'ativos')}</span></div>
-        ${l.length ? `<div class="stack">${l.map((x) => { const on = x.ate >= H; return `<article class="card item${on ? '' : ' off'}"><div class="grow"><h3>${x.urgente ? '<span class="pill red" style="margin-right:6px">Importante</span>' : ''}${esc(x.titulo)}</h3>
-          <div class="meta">${x.turma ? esc(TURMAS[x.turma].nome) : 'Todos os alunos'} · ${on ? `até ${fmtCurto(parse(x.ate))}` : `venceu em ${fmtCurto(parse(x.ate))}`}</div></div>
-          <div class="acts"><span class="pill ${on ? 'green' : ''}">${on ? 'No ar' : 'Vencido'}</span>${delBtn('aviso', x.id)}</div></article>`; }).join('')}</div>` : vazio('Nenhum aviso publicado.')}</section>`;
-  }
-
-  function vCMural() {
-    return coordHead('Coordenação · Mural', 'Mural', 'Fotos e novidades que aparecem na aba Mural dos alunos.') + `
-      <section class="card pad"><h2 style="font-size:18px;margin-bottom:12px">Nova publicação</h2>
-        <form id="f-mural" class="stack">
-          <label class="field"><span>Foto</span><input class="input" type="file" name="foto" accept="image/*"></label>
-          <label class="field"><span>Título</span><input class="input" name="titulo" required maxlength="90"></label>
-          <label class="field"><span>Texto</span><textarea class="input" name="texto" rows="3"></textarea></label>
-          <div class="row" style="justify-content:flex-end"><button class="btn primary">Publicar no mural</button></div>
-        </form></section>
-      <section><div class="section-title"><h2>Publicados</h2><span>${plural(MURAL.length, 'publicação', 'publicações')}</span></div>
-        ${MURAL.length ? `<div class="stack">${MURAL.map((m) => `<article class="card item"><div class="grow"><h3>${esc(m.titulo)}</h3><div class="meta">${fmtCurto(parse(m.data))} · ${m.img ? 'com foto' : esc(m.foto) + ' (exemplo)'}</div></div><div class="acts">${delBtn('mural', m.id)}</div></article>`).join('')}</div>` : vazio('Nada no mural ainda.')}</section>`;
-  }
-
-  function vCOport() {
-    const l = OPORTUNIDADES.slice().sort((a, b) => a.prazo.localeCompare(b.prazo));
-    return coordHead('Coordenação · Oportunidades', 'Oportunidades', 'Vagas, cursos e editais de fora do instituto. O aluno clica e vai direto para a inscrição no site de quem oferece.') + `
-      <section class="card pad"><h2 style="font-size:18px;margin-bottom:12px">Nova oportunidade</h2>
-        <form id="f-op" class="stack">
-          <div class="grid-f"><label class="field"><span>Tipo</span><select class="input" name="tipo"><option>Emprego</option><option>Estágio</option><option>Curso</option><option>Edital</option></select></label>
-            <label class="field"><span>Inscrições até</span><input class="input" type="date" name="prazo" required min="${H}" value="${ymd(addDays(hoje, 14))}"></label></div>
-          <label class="field"><span>Título</span><input class="input" name="titulo" required maxlength="100"></label>
-          <label class="field"><span>Descrição</span><textarea class="input" name="texto" rows="2"></textarea></label>
-          <label class="field"><span>Para quem</span><input class="input" name="quem" placeholder="Ex.: de 16 a 24 anos, ensino médio"></label>
-          <label class="field"><span>Link da inscrição</span><input class="input" type="url" name="link" required placeholder="https://"></label>
-          <div class="row" style="justify-content:flex-end"><button class="btn primary">Publicar oportunidade</button></div>
-        </form></section>
-      <section><div class="section-title"><h2>Publicadas</h2><span>somem sozinhas depois do prazo</span></div>
-        ${l.length ? `<div class="stack">${l.map((o) => { const on = o.prazo >= H; return `<article class="card item${on ? '' : ' off'}"><div class="grow"><h3>${esc(o.titulo)}</h3><div class="meta">${esc(o.tipo)} · até ${fmtCurto(parse(o.prazo))} · ${esc(o.link || o.onde)}</div></div><div class="acts">${delBtn('op', o.id)}</div></article>`; }).join('')}</div>` : vazio('Nenhuma oportunidade publicada.')}</section>`;
-  }
-
-  function vCJust() {
-    const all = Object.entries(S.just).map(([k, j]) => { const [aid, tid, data] = k.split('|'); return { k, j, aid, tid, data }; });
-    const p = all.filter((x) => x.j.status === 'pendente'), feitas = all.filter((x) => x.j.status !== 'pendente');
-    const quando = (x) => { const d = parse(x.data); return `${DIAS_LONGO[d.getDay()]}, ${fmtCurto(d)}`; };
-    return coordHead('Coordenação · Justificativas', 'Justificativas de falta', 'A falta só vira "justificada" na frequência depois que alguém da equipe aceita.') + `
-      <section><div class="section-title"><h2>Para avaliar</h2><span>${plural(p.length, 'pendente', 'pendentes')}</span></div>
-        ${p.length ? `<div class="stack">${p.map((x) => `<article class="card pad"><div class="row wrapx"><b class="grow">${esc(nomeAluno(x.aid))}</b><span class="pill amber">Em análise</span></div>
-          <div class="small muted" style="margin-top:2px">${esc(TURMAS[x.tid].nome)} · falta em ${quando(x)}</div>
-          <div class="quote">${esc(x.j.motivo)}${x.j.arquivo ? `<div class="small muted" style="margin-top:4px">Anexo: ${esc(x.j.arquivo)}</div>` : ''}</div>
-          <label class="field" style="margin-top:10px"><span>Resposta para o aluno (opcional)</span><textarea class="input" rows="2" data-obs="${esc(x.k)}" placeholder="Ex.: traga o atestado original na próxima aula"></textarea></label>
-          <div class="acts" style="margin-top:10px;justify-content:flex-end"><button class="btn no" data-jav="recusada|${esc(x.k)}">Não aceitar</button><button class="btn ok" data-jav="aceita|${esc(x.k)}">Aceitar: contar como justificada</button></div></article>`).join('')}</div>` : vazio('Nenhuma justificativa esperando avaliação.')}</section>
-      ${feitas.length ? `<section><div class="section-title"><h2>Já avaliadas</h2></div><div class="stack">${feitas.map((x) => `<article class="card item"><div class="grow"><h3>${esc(nomeAluno(x.aid))}</h3><div class="meta">${esc(TURMAS[x.tid].nome)} · ${quando(x)} · ${esc(x.j.motivo)}</div></div><span class="pill ${x.j.status === 'aceita' ? 'green' : 'red'}">${x.j.status === 'aceita' ? 'Aceita' : 'Não aceita'}</span></article>`).join('')}</div></section>` : ''}`;
-  }
-
-  function vCInsc() {
-    const all = Object.entries(S.insc).map(([k, v]) => { const [aid, cid] = k.split('|'); return { k, v, aid, c: CURSOS.find((c) => c.id === cid) }; });
-    const p = all.filter((x) => x.v.status === 'pendente'), feitas = all.filter((x) => x.v.status !== 'pendente');
-    return coordHead('Coordenação · Inscrições', 'Inscrições pelo portal', 'Pedidos de alunos para entrar em cursos do Íris. No site da gestão eles também aparecem em Inscrições como "Aguardando vaga".') + `
-      <section><div class="section-title"><h2>Para aprovar</h2><span>${plural(p.length, 'pedido', 'pedidos')}</span></div>
-        ${p.length ? `<div class="stack">${p.map((x) => `<article class="card pad"><div class="row wrapx"><b class="grow">${esc(nomeAluno(x.aid))}</b><span class="pill ${x.c.vagas ? 'green' : 'amber'}">${x.c.vagas ? plural(x.c.vagas, 'vaga', 'vagas') : 'Sem vagas'}</span></div>
-          <div class="small muted" style="margin-top:2px">Quer entrar em <b>${esc(x.c.nome)}</b> · ${esc(x.c.dias)} · ${esc(x.c.horario)}</div>
-          <div class="quote"><b>Telefone / WhatsApp:</b> <span class="num">${esc(x.v.tel || '—')}</span>${x.v.obs ? `<div style="margin-top:4px">${esc(x.v.obs)}</div>` : ''}</div>
-          <div class="grid-f" style="margin-top:10px"><label class="field"><span>Colocar na turma</span><select class="input" data-tsel="${esc(x.k)}">${turmaOpts(x.c.turma)}</select></label>
-            <label class="field"><span>Resposta para o aluno (opcional)</span><input class="input" data-resp="${esc(x.k)}" placeholder="Ex.: as aulas começam dia 3"></label></div>
-          <div class="acts" style="margin-top:10px;justify-content:flex-end"><button class="btn no" data-iav="recusada|${esc(x.k)}">Recusar</button><button class="btn ok" data-iav="aprovada|${esc(x.k)}">Aprovar e matricular</button></div></article>`).join('')}</div>` : vazio('Nenhum pedido de inscrição pendente.')}</section>
-      ${feitas.length ? `<section><div class="section-title"><h2>Já avaliadas</h2></div><div class="stack">${feitas.map((x) => `<article class="card item"><div class="grow"><h3>${esc(nomeAluno(x.aid))}</h3><div class="meta">${esc(x.c.nome)} · ${esc(x.v.tel || '')}${x.v.turma ? ' · turma ' + esc(TURMAS[x.v.turma].nome) : ''}</div></div><span class="pill ${x.v.status === 'aprovada' ? 'green' : 'red'}">${x.v.status === 'aprovada' ? 'Matriculado' : 'Recusada'}</span></article>`).join('')}</div></section>` : ''}`;
-  }
-
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
-  const CNAV = [['c-avisos', 'Avisos', 'bell'], ['c-mural', 'Mural', 'image'], ['c-oport', 'Oportunid.', 'rocket'], ['c-just', 'Justificat.', 'check'], ['c-insc', 'Inscrições', 'plus']];
-  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris', 'c-oport': 'Oportunidades', 'c-just': 'Justificativas' };
+  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
   function render() {
-    const coord = S.modo === 'coord';
-    const nav = coord ? CNAV : NAV; const cur = coord ? S.cview : S.view;
-    const dots = coord ? { 'c-just': pend(S.just), 'c-insc': pend(S.insc) } : { inicio: avisosAtivos(aluno()).length };
+    const nav = NAV; const cur = S.view;
+    const dots = { inicio: avisosAtivos(aluno()).length };
     const btn = ([id, l, ic]) => `<button class="tab${cur === id ? ' on' : ''}" data-nav="${id}" aria-current="${cur === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
     $('#tabs').innerHTML = nav.map(btn).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${coord ? 'Coordenação' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}`;
-    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'c-avisos': vCAvisos, 'c-mural': vCMural, 'c-oport': vCOport, 'c-just': vCJust, 'c-insc': vCInsc };
-    $('#view').innerHTML = (V[cur] || (coord ? vCAvisos : vInicio))();
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>Portal do Aluno</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}`;
+    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades };
+    $('#view').innerHTML = (V[cur] || vInicio)();
     $('#modal-root').innerHTML = S.modal ? (S.modal.tipo === 'just' ? modalJust(S.modal.k) : modalInsc(S.modal.c)) : '';
   }
   function toast(m) { $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => ($('#toast-root').innerHTML = ''), 3000); }
 
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
-    if (nav) { if (S.modo === 'coord') S.cview = nav.dataset.nav; else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
-    const md = e.target.closest('[data-modo]');
-    if (md) { S.modo = md.dataset.modo; render(); try { window.scrollTo(0, 0); } catch {} return; }
-    const dl = e.target.closest('[data-del]');
-    if (dl) { const [l, id] = dl.dataset.del.split(':'); const arr = { aviso: AVISOS, mural: MURAL, op: OPORTUNIDADES }[l]; const ix = arr.findIndex((x) => x.id === id); if (ix >= 0) arr.splice(ix, 1); render(); toast('Removido.'); return; }
-    const jv = e.target.closest('[data-jav]');
-    if (jv) {
-      const [st, ...rest] = jv.dataset.jav.split('|'); const k = rest.join('|'); const [aid, tid, data] = rest; const j = S.just[k];
-      j.status = st; j.obs = (document.querySelector(`[data-obs="${CSS.escape(k)}"]`)?.value || '').trim();
-      const h = ALUNOS.find((a) => a.id === aid).hist[tid].find((x) => x.data === data); if (h) h.v = st === 'aceita' ? 'J' : 'F';
-      render(); toast(st === 'aceita' ? 'Aceita: a falta agora conta como justificada.' : 'Justificativa não aceita: a falta continua contando.'); return;
-    }
-    const iv = e.target.closest('[data-iav]');
-    if (iv) {
-      const [st, ...rest] = iv.dataset.iav.split('|'); const k = rest.join('|'); const [aid, cid] = rest; const v = S.insc[k];
-      v.status = st; v.resp = (document.querySelector(`[data-resp="${CSS.escape(k)}"]`)?.value || '').trim();
-      if (st === 'aprovada') {
-        const t = document.querySelector(`[data-tsel="${CSS.escape(k)}"]`).value; v.turma = t;
-        const a = ALUNOS.find((x) => x.id === aid); if (!a.turmas.includes(t)) { a.turmas.push(t); a.hist[t] = a.hist[t] || []; }
-        const c = CURSOS.find((x) => x.id === cid); if (c.vagas > 0) c.vagas--;
-      }
-      render(); toast(st === 'aprovada' ? `${nomeAluno(aid).split(' ')[0]} foi matriculado(a) na turma.` : 'Inscrição recusada.'); return;
-    }
+    if (nav) { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} render(); try { window.scrollTo(0, 0); } catch {} return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
     const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'}.`); return; }
@@ -586,16 +457,6 @@ textarea.input { resize: vertical; }
       const tel = document.getElementById('insc-tel').value.trim(); const dig = tel.replace(/\D/g, '');
       if (dig.length < 10 || dig.length > 11) { document.getElementById('insc-tel-err').hidden = false; document.getElementById('insc-tel').focus(); return; }
       S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs: document.getElementById('insc-obs').value.trim(), status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
-  });
-  document.addEventListener('submit', (e) => {
-    const f = e.target; const d = Object.fromEntries(new FormData(f));
-    if (f.id === 'f-aviso') { AVISOS.unshift({ id: nid(), titulo: d.titulo.trim(), texto: d.texto.trim(), ate: d.ate, turma: d.turma || undefined, urgente: !!d.urgente }); render(); toast('Aviso publicado. Já aparece na tela inicial dos alunos.'); }
-    if (f.id === 'f-op') { let onde = 'site da inscrição'; try { onde = new URL(d.link).hostname.replace(/^www\./, ''); } catch {} OPORTUNIDADES.push({ id: nid(), tipo: d.tipo, titulo: d.titulo.trim(), texto: d.texto.trim(), quem: d.quem.trim() || 'Todos', prazo: d.prazo, link: d.link, onde }); render(); toast('Oportunidade publicada.'); }
-    if (f.id === 'f-mural') {
-      const add = (img) => { MURAL.unshift({ id: nid(), titulo: d.titulo.trim(), texto: d.texto.trim(), data: H, cor: '#1c2d6b', foto: 'Sem foto', img }); render(); toast('Publicado no mural.'); };
-      const file = d.foto && d.foto.size ? d.foto : null;
-      if (file) { const r = new FileReader(); r.onload = () => add(r.result); r.readAsDataURL(file); } else add('');
-    }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
   document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });
