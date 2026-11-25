@@ -297,7 +297,7 @@ textarea.input { resize: vertical; }
   function selector() {
     return `<select class="who-select" id="who" aria-label="Ver dados de">${ALUNOS.map((a) => `<option value="${a.id}"${a.id === S.aluno ? ' selected' : ''}>${esc(a.nome.split(' ')[0])}</option>`).join('')}</select>`;
   }
-  const demoBanner = () => `<div class="banner">${icon('info')}<span><b>Protótipo com dados de exemplo.</b> Este e-mail tem dois filhos cadastrados (Ana Clara e Davi): troque no seletor do topo para ver cada um.</span></div>`;
+  const demoBanner = () => `<div class="banner">${icon('info')}<span><b>Protótipo com dados de exemplo.</b> Este e-mail tem duas pessoas cadastradas (Ana Clara e Davi): troque no seletor do topo para ver cada um.</span></div>`;
 
   function avisoHtml(x) {
     const t = x.turma ? TURMAS[x.turma] : null;
