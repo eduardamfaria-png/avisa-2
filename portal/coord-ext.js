@@ -239,11 +239,54 @@
     const t = get('turmas', turmaId);
     const campos = a
       ? { turmaIds: [...new Set([...(a.turmaIds || []), turmaId])], status: 'matriculado', matriculaEm: a.matriculaEm || today(), telefone: a.telefone || p.telefone }
-      : { nome: p.nome || '', nascimento: p.nascimento || '', telefone: p.telefone || '', turmaIds: [turmaId], status: 'matriculado', matriculaEm: today(), comoConheceu: 'Outro', obs: p.obs ? 'Recado no pedido pelo portal: ' + p.obs : '' };
+      : (() => { const i = get('interessados', p.interessadoId) || {}; return { nome: p.nome || i.nome || '', nascimento: p.nascimento || i.nascimento || '', telefone: p.telefone || i.telefone || '', email: i.email || '', bairro: i.bairro || '', comoConheceu: i.comoConheceu || '', aceitaComunicacoes: i.aceitaComunicacoes || '', turmaIds: [turmaId], status: 'matriculado', matriculaEm: today(), obs: p.obs ? 'Recado no pedido pelo portal: ' + p.obs : '' }; })();
     const banner = `<div class="banner" style="margin-bottom:14px">${icon('info')}<span class="grow">Matrícula em <b>${esc(cursoDe(t))} · ${esc(t.nome)}</b>. Telefone: <b class="num">${esc(p.telefone || '—')}</b> <a href="${esc(waLink(p.telefone))}" target="_blank" rel="noopener" style="color:inherit;font-weight:700">(abrir WhatsApp)</a>. Preencha a ficha com os dados que o aluno passar e toque em <b>Salvar ficha</b> para concluir.</span></div>`;
     alunoModal(p.alunoId || null, null, { pedidoId: id, campos, banner });
   }
   async function decidirPedido(id, status) {
     const resposta = val('p-resp');
     if (await guard(() => patch('pedidos', id, { status, resposta, avaliadoEm: new Date().toISOString() }), 'Pedido recusado.')) closeModal();
+  }
+
+  // ───────────── Interessados (cadastro de quem ainda não é aluno) ─────────────
+  function inscAbas() {
+    const n = list('interessados').filter((x) => !x.alunoId).length;
+    return `<div class="seg" role="tablist" aria-label="Lista" style="align-self:flex-start"><button class="${S.inscAba !== 'interessados' ? 'on' : ''}" data-act="insc-aba" data-v="alunos">Inscrições e alunos</button><button class="${S.inscAba === 'interessados' ? 'on' : ''}" data-act="insc-aba" data-v="interessados">Interessados <span class="num">${n}</span></button></div>`;
+  }
+  const statusInt = (x) => x.alunoId ? ['Virou aluno', 'green'] : pendentes('pedidos').some((p) => p.interessadoId === x.id) ? ['Pedido em análise', 'amber'] : ['Só cadastro', ''];
+  function interessadosPanel() {
+    const l = list('interessados').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
+    if (!l.length) return '<div class="empty card"><h3>Nenhum interessado ainda</h3><p>Quem fizer o cadastro rápido no portal ("Ainda não sou aluno") aparece aqui.</p></div>';
+    const mes = ym(new Date());
+    const viraram = l.filter((x) => x.alunoId).length;
+    const porFaixa = countBy(l, (x) => faixa({ nascimento: x.nascimento })).sort((a, b) => FAIXAS.findIndex((f) => f[0] === a[0]) - FAIXAS.findIndex((f) => f[0] === b[0]));
+    return `<p class="small muted">Pessoas que fizeram o cadastro rápido no portal ("Ainda não sou aluno"). Mostram até onde a divulgação do Íris está chegando.</p>
+      <div class="minis">
+        <div><b class="num">${l.length}</b><span>cadastros</span></div>
+        <div><b class="num">${l.filter((x) => (x.criadoEm || '').startsWith(mes)).length}</b><span>novos em ${MESES[new Date().getMonth()]}</span></div>
+        <div><b class="num">${viraram}</b><span>viraram alunos (${Math.round((viraram / l.length) * 100)}%)</span></div>
+        <div><b class="num">${l.filter((x) => statusInt(x)[0] === 'Pedido em análise').length}</b><span>com pedido em análise</span></div>
+        <div><b class="num">${l.filter((x) => x.aceitaComunicacoes === 'Sim').length}</b><span>aceitam receber novidades</span></div>
+      </div>
+      <div class="profile-grid">
+        <div class="card pad"><h3 class="ph">Faixa etária</h3>${barList(porFaixa, l.length, 7)}</div>
+        <div class="card pad"><h3 class="ph">Bairro</h3>${barList(countBy(l, (x) => (x.bairro || '').trim()), l.length)}</div>
+        <div class="card pad"><h3 class="ph">Como conheceu</h3>${barList(countBy(l, (x) => x.comoConheceu), l.length)}</div>
+      </div>
+      <div class="section-title" style="margin-top:6px"><h2>Cadastros</h2><span>${plural(l.length, 'pessoa', 'pessoas')}</span></div>
+      <div class="card list">${l.map((x) => { const [st, c] = statusInt(x); return `<button class="item" data-act="int-open" data-id="${x.id}">${avatar(x, 36)}<div class="grow"><strong>${esc(x.nome)}</strong><span class="sub">${age(x.nascimento) ?? '—'} anos · ${esc(x.bairro || '—')} · <span class="num" style="white-space:nowrap">${esc(x.telefone || '')}</span></span></div><span class="pill ${c}">${st}</span></button>`; }).join('')}</div>`;
+  }
+  function interessadoModal(id) {
+    const x = get('interessados', id); if (!x) return;
+    const peds = list('pedidos').filter((p) => p.interessadoId === id);
+    const [st, c] = statusInt(x);
+    openModal(esc(x.nome), `<div class="row" style="margin-bottom:14px">${avatar(x, 44)}<div class="grow"><span class="pill ${c}">${st}</span><div class="small muted" style="margin-top:4px">Cadastro em ${fmtDate((x.criadoEm || '').slice(0, 10))}</div></div>${x.alunoId ? `<button class="btn sm" data-act="aluno-open" data-id="${x.alunoId}">Ver ficha</button>` : ''}</div>
+      <div class="card pad" style="display:grid;gap:10px;background:var(--green-soft);border-color:transparent;box-shadow:none">
+        <div><div class="small" style="color:var(--green);font-weight:700">Telefone / WhatsApp</div><div class="num" style="font-family:var(--display);font-size:22px;font-weight:800">${esc(x.telefone || '—')}</div></div>
+        <a class="btn primary block" style="background:var(--green);border-color:var(--green);text-decoration:none" href="${esc(waLink(x.telefone))}" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      </div>
+      <dl class="kv" style="margin-top:14px"><dt>E-mail</dt><dd>${esc(x.email || '—')}</dd><dt>Nascimento</dt><dd>${x.nascimento ? `${fmtDate(x.nascimento)} · ${age(x.nascimento)} anos` : '—'}</dd><dt>Bairro</dt><dd>${esc(x.bairro || '—')}</dd><dt>Como conheceu</dt><dd>${esc(x.comoConheceu || 'Não informou')}</dd><dt>Recebe novidades</dt><dd>${esc(x.aceitaComunicacoes || 'Não')}</dd></dl>
+      <div class="section-title" style="margin-top:16px"><h2 style="font-size:16px">Pedidos de inscrição</h2></div>
+      ${peds.length ? `<div class="card list">${peds.map((p) => `<button class="item" data-act="ped-open" data-id="${p.id}"><div class="grow"><strong>${esc(cursoPedido(p))}</strong><span class="sub">enviado em ${fmtDate((p.enviadoEm || '').slice(0, 10))}</span></div>${p.status === 'pendente' ? '<span class="pill amber">Avaliar</span>' : stPill(p.status)}</button>`).join('')}</div>` : '<p class="small muted">Ainda não pediu inscrição em nenhum curso.</p>'}`,
+      '<button class="btn" data-act="modal-close">Fechar</button>');
   }

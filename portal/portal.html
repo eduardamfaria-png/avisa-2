@@ -47,7 +47,7 @@ button { cursor: pointer; }
 .top .grow { min-width: 0; }
 .top b { display: block; font-family: var(--display); font-size: 16px; }
 .top small { color: var(--muted); font-size: 12.5px; }
-.who-select { margin-left: auto; min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 4px 30px 4px 10px; font-size: 13.5px; font-weight: 600; max-width: 46vw; }
+.who-select { margin-left: auto; max-width: 30vw !important; min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 4px 30px 4px 10px; font-size: 13.5px; font-weight: 600; max-width: 46vw; }
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(6, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 2px 8px; border: 0; background: none; color: var(--faint); font-size: 10.5px; font-weight: 600; position: relative; }
 .tab svg { width: 22px; height: 22px; }
@@ -65,7 +65,7 @@ button { cursor: pointer; }
   .side .tab.on { background: var(--navy-soft); color: var(--navy); }
   .side .tab.on::before { top: 9px; bottom: 9px; left: -14px; right: auto; width: 4px; height: auto; border-radius: 0 3px 3px 0; }
   .side .tab .dot { position: static; margin-left: auto; }
-  .tabs, .top .logo-img { display: none; }
+  .tabs, .top .logo-img, .sair-m { display: none; }
   .main { padding-inline: 32px; padding-block: 26px 48px; }
 }
 
@@ -176,10 +176,35 @@ textarea.input { resize: vertical; }
 .install { display: flex; gap: 12px; align-items: center; padding: 14px; }
 .install svg { flex: none; width: 26px; height: 26px; color: var(--navy); }
 .post .foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Entrada */
+body.gated .app, body.gated .tabs { display: none; }
+body:not(.gated) #gate { display: none; }
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.gate-card { width: 100%; max-width: 460px; padding: 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+.gate-card h1 { font-size: 26px; font-weight: 800; }
+.gate-logo .logo-img { height: 76px; margin: 0 auto 4px; }
+.choice { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: left; width: 100%; }
+.choice:hover { border-color: var(--navy); background: var(--navy-soft); }
+.choice .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--navy-soft); color: var(--navy); flex: none; }
+.choice .ic svg { width: 22px; height: 22px; }
+.choice b { display: block; font-size: 16px; } .choice small { color: var(--muted); font-size: 13.5px; }
+.btn.block { width: 100%; }
+.btn.sm { min-height: 34px; font-size: 13px; padding: 0 11px; }
+.btn.ghost { border-color: transparent; background: none; color: var(--navy); align-self: flex-start; padding-inline: 6px; }
+.banner.err { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--navy); }
+.req { color: var(--red); }
+.tl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.tl div { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; color: var(--faint); }
+.tl i { height: 6px; border-radius: 3px; background: var(--surface-2); }
+.tl .on { color: var(--green); } .tl .on i { background: var(--green); }
+.side-foot { margin-top: auto; padding-top: 12px; }
 .toast { position: fixed; z-index: 80; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; }
 @media (min-width: 960px) { .toast { bottom: 24px; left: auto; right: 24px; } }
 </style>
 
+<div id="gate"></div>
 <div class="app">
   <aside class="side" id="side"></aside>
   <main class="main"><div class="wrap" id="view"></div></main>
@@ -291,7 +316,7 @@ textarea.input { resize: vertical; }
   const avisosAtivos = (a) => AVISOS.filter((x) => x.ate >= H && (!x.turma || a.turmas.includes(x.turma))).sort((x, y) => Number(!!y.urgente) - Number(!!x.urgente) || x.ate.localeCompare(y.ate));
 
   function header(eyebrow, title, sub) {
-    return `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}</div>
+    return `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}<button class="btn sm sair-m" data-sair="1">Sair</button></div>
       <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
   }
   function selector() {
@@ -379,13 +404,13 @@ textarea.input { resize: vertical; }
   }
 
   function modalInsc(cid) {
-    const c = CURSOS.find((x) => x.id === cid); const a = aluno();
+    const c = CURSOS.find((x) => x.id === cid); const int = S.auth?.tipo === 'interessado'; const a = int ? INTERESSADOS[S.auth.email] : aluno();
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
       <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)}</p>
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
         <p>Inscrever <b>${esc(a.nome)}</b> neste curso?</p>
         ${c.vagas ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
-        <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
+        <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${esc(int ? a.telefone : '')}"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
         <label class="field"><span>Observação para a coordenação (opcional)</span><textarea class="input" id="insc-obs" rows="2" placeholder="Ex.: só posso no período da tarde"></textarea></label>
         <p class="small muted">A coordenação analisa a inscrição e avisa quando ela for aprovada e a turma definida.</p>
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
@@ -420,24 +445,158 @@ textarea.input { resize: vertical; }
         <div><button class="btn primary" data-saber="${esc(o.link || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
+  // ───── Entrada (3 caminhos) e área de quem ainda não é aluno ─────
+  // No site de verdade estes e-mails vêm das fichas (alunos), da lista da equipe e dos cadastros de interessados.
+  const EMAIL_ALUNOS = { 'familia.souza@exemplo.com': ['ana', 'davi'] };
+  const EMAIL_EQUIPE = ['coordenacao@exemplo.com'];
+  const INTERESSADOS = { 'maria.lima@exemplo.com': { nome: 'Maria Lima', telefone: '(21) 98888-1111', nascimento: '2004-05-10', bairro: 'Éden', comoConheceu: 'Instagram' } };
+  const PEDIDOS_INT = { 'maria.lima@exemplo.com': [{ curso: 'danca', status: 'analise', em: ymd(addDays(hoje, -2)), tel: '(21) 98888-1111' }] };
+  const BAIRROS = ['Éden', 'Vilar dos Teles', 'Coelho da Rocha', 'Jardim Meriti', 'Centro'];
+  const COMO = ['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro'];
+  S.auth = null; S.iview = 'i-cursos';
+  const novoLogin = () => ({ modo: '', etapa: 'email', email: '', erro: '', dados: {}, destino: '' });
+  S.login = novoLogin();
+  const okEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const voltarBtn = '<button class="btn ghost sm" data-login="voltar">← Voltar</button>';
+  const testeHint = () => `<div class="banner">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · já cadastrado <b>maria.lima@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>. Outros e-mails mostram o aviso de e-mail não encontrado.</span></div>`;
+  const choice = (m, ic, t, sub) => `<button class="choice" data-login="${m}"><span class="ic">${icon(ic)}</span><span class="grow"><b>${t}</b><small>${sub}</small></span></button>`;
+
+  function loginScreen() {
+    const L = S.login; let body;
+    if (L.etapa === 'enviado') body = `${voltarBtn}<h1>Confira seu e-mail</h1><p>Enviamos um link de acesso para <b>${esc(L.email)}</b>. Toque nele para entrar. Depois disso você continua conectado(a) neste aparelho.</p>
+      <button class="btn primary block" data-login="abrir">Simular: abrir o link do e-mail</button><p class="small faint">No protótipo não chega e-mail de verdade: use o botão acima.</p>`;
+    else if (L.etapa === 'equipe') body = `${voltarBtn}<h1>Área da equipe</h1><p>No site de verdade, aqui você entraria direto no <b>site de gestão</b>: Painel, Chamada, Turmas, Inscrições, Portal e Finanças.</p>`;
+    else if (!L.modo) body = `<h1>Entrar</h1><p class="muted">Como você quer entrar?</p><div class="stack">
+      ${choice('aluno', 'book', 'Sou aluno', 'Já estudo no Instituto Íris')}${choice('cadastro', 'plus', 'Ainda não sou aluno', 'Quero ver os cursos com vaga e me inscrever')}${choice('equipe', 'check', 'Sou da equipe', 'Coordenação e professores')}</div>${testeHint()}`;
+    else if (L.etapa === 'cadastro') body = cadastroForm();
+    else body = emailForm();
+    return `<div class="gate"><div class="card gate-card"><div class="gate-logo">${LOGO}</div>${body}</div></div>`;
+  }
+  function emailForm() {
+    const L = S.login;
+    const t = { aluno: ['Sou aluno', 'Digite o e-mail que você deu na sua ficha de inscrição.'], equipe: ['Sou da equipe', 'Digite seu e-mail da equipe.'], novo: ['Já tenho cadastro', 'Digite o e-mail que você usou no cadastro.'] }[L.modo];
+    return `${voltarBtn}<h1>${t[0]}</h1><p class="muted">${t[1]} Vamos enviar um link para você entrar, sem senha.</p>
+      <form id="form-login" class="stack" novalidate><input class="input" type="email" id="login-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email)}"><button class="btn primary block">Receber link de acesso</button></form>
+      ${L.erro ? `<div class="banner err"><span>${L.erro}</span></div>` : ''}
+      ${L.modo === 'aluno' ? '<button class="btn ghost sm" data-login="cadastro">Ainda não sou aluno: fazer cadastro</button>' : L.modo === 'novo' ? '<button class="btn ghost sm" data-login="cadastro">Não tenho cadastro: criar agora</button>' : ''}${testeHint()}`;
+  }
+  function cadastroForm() {
+    const L = S.login; const d = L.dados;
+    const f = (id, label, input, req) => `<label class="field"><span>${label}${req ? ' <b class="req">*</b>' : ''}</span>${input}</label>`;
+    return `${voltarBtn}<h1>Cadastro rápido</h1><p class="muted">Leva menos de um minuto. Depois você já vê os cursos com vaga e pode se inscrever.</p>
+      <form id="form-cad" class="stack" novalidate>
+        ${f('c-nome', 'Nome completo', `<input class="input" id="c-nome" autocomplete="name" value="${esc(d.nome || '')}">`, 1)}
+        ${f('c-email', 'E-mail', `<input class="input" type="email" id="c-email" autocomplete="email" placeholder="seu@email.com" value="${esc(d.email || '')}">`, 1)}
+        ${f('c-tel', 'WhatsApp', `<input class="input" type="tel" id="c-tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${esc(d.tel || '')}">`, 1)}
+        ${f('c-nasc', 'Data de nascimento', `<input class="input" type="date" id="c-nasc" value="${esc(d.nasc || '')}">`, 1)}
+        ${f('c-bairro', 'Bairro onde mora', `<input class="input" id="c-bairro" list="dl-bairros" placeholder="Ex.: Éden" value="${esc(d.bairro || '')}"><datalist id="dl-bairros">${BAIRROS.map((b) => `<option value="${b}">`).join('')}</datalist>`, 1)}
+        ${f('c-como', 'Como conheceu o Íris', `<select class="input" id="c-como"><option value="">Escolha (opcional)</option>${COMO.map((c) => `<option${d.como === c ? ' selected' : ''}>${c}</option>`).join('')}</select>`)}
+        <label class="check"><input type="checkbox" id="c-aceite"${d.aceite ? ' checked' : ''}><span class="small">Aceito receber comunicações do Instituto Íris sobre novos cursos e novidades por e-mail ou WhatsApp. Posso cancelar quando quiser.</span></label>
+        ${L.erro ? `<div class="banner err"><span>${L.erro}</span></div>` : ''}
+        <button class="btn primary block">Criar cadastro</button>
+      </form>
+      <button class="btn ghost sm" data-login="novo">Já tenho cadastro: entrar</button>`;
+  }
+  function loginSubmit(email) {
+    const L = S.login; L.email = email; L.erro = '';
+    if (!okEmail(email)) { L.erro = 'Digite um e-mail válido, como nome@gmail.com.'; return render(); }
+    const ehAluno = !!EMAIL_ALUNOS[email], ehInt = !!INTERESSADOS[email], ehEquipe = EMAIL_EQUIPE.includes(email);
+    if (L.modo === 'aluno') {
+      if (ehAluno) { L.etapa = 'enviado'; L.destino = 'aluno'; }
+      else if (ehInt) L.erro = 'Este e-mail tem um cadastro de quem ainda não é aluno. Volte e entre por <b>"Ainda não sou aluno"</b>.';
+      else L.erro = '<b>Este e-mail não está na ficha de nenhum aluno.</b><br>Confira se digitou certo. Se continuar dando erro, fale com a coordenação para conferir o e-mail da sua ficha.';
+    } else if (L.modo === 'equipe') {
+      if (ehEquipe) { L.etapa = 'enviado'; L.destino = 'equipe'; }
+      else L.erro = '<b>Este e-mail não tem acesso à área da equipe.</b><br>Confira se digitou certo.';
+    } else {
+      if (ehInt) { L.etapa = 'enviado'; L.destino = 'interessado'; }
+      else if (ehAluno) L.erro = 'Este e-mail é de um aluno. Volte e entre por <b>"Sou aluno"</b>.';
+      else L.erro = '<b>Não encontramos cadastro com este e-mail.</b><br>Confira se digitou certo ou crie seu cadastro abaixo.';
+    }
+    render();
+  }
+  function cadastroSubmit() {
+    const L = S.login; const g = (id) => document.getElementById(id);
+    const d = L.dados = { nome: g('c-nome').value.trim(), email: g('c-email').value.trim().toLowerCase(), tel: g('c-tel').value.trim(), nasc: g('c-nasc').value, bairro: g('c-bairro').value.trim(), como: g('c-como').value, aceite: g('c-aceite').checked };
+    const dig = d.tel.replace(/\D/g, '');
+    const falta = [!d.nome && 'nome', !okEmail(d.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !d.nasc && 'data de nascimento', !d.bairro && 'bairro'].filter(Boolean);
+    L.erro = '';
+    if (falta.length) L.erro = `Preencha: ${falta.join(', ')}.`;
+    else if (EMAIL_ALUNOS[d.email]) L.erro = 'Este e-mail já é de um aluno. Volte e entre por <b>"Sou aluno"</b>.';
+    else if (INTERESSADOS[d.email]) L.erro = 'Você já tem cadastro com este e-mail. Toque em <b>"Já tenho cadastro: entrar"</b>.';
+    else {
+      INTERESSADOS[d.email] = { nome: d.nome, telefone: fmtTel(dig), nascimento: d.nasc, bairro: d.bairro, comoConheceu: d.como, aceitaComunicacoes: d.aceite ? 'Sim' : 'Não' };
+      L.email = d.email; L.etapa = 'enviado'; L.destino = 'interessado';
+    }
+    render();
+  }
+
+  // Área de quem ainda não é aluno
+  const interessado = () => INTERESSADOS[S.auth.email];
+  function headerInt(eyebrow, title, sub) {
+    return `<div class="top">${LOGO}<div class="grow"><b>Portal Íris</b><small>${esc(interessado().nome)}</small></div><button class="btn sm sair-m" data-sair="1">Sair</button></div>
+      <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
+  }
+  const STI = { enviada: 0, analise: 1, matriculado: 2 };
+  function vICursos() {
+    const meus = PEDIDOS_INT[S.auth.email] || [];
+    const abertos = CURSOS.filter((c) => c.vagas > 0);
+    return headerInt('Cursos do Íris', `Olá, ${esc(interessado().nome.split(' ')[0])}!`, 'Cursos gratuitos com vagas abertas agora. Escolha e faça sua inscrição.') + (abertos.length ? `<div class="feed">${abertos.map((c) => {
+      const p = meus.find((x) => x.curso === c.id && x.status !== 'recusado');
+      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill green">${plural(c.vagas, 'vaga', 'vagas')}</span></div>
+        <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
+        <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
+        <div>${p ? '<button class="btn" data-nav="i-minhas">Inscrição enviada · acompanhar</button>' : `<button class="btn primary" data-insc="${c.id}">Quero me inscrever</button>`}</div></article>`;
+    }).join('')}</div>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>');
+  }
+  function vIMinhas() {
+    const meus = (PEDIDOS_INT[S.auth.email] || []).map((p, i) => ({ ...p, i }));
+    const tel = interessado().telefone;
+    return headerInt('Minhas inscrições', 'Acompanhe sua inscrição', '') + (meus.length ? `<div class="stack">${meus.reverse().map((p) => {
+      const c = CURSOS.find((x) => x.id === p.curso); const k = STI[p.status];
+      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(p.tel || tel)}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! No próximo acesso, entre por <b>"Sou aluno"</b> com este mesmo e-mail para ver suas aulas e sua frequência.', recusado: 'Não foi possível desta vez.' }[p.status];
+      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:18px">${esc(c.nome)}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
+        ${p.status === 'recusado' ? '<span class="pill red" style="margin-top:8px">Não aprovada</span>' : `<div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>`}
+        <p class="small" style="margin-top:10px">${txt}</p>
+        ${p.status !== 'matriculado' && p.status !== 'recusado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
+    }).join('')}</div>` : `<div class="empty">Você ainda não se inscreveu em nenhum curso.<br><button class="btn primary" style="margin-top:12px" data-nav="i-cursos">Ver cursos com vaga</button></div>`);
+  }
+  const NAV_INT = [['i-cursos', 'Cursos com vaga', 'plus'], ['i-minhas', 'Minhas inscrições', 'check']];
+
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
   const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
   function render() {
-    const nav = NAV; const cur = S.view;
-    const dots = { inicio: avisosAtivos(aluno()).length };
+    document.body.classList.toggle('gated', !S.auth);
+    if (!S.auth) { $('#gate').innerHTML = loginScreen(); $('#modal-root').innerHTML = ''; return; }
+    $('#gate').innerHTML = '';
+    const int = S.auth.tipo === 'interessado';
+    const nav = int ? NAV_INT : NAV; const cur = int ? S.iview : S.view;
+    const dots = int ? {} : { inicio: avisosAtivos(aluno()).length };
     const btn = ([id, l, ic]) => `<button class="tab${cur === id ? ' on' : ''}" data-nav="${id}" aria-current="${cur === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
     $('#tabs').innerHTML = nav.map(btn).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>Portal do Aluno</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}`;
-    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades };
-    $('#view').innerHTML = (V[cur] || vInicio)();
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${int ? 'Portal Íris' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}<div class="side-foot"><button class="btn sm block" data-sair="1">Sair</button></div>`;
+    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'i-cursos': vICursos, 'i-minhas': vIMinhas };
+    $('#view').innerHTML = (V[cur] || (int ? vICursos : vInicio))();
     $('#modal-root').innerHTML = S.modal ? (S.modal.tipo === 'just' ? modalJust(S.modal.k) : modalInsc(S.modal.c)) : '';
   }
   function toast(m) { $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => ($('#toast-root').innerHTML = ''), 3000); }
 
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
-    if (nav) { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} render(); try { window.scrollTo(0, 0); } catch {} return; }
+    if (nav) { if (S.auth?.tipo === 'interessado') S.iview = nav.dataset.nav; else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
+    const lg = e.target.closest('[data-login]');
+    if (lg) {
+      const v = lg.dataset.login; const L = S.login;
+      if (v === 'voltar') S.login = novoLogin();
+      else if (v === 'cadastro') { S.login = novoLogin(); S.login.modo = 'novo'; S.login.etapa = 'cadastro'; }
+      else if (v === 'abrir') { if (L.destino === 'equipe') L.etapa = 'equipe'; else { S.auth = { tipo: L.destino, email: L.email }; if (L.destino === 'aluno') S.aluno = EMAIL_ALUNOS[L.email][0]; S.iview = 'i-cursos'; } }
+      else { S.login = novoLogin(); S.login.modo = v; }
+      render(); try { window.scrollTo(0, 0); } catch {} document.getElementById('login-email')?.focus(); return;
+    }
+    if (e.target.closest('[data-sair]')) { S.auth = null; S.login = novoLogin(); render(); return; }
+    const av = e.target.closest('[data-avancar]');
+    if (av) { const p = PEDIDOS_INT[S.auth.email][Number(av.dataset.avancar)]; p.status = p.status === 'enviada' ? 'analise' : 'matriculado'; render(); return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
     const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
@@ -447,6 +606,8 @@ textarea.input { resize: vertical; }
   });
   document.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (e.target.id === 'form-login') return loginSubmit(document.getElementById('login-email').value.trim().toLowerCase());
+    if (e.target.id === 'form-cad') return cadastroSubmit();
     if (e.target.id === 'form-just') {
       const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
       const f = document.getElementById('just-arq').files[0];
@@ -456,7 +617,9 @@ textarea.input { resize: vertical; }
     if (e.target.id === 'form-insc') {
       const tel = document.getElementById('insc-tel').value.trim(); const dig = tel.replace(/\D/g, '');
       if (dig.length < 10 || dig.length > 11) { document.getElementById('insc-tel-err').hidden = false; document.getElementById('insc-tel').focus(); return; }
-      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs: document.getElementById('insc-obs').value.trim(), status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
+      const obs = document.getElementById('insc-obs').value.trim();
+      if (S.auth.tipo === 'interessado') { (PEDIDOS_INT[S.auth.email] ||= []).push({ curso: e.target.dataset.c, status: 'enviada', em: H, tel: fmtTel(dig), obs }); S.modal = null; S.iview = 'i-minhas'; render(); toast('Inscrição enviada! Acompanhe em Minhas inscrições.'); return; }
+      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
   document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });

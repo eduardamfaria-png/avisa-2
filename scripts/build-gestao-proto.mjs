@@ -29,8 +29,8 @@ rep(`    trash: '`, `    mega: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 
     trash: '`);
 
 // Coleções novas.
-rep(`const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos'];`, `const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos', 'avisos', 'mural', 'oportunidades', 'justificativas', 'pedidos'];`);
-rep(`    finMes: ym(new Date()),`, `    finMes: ym(new Date()), portalSub: 'justificativas',`);
+rep(`const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos'];`, `const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos', 'avisos', 'mural', 'oportunidades', 'justificativas', 'pedidos', 'interessados'];`);
+rep(`    finMes: ym(new Date()),`, `    finMes: ym(new Date()), portalSub: 'justificativas', inscAba: 'alunos',`);
 
 // Aba nova no menu, com contador do que espera avaliação.
 rep(`    ['inscricoes', 'Inscrições', 'form'],\n`, `    ['inscricoes', 'Inscrições', 'form'],\n    ['portal', 'Portal', 'mega'],\n`);
@@ -53,8 +53,10 @@ rep(`      \${notices()}
       <div class="card pad stack" style="gap:10px">`);
 
 // Inscrições: pedidos feitos pelo Portal do Aluno.
-rep(`      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2>`, `      \${pedidosSec()}
-      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2>`);
+rep(`      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>
+      \${alunosPanel()}\`;`, `      \${pedidosSec()}
+      \${inscAbas()}
+      \${S.inscAba === 'interessados' ? interessadosPanel() : \`<div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>\${alunosPanel()}\`}\`;`);
 
 // Turma ganha o campo "Curso" (um curso pode ter várias turmas, ex.: manhã e tarde).
 rep(`      <label class="field full"><span>Nome da turma / curso</span><input class="input" id="t-nome" value="\${esc(t.nome)}" placeholder="Ex.: Informática básica — tarde"></label>`,
@@ -78,7 +80,7 @@ rep(`    const newId = id || uid();
     const pedidoId = JSON.parse($('#modal-root .modal')?.dataset.ctx || '{}').pedidoId;
     if (pedidoId) {
       const turmaFinal = body.turmaIds.find((t) => t === get('pedidos', pedidoId)?.turmaEscolhida) || body.turmaIds[0] || '';
-      if (await guard(async () => { await put('alunos', newId, body); await patch('pedidos', pedidoId, { status: 'aprovado', alunoId: newId, turmaFinal, avaliadoEm: new Date().toISOString() }); }, \`Matrícula concluída: \${nome.split(' ')[0]} está em \${turmaNome(turmaFinal)}.\`)) closeModal();
+      if (await guard(async () => { await put('alunos', newId, body); await patch('pedidos', pedidoId, { status: 'aprovado', alunoId: newId, turmaFinal, avaliadoEm: new Date().toISOString() }); const iid = get('pedidos', pedidoId)?.interessadoId; if (iid) await patch('interessados', iid, { alunoId: newId, viraAlunoEm: new Date().toISOString() }); }, \`Matrícula concluída: \${nome.split(' ')[0]} está em \${turmaNome(turmaFinal)}.\`)) closeModal();
       return;
     }
     if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Inscrição salva. Se quiser, adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }`);
@@ -100,6 +102,8 @@ rep(`      case 'csv-alunos': csvAlunos(); break;`, `      case 'csv-alunos': cs
       case 'op-open': opModal(t.dataset.id); break;
       case 'op-save': saveOp(t.dataset.id); break;
       case 'op-resumo': resumoOp(t.dataset.id); break;
+      case 'insc-aba': S.inscAba = t.dataset.v; render(); break;
+      case 'int-open': interessadoModal(t.dataset.id); break;
       case 'curso-open': cursoModal(t.dataset.id); break;
       case 'curso-save': saveCurso(t.dataset.id); break;
       case 'just-open': justModal(t.dataset.id); break;
@@ -152,7 +156,12 @@ rep(`    return { turmas, alunos, chamadas, lancamentos };`, `    turmas[t1].cur
       'ex-pe1': { alunoId: 'ex-aluno-1', curso: 'Reforço escolar', turmaId: t2, telefone: '(21) 98765-4321', obs: 'Quero reforço de matemática para o ENEM.', status: 'pendente', enviadoEm: new Date(Date.now() - 864e5).toISOString(), exemplo: true },
       'ex-pe2': { alunoId: 'ex-aluno-2', curso: 'Dança', turmaId: t3, telefone: '(21) 97777-1234', obs: 'Só consigo aos sábados.', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true },
     };
-    return { turmas, alunos, chamadas, lancamentos, avisos, mural, oportunidades, justificativas, pedidos };`);
+    const INT = [['Marcos Vinícius Alves', '2006-08-14', 'Éden', 'Instagram', '(21) 99123-4567'], ['Juliana Prado', '2001-01-22', 'Vilar dos Teles', 'Indicação', '(21) 99234-5678'], ['Renata Gomes', '1979-11-05', 'Éden', 'Na rua / evento', '(21) 99345-6789'], ['Lucas Ferreira', '2008-04-30', 'Coelho da Rocha', 'Instagram', '(21) 99456-7890'], ['Patrícia Souza', '1992-07-18', 'Centro', 'WhatsApp', '(21) 99567-8901'], ['Thiago Martins', '2007-12-02', 'Éden', 'Escola', '(21) 99678-9012'], ['Bianca Rocha', '1999-03-09', 'Jardim Meriti', 'Instagram', '(21) 99789-0123'], ['Sérgio Lima', '1965-09-27', 'Vilar dos Teles', 'Indicação', '(21) 99890-1234']];
+    const interessados = {};
+    INT.forEach(([nome, nascimento, bairro, comoConheceu, telefone], k) => (interessados['ex-in' + k] = { nome, nascimento, bairro, comoConheceu, telefone, email: nome.split(' ')[0].toLowerCase().normalize('NFD').replace(/[^a-z]/g, '') + '@exemplo.com', aceitaComunicacoes: k % 3 ? 'Sim' : 'Não', criadoEm: new Date(Date.now() - (k * 3 + 1) * 864e5).toISOString(), exemplo: true }));
+    interessados['ex-in2'].alunoId = 'ex-aluno-2';
+    pedidos['ex-pe3'] = { interessadoId: 'ex-in0', alunoId: '', nome: 'Marcos Vinícius Alves', nascimento: '2006-08-14', curso: 'Informática básica', turmaId: '', telefone: '(21) 99123-4567', obs: 'Prefiro de manhã.', status: 'pendente', enviadoEm: new Date().toISOString(), exemplo: true };
+    return { turmas, alunos, chamadas, lancamentos, avisos, mural, oportunidades, justificativas, pedidos, interessados };`);
 
 writeFileSync('portal/gestao-coordenacao.html', `<script>window.IRIS_DEMO = true;</script>\n${app}`);
 console.log('portal/gestao-coordenacao.html gerado');
