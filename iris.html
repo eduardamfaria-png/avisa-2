@@ -395,6 +395,7 @@ body.gated .app { grid-template-columns: 1fr; }
     me: null,
     gate: '',
     platform: 'claude',
+    canFinance: true,
     login: { email: '', sent: '', busy: false, needEmail: false, error: '' },
   };
   try { const v = localStorage.getItem('iris:view'); if (v) S.view = v === 'alunos' ? 'inscricoes' : v; const m = localStorage.getItem('iris:alunosModo'); if (m) S.alunosModo = m; } catch {}
@@ -547,8 +548,10 @@ body.gated .app { grid-template-columns: 1fr; }
   function renderNav() {
     const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
-    $('#tabs').innerHTML = NAV.map((n) => btn(...n)).join('');
-    $('#side').innerHTML = `<div class="brand brand-side">${LOGO}<small>Gestão das aulas</small></div>${NAV.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28">` : ''}<span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.platform === 'firebase' ? `<div class="row" style="gap:6px;margin-bottom:10px"><button class="btn sm" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? (S.demo ? 'Versão de teste: nada é salvo.' : 'Visualização local: nada é salvo.') : 'Carregando…'}</div>`;
+    const nav = NAV.filter(([id]) => id !== 'financas' || S.canFinance);
+    $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
+    $('#tabs').innerHTML = nav.map((n) => btn(...n)).join('');
+    $('#side').innerHTML = `<div class="brand brand-side">${LOGO}<small>Gestão das aulas</small></div>${nav.map((n) => btn(...n)).join('')}<div class="side-foot">${S.me && S.me.name ? `<div class="who">${S.me.avatarUrl ? `<img src="${esc(S.me.avatarUrl)}" alt="" width="28" height="28">` : ''}<span><b>${esc(S.me.name)}</b><br>conectado(a)</span></div>` : ''}${S.platform === 'firebase' ? `<div class="row" style="gap:6px;margin-bottom:10px"><button class="btn sm" data-act="equipe">Equipe</button><button class="btn sm ghost" data-act="sair">Sair</button></div>` : ''}${S.mode === 'db' ? 'Dados salvos e compartilhados com a equipe.' : S.mode === 'local' ? (S.demo ? 'Versão de teste: nada é salvo.' : 'Visualização local: nada é salvo.') : 'Carregando…'}</div>`;
   }
 
   function header(eyebrow, title, sub, actions = '') {
@@ -623,6 +626,7 @@ body.gated .app { grid-template-columns: 1fr; }
       $('#view').innerHTML = header('Instituto Íris', 'Carregando dados…', 'Buscando alunos, turmas e chamadas.');
       return;
     }
+    if (S.view === 'financas' && !S.canFinance) S.view = 'painel';
     const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, financas: vFinancas }[S.view] || vPainel;
     $('#view').innerHTML = v();
     if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
@@ -1454,9 +1458,10 @@ body.gated .app { grid-template-columns: 1fr; }
   // ───────────── Inicialização ─────────────
   render();
 
-  function subscribeAll(extra) {
+  function subscribeAll(extra, pular = []) {
     const timer = setTimeout(() => { S.slow = true; schedule(); }, 10000);
-    for (const col of [...COLS, ...extra]) {
+    for (const col of pular) S.loaded.add(col);
+    for (const col of [...COLS, ...extra].filter((c) => !pular.includes(c))) {
       db.collection(col).onSnapshot((snap) => {
         const next = {};
         for (const doc of snap.docs) next[doc.id] = doc.data();
@@ -1484,8 +1489,9 @@ body.gated .app { grid-template-columns: 1fr; }
       const ok = await backend.isMember();
       if (!ok) { S.gate = 'denied'; render(); return; }
       S.gate = ''; S.mode = 'db';
+      S.canFinance = backend.canFinance ? await backend.canFinance(S.me.email).catch(() => false) : true;
       if (!subscribed) {
-        subscribed = true; subscribeAll(['fotos', 'config']);
+        subscribed = true; subscribeAll(['fotos', 'config'], S.canFinance ? [] : ['lancamentos']);
         // Completa a lista de e-mails liberados (para quem foi liberado antes da checagem prévia existir).
         setTimeout(() => { const em = S.data.config?.acesso?.emails || []; if (em.length && backend.syncPermitidos) backend.syncPermitidos(em, []).catch(() => {}); }, 4000);
       }

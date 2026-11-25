@@ -14,9 +14,17 @@ service cloud.firestore {
       return exists(acesso) && email() in get(acesso).data.emails;
     }
     function membro() { return emailVerificado() && (email() in donos() || naEquipe()); }
+    // Só estes e-mails veem e mexem nas Finanças.
+    function financeiro() {
+      return emailVerificado() && email() in ['eduardamfaria@gmail.com', 'ffaria.edu@gmail.com', 'albudanejoao5@gmail.com'];
+    }
 
-    match /{document=**} {
-      allow read, write: if membro();
+    // Toda a equipe: tudo, menos as Finanças.
+    match /{colecao}/{resto=**} {
+      allow read, write: if membro() && colecao != 'lancamentos';
+    }
+    match /lancamentos/{id} {
+      allow read, write: if financeiro();
     }
 
     // Só a "impressão digital" dos e-mails liberados: qualquer um pode perguntar por UM

@@ -17,6 +17,12 @@ const DONOS = [
   '864005209240bd63e9649f1da3c7a22c4e3a4ede539bf195bfeaa624c04f8c27',
   'c446a8456260764b5c06469f95b156eb188a489ba04087b035f66491da89c93f',
 ];
+// Quem vê as Finanças (os mesmos de "financeiro()" em firestore.rules).
+const FINANCEIRO = [
+  '03a067252babae4d64c0ac339111f8e4b206d1d31186a47204a447569241ec60',
+  '32afe39baaa612fa373ac4bfbed3baaee6dc5d44aa4616eec51b2cf6493a1d47',
+  '864005209240bd63e9649f1da3c7a22c4e3a4ede539bf195bfeaa624c04f8c27',
+];
 async function hashEmail(email) {
   const bytes = new TextEncoder().encode(String(email).trim().toLowerCase());
   const d = await crypto.subtle.digest('SHA-256', bytes);
@@ -76,6 +82,7 @@ function create(config) {
     signOut: () => signOut(auth),
     // Quem não está na lista da equipe recebe "permissão negada" do servidor.
     // Confere se o e-mail está liberado ANTES de mandar o link (coleção "permitidos": só leitura de um item, sem listar).
+    canFinance: async (email) => FINANCEIRO.includes(await hashEmail(email)),
     async isAllowedEmail(email) {
       const h = await hashEmail(email);
       if (DONOS.includes(h)) return true;
