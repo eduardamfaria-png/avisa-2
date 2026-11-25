@@ -48,7 +48,7 @@ button { cursor: pointer; }
 .top b { display: block; font-family: var(--display); font-size: 16px; }
 .top small { color: var(--muted); font-size: 12.5px; }
 .who-select { margin-left: auto; min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 4px 30px 4px 10px; font-size: 13.5px; font-weight: 600; max-width: 46vw; }
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(6, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 2px 8px; border: 0; background: none; color: var(--faint); font-size: 10.5px; font-weight: 600; position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.on { color: var(--navy); }
@@ -140,6 +140,19 @@ button { cursor: pointer; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
 
+/* Faltas e modal */
+.faltas { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.falta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > span { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.input { width: 100%; min-height: 44px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
+textarea.input { resize: vertical; }
+.backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(10, 14, 32, .55); display: flex; align-items: flex-end; justify-content: center; }
+.modal { width: 100%; max-height: 92vh; overflow-y: auto; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.modal h2 { font-size: 20px; }
+@media (min-width: 640px) { .backdrop { align-items: center; padding: 24px; } .modal { max-width: 520px; border-radius: 20px; padding: 22px 24px; } }
+.tab span { white-space: nowrap; }
+
 /* Mural */
 .post { overflow: hidden; }
 .post .foto { aspect-ratio: 16 / 9; max-width: 100%; display: grid; place-items: center; color: #fff; font-family: var(--display); font-weight: 800; font-size: 20px; text-align: center; padding: 16px; position: relative; }
@@ -171,6 +184,7 @@ button { cursor: pointer; }
   <main class="main"><div class="wrap" id="view"></div></main>
   <nav class="tabs" id="tabs" aria-label="Seções"></nav>
 </div>
+<div id="modal-root"></div>
 <div id="toast-root"></div>
 
 <script>
@@ -193,6 +207,7 @@ button { cursor: pointer; }
     book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/>',
     check: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
     image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/>',
+    plus: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
     rocket: '<path d="M5 15c-1.5 1.5-2 4-2 6 2 0 4.5-.5 6-2"/><path d="M9 15l-3-3a11 11 0 0 1 11-9c1 0 1.9.1 2.7.3.2.8.3 1.7.3 2.7a11 11 0 0 1-9 11z"/><circle cx="15" cy="9" r="1.5"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
@@ -230,14 +245,22 @@ button { cursor: pointer; }
     { titulo: 'Nova turma de Informática à tarde', texto: 'Com a chegada de 5 computadores doados, abrimos mais uma turma. Fale com a coordenação para entrar na lista de espera.', data: ymd(addDays(hoje, -9)), cor: '#1c2d6b', foto: 'Foto do laboratório' },
     { titulo: 'Mutirão de pintura do instituto', texto: 'Voluntários pintaram as salas no último fim de semana. O espaço ficou lindo!', data: ymd(addDays(hoje, -16)), cor: '#d99a12', foto: 'Foto do mutirão' },
   ];
+  // Oportunidades: só o que é DE FORA do instituto, com link para a inscrição no site de quem oferece.
   const OPORTUNIDADES = [
-    { tipo: 'Emprego', titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando. Ajuda com currículo na coordenação.', prazo: ymd(addDays(hoje, 10)), quem: 'De 14 a 22 anos' },
-    { tipo: 'Curso', titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades' },
-    { tipo: 'Edital', titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos. A coordenação ajuda na inscrição.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando' },
-    { tipo: 'Curso Íris', titulo: 'Inglês para iniciantes (novo!)', texto: 'Nova turma no Instituto Íris a partir de fevereiro. Vagas limitadas.', prazo: ymd(addDays(hoje, 30)), quem: 'A partir de 12 anos' },
+    { tipo: 'Emprego', titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando. A coordenação ajuda com o currículo.', prazo: ymd(addDays(hoje, 10)), quem: 'De 14 a 22 anos', onde: 'site da empresa' },
+    { tipo: 'Curso', titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades', onde: 'site do curso' },
+    { tipo: 'Edital', titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando', onde: 'site do edital' },
+    { tipo: 'Estágio', titulo: 'Estágio em escritório de contabilidade', texto: 'Vaga de meio período, com bolsa-auxílio e vale-transporte.', prazo: ymd(addDays(hoje, 14)), quem: 'Ensino médio cursando, a partir de 16 anos', onde: 'site da vaga' },
+  ];
+  // Cursos do Íris com inscrições abertas: a inscrição vai para a equipe aprovar e colocar numa turma.
+  const CURSOS = [
+    { id: 'ingles', nome: 'Inglês para iniciantes', texto: 'Primeiros passos no inglês: conversação, vocabulário do dia a dia e música.', dias: 'Terças e quintas', horario: '16:00–17:30', inicio: 'Fevereiro', quem: 'A partir de 12 anos', vagas: 8, novo: true },
+    { id: 'info', nome: 'Informática básica', texto: 'Computador, internet, e-mail, Word e Excel do zero.', dias: 'Segundas e quartas', horario: '14:00–16:00', inicio: 'Turma em andamento (lista de espera)', quem: 'A partir de 10 anos', vagas: 0, turma: 'info' },
+    { id: 'danca', nome: 'Dança', texto: 'Ritmos variados, expressão corporal e apresentações ao longo do ano.', dias: 'Sábados', horario: '10:00–11:30', inicio: 'Imediato', quem: 'A partir de 7 anos', vagas: 12, turma: 'danca' },
+    { id: 'reforco', nome: 'Reforço escolar', texto: 'Apoio em português e matemática para o ensino fundamental.', dias: 'Terças e quintas', horario: '09:00–11:00', inicio: 'Imediato', quem: 'Ensino fundamental', vagas: 5, turma: 'reforco' },
   ];
 
-  const S = { view: 'inicio', aluno: 'ana', opTipo: 'Todos' };
+  const S = { view: 'inicio', aluno: 'ana', opTipo: 'Todos', just: {}, insc: {}, modal: null };
   try { S.view = localStorage.getItem('portal:view') || 'inicio'; } catch {}
   const aluno = () => ALUNOS.find((a) => a.id === S.aluno);
 
@@ -308,8 +331,59 @@ button { cursor: pointer; }
         <div class="grow"><h3 style="font-size:18px">${esc(t.nome)}</h3><p class="small muted num">${plural(P, 'presença', 'presenças')} · ${plural(F, 'falta', 'faltas')} · ${plural(J, 'justificada', 'justificadas')} · ${h.length} aulas</p>
         ${f < 0.75 ? '<p class="small" style="color:var(--red);font-weight:700;margin-top:4px">Atenção: abaixo de 75%. Converse com a coordenação.</p>' : f < 0.85 ? '<p class="small" style="color:var(--amber);font-weight:700;margin-top:4px">Perto do mínimo. Evite novas faltas.</p>' : '<p class="small" style="color:var(--green);font-weight:700;margin-top:4px">Frequência ótima!</p>'}</div></div>
         <div style="padding:0 16px 16px"><span class="small muted">Últimas aulas</span><div class="hist">${h.map((x) => `<i class="${x.v}" title="${fmtCurto(parse(x.data))}: ${{ P: 'presente', F: 'falta', J: 'justificada' }[x.v]}">${{ P: '✓', F: '✕', J: 'J' }[x.v]}</i>`).join('')}</div>
-        <div class="legend"><span><i style="background:var(--green)"></i>Presente</span><span><i style="background:var(--red)"></i>Falta</span><span><i style="background:var(--amber)"></i>Justificada</span></div></div></section>`;
+        <div class="legend"><span><i style="background:var(--green)"></i>Presente</span><span><i style="background:var(--red)"></i>Falta</span><span><i style="background:var(--amber)"></i>Justificada</span></div>
+        ${faltasHtml(a, id, h)}</div></section>`;
     }).join('');
+  }
+
+  // Faltas da turma com o estado da justificativa.
+  function faltasHtml(a, tid, h) {
+    const faltas = h.filter((x) => x.v === 'F').slice().reverse();
+    if (!faltas.length) return '';
+    return `<div class="faltas"><span class="small muted" style="font-weight:700">Faltas</span>${faltas.map((x) => {
+      const k = `${a.id}|${tid}|${x.data}`; const j = S.just[k];
+      const d = parse(x.data);
+      return `<div class="falta-row"><span class="grow"><b>${DIAS_LONGO[d.getDay()].replace(/^./, (c) => c.toUpperCase())}, ${fmtCurto(d)}</b>${j ? `<br><span class="small muted">Motivo: ${esc(j.motivo)}${j.arquivo ? ' · anexo: ' + esc(j.arquivo) : ''}</span>` : ''}</span>
+        ${j ? '<span class="pill amber">Aguardando aprovação</span>' : `<button class="btn" data-just="${esc(k)}">Justificar</button>`}</div>`;
+    }).join('')}</div>`;
+  }
+
+  function modalJust(k) {
+    const [, tid, data] = k.split('|');
+    const d = parse(data);
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Justificar falta">
+      <h2>Justificar falta</h2><p class="muted small" style="margin:4px 0 14px">${esc(TURMAS[tid].nome)} · ${DIAS_LONGO[d.getDay()]}, ${fmtCurto(d)}</p>
+      <form id="form-just" class="stack" data-k="${esc(k)}">
+        <label class="field"><span>Motivo</span><textarea class="input" id="just-motivo" rows="3" required placeholder="Ex.: consulta médica, problema de transporte…"></textarea></label>
+        <label class="field"><span>Atestado ou foto (opcional)</span><input class="input" type="file" id="just-arq" accept="image/*,application/pdf"></label>
+        <p class="small muted">A justificativa vai para o professor. Quando ele aceitar, a falta passa a contar como justificada.</p>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar justificativa</button></div>
+      </form></div></div>`;
+  }
+
+  function modalInsc(cid) {
+    const c = CURSOS.find((x) => x.id === cid); const a = aluno();
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
+      <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)}</p>
+      <form id="form-insc" class="stack" data-c="${esc(cid)}">
+        <p>Inscrever <b>${esc(a.nome)}</b> neste curso?</p>
+        ${c.vagas ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
+        <label class="field"><span>Observação para a coordenação (opcional)</span><textarea class="input" id="insc-obs" rows="2" placeholder="Ex.: só posso no período da tarde"></textarea></label>
+        <p class="small muted">A coordenação analisa a inscrição e avisa quando ela for aprovada e a turma definida.</p>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
+      </form></div></div>`;
+  }
+
+  function vCursos() {
+    const a = aluno();
+    return header('Cursos do Íris', 'Inscreva-se', 'Cursos gratuitos do instituto com inscrições abertas.') + `<div class="feed">${CURSOS.map((c) => {
+      const ja = c.turma && a.turmas.includes(c.turma);
+      const enviada = S.insc[`${a.id}|${c.id}`];
+      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : 'amber'}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Lista de espera'}</span></div>
+        <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
+        <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
+        <div>${ja ? '<span class="pill navy">Você já está neste curso</span>' : enviada ? '<span class="pill amber">Inscrição enviada · aguardando aprovação</span>' : `<button class="btn primary" data-insc="${c.id}">${c.vagas ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`}</div></article>`;
+    }).join('')}</div>`;
   }
 
   function vMural() {
@@ -318,23 +392,24 @@ button { cursor: pointer; }
   }
 
   function vOportunidades() {
-    const tipos = ['Todos', 'Emprego', 'Curso', 'Edital', 'Curso Íris'];
+    const tipos = ['Todos', 'Emprego', 'Estágio', 'Curso', 'Edital'];
     const lista = OPORTUNIDADES.filter((o) => S.opTipo === 'Todos' || o.tipo === S.opTipo).sort((a, b) => a.prazo.localeCompare(b.prazo));
-    const cor = { Emprego: 'green', Curso: 'navy', Edital: 'gold', 'Curso Íris': 'amber' };
-    return header('Oportunidades', 'Oportunidade para todos!', 'Vagas, cursos e editais escolhidos pela coordenação.') + `
+    const cor = { Emprego: 'green', Estágio: 'green', Curso: 'navy', Edital: 'gold' };
+    return header('Oportunidades', 'Oportunidade para todos!', 'Vagas, cursos e editais de fora do instituto, escolhidos pela coordenação. A inscrição é feita no site de quem oferece.') + `
       <div class="chips">${tipos.map((t) => `<button class="chip${S.opTipo === t ? ' on' : ''}" data-op="${t}">${t}</button>`).join('')}</div>
       ${lista.length ? `<div class="feed">${lista.map((o) => { const dias = Math.round((parse(o.prazo) - hoje) / 864e5); return `<article class="card op"><div class="row wrapx"><span class="pill ${cor[o.tipo]}">${o.tipo}</span><span class="small grow" style="text-align:right">${dias <= 7 ? `<b style="color:var(--red)">Termina em ${plural(dias, 'dia', 'dias')}</b>` : `Até ${fmtCurto(parse(o.prazo))}`}</span></div>
         <h3>${esc(o.titulo)}</h3><p>${esc(o.texto)}</p><div class="small muted">Para quem: ${esc(o.quem)}</div>
-        <div><button class="btn primary" data-saber="1">Saber mais</button></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
+        <div><button class="btn primary" data-saber="1">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
-  const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunidades', 'rocket']];
+  const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
   function render() {
     const n = avisosAtivos(aluno()).length;
     const btn = ([id, l, ic]) => `<button class="tab${S.view === id ? ' on' : ''}" data-nav="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${id === 'inicio' && n ? `<span class="dot num">${n}</span>` : ''}</button>`;
     $('#tabs').innerHTML = NAV.map(btn).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>Portal do Aluno</small></div>${NAV.map(btn).join('')}`;
-    $('#view').innerHTML = ({ inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, mural: vMural, oportunidades: vOportunidades }[S.view] || vInicio)();
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>Portal do Aluno</small></div>${NAV.map(([id, l, ic]) => btn([id, id === 'oportunidades' ? 'Oportunidades' : id === 'cursos' ? 'Cursos do Íris' : l, ic])).join('')}`;
+    $('#view').innerHTML = ({ inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades }[S.view] || vInicio)();
+    $('#modal-root').innerHTML = S.modal ? (S.modal.tipo === 'just' ? modalJust(S.modal.k) : modalInsc(S.modal.c)) : '';
   }
   function toast(m) { $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => ($('#toast-root').innerHTML = ''), 3000); }
 
@@ -343,8 +418,22 @@ button { cursor: pointer; }
     if (nav) { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} render(); try { window.scrollTo(0, 0); } catch {} return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
-    if (e.target.closest('[data-saber]')) toast('No portal de verdade, este botão abre o link da oportunidade.');
+    if (e.target.closest('[data-saber]')) { toast('No portal de verdade, este botão abre o site da inscrição.'); return; }
+    const j = e.target.closest('[data-just]'); if (j) { S.modal = { tipo: 'just', k: j.dataset.just }; render(); document.getElementById('just-motivo')?.focus(); return; }
+    const ins = e.target.closest('[data-insc]'); if (ins) { S.modal = { tipo: 'insc', c: ins.dataset.insc }; render(); return; }
+    const c = e.target.closest('[data-close]'); if (c && (e.target === c || c.tagName === 'BUTTON')) { S.modal = null; render(); }
   });
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (e.target.id === 'form-just') {
+      const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
+      const f = document.getElementById('just-arq').files[0];
+      S.just[e.target.dataset.k] = { motivo, arquivo: f ? f.name : '' }; S.modal = null; render();
+      toast('Justificativa enviada ao professor.');
+    }
+    if (e.target.id === 'form-insc') { S.insc[`${S.aluno}|${e.target.dataset.c}`] = true; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
   document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });
   render();
 })();
