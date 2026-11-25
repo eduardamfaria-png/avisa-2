@@ -440,7 +440,7 @@ textarea.input { resize: vertical; }
     if (nav) { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} render(); try { window.scrollTo(0, 0); } catch {} return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
-    const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'}.`); return; }
+    const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
     const j = e.target.closest('[data-just]'); if (j) { S.modal = { tipo: 'just', k: j.dataset.just }; render(); document.getElementById('just-motivo')?.focus(); return; }
     const ins = e.target.closest('[data-insc]'); if (ins) { S.modal = { tipo: 'insc', c: ins.dataset.insc }; render(); return; }
     const c = e.target.closest('[data-close]'); if (c && (e.target === c || c.tagName === 'BUTTON')) { S.modal = null; render(); }

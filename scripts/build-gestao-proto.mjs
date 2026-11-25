@@ -30,7 +30,7 @@ rep(`    trash: '`, `    mega: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 
 
 // Coleções novas.
 rep(`const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos'];`, `const COLS = ['alunos', 'turmas', 'chamadas', 'lancamentos', 'avisos', 'mural', 'oportunidades', 'justificativas', 'pedidos'];`);
-rep(`    finMes: ym(new Date()),`, `    finMes: ym(new Date()), portalSub: 'avisos',`);
+rep(`    finMes: ym(new Date()),`, `    finMes: ym(new Date()), portalSub: 'justificativas',`);
 
 // Aba nova no menu, com contador do que espera avaliação.
 rep(`    ['inscricoes', 'Inscrições', 'form'],\n`, `    ['inscricoes', 'Inscrições', 'form'],\n    ['portal', 'Portal', 'mega'],\n`);
@@ -99,6 +99,7 @@ rep(`      case 'csv-alunos': csvAlunos(); break;`, `      case 'csv-alunos': cs
       case 'op-new': opModal(null); break;
       case 'op-open': opModal(t.dataset.id); break;
       case 'op-save': saveOp(t.dataset.id); break;
+      case 'op-resumo': resumoOp(t.dataset.id); break;
       case 'curso-open': cursoModal(t.dataset.id); break;
       case 'curso-save': saveCurso(t.dataset.id); break;
       case 'just-open': justModal(t.dataset.id); break;
@@ -133,6 +134,12 @@ rep(`    return { turmas, alunos, chamadas, lancamentos };`, `    turmas[t1].cur
       'ex-op1': { tipo: 'Emprego', titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando.', quem: 'De 14 a 22 anos', prazo: fwd(10), link: 'https://exemplo.com/jovem-aprendiz', exemplo: true },
       'ex-op2': { tipo: 'Curso', titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira.', quem: 'Todas as idades', prazo: fwd(20), link: 'https://exemplo.com/excel', exemplo: true },
     };
+    // Cliques de exemplo nas oportunidades.
+    const ids = Object.keys(alunos).filter((k) => alunos[k].status === 'matriculado');
+    oportunidades['ex-op1'].cliques = Object.fromEntries(ids.slice(0, 7).map((k, i) => [k, 1 + (i % 3)]));
+    oportunidades['ex-op2'].cliques = Object.fromEntries(ids.slice(2, 6).map((k) => [k, 1]));
+    oportunidades['ex-op1'].criadoEm = new Date(Date.now() - 6 * 864e5).toISOString();
+    oportunidades['ex-op2'].criadoEm = new Date(Date.now() - 2 * 864e5).toISOString();
     // Justificativas: usa faltas reais dos exemplos de chamada.
     const faltas = [];
     for (const c of Object.values(chamadas).sort((a, b) => b.data.localeCompare(a.data))) for (const [aid, v] of Object.entries(c.registros)) if (v === 'F') faltas.push({ aid, c });

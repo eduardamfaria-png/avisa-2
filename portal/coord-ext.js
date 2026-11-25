@@ -26,10 +26,10 @@
   }
 
   function vPortal() {
-    const subs = [['avisos', 'Avisos'], ['mural', 'Mural'], ['oportunidades', 'Oportunidades'], ['cursos', 'Cursos abertos'], ['justificativas', 'Justificativas']];
+    const subs = [['justificativas', 'Justificativas'], ['avisos', 'Avisos'], ['mural', 'Mural'], ['oportunidades', 'Oportunidades'], ['cursos', 'Cursos abertos']];
     const nj = pendentes('justificativas').length;
     const acao = { avisos: `<button class="btn primary" data-act="aviso-new">${icon('plus')}Novo aviso</button>`, mural: `<button class="btn primary" data-act="mural-new">${icon('plus')}Nova publicação</button>`, oportunidades: `<button class="btn primary" data-act="op-new">${icon('plus')}Nova oportunidade</button>` }[S.portalSub] || '';
-    const sub = { avisos: pAvisos, mural: pMural, oportunidades: pOport, cursos: pCursos, justificativas: pJust }[S.portalSub] || pAvisos;
+    const sub = { avisos: pAvisos, mural: pMural, oportunidades: pOport, cursos: pCursos, justificativas: pJust }[S.portalSub] || pJust;
     return header('Portal do Aluno', 'Portal', 'O que os alunos veem no portal deles: avisos, mural, oportunidades e cursos com inscrição aberta.', acao) + notices() + `
       <div class="ptabs" role="tablist" aria-label="Seções do portal">${subs.map(([k, l]) => `<button class="chip${S.portalSub === k ? ' on' : ''}" role="tab" aria-selected="${S.portalSub === k}" data-act="p-sub" data-v="${k}">${l}${k === 'justificativas' && nj ? ` <i class="num">${nj}</i>` : ''}</button>`).join('')}</div>
       ${sub()}`;
@@ -52,8 +52,9 @@
     const l = list('oportunidades').sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
     const hoje = today();
     if (!l.length) return `<div class="empty card"><h3>Nenhuma oportunidade</h3><p>Vagas, cursos e editais de fora do instituto, com o link da inscrição.</p><button class="btn primary" data-act="op-new">${icon('plus')}Nova oportunidade</button></div>`;
-    return `<p class="small muted">Vagas, cursos e editais de fora do instituto. O aluno toca e vai direto para a inscrição no site de quem oferece. Somem depois do prazo.</p>
-      <div class="card list">${l.map((o) => { const on = o.prazo >= hoje; return `<button class="item${on ? '' : ' off'}" data-act="op-open" data-id="${o.id}"><div class="grow"><strong>${esc(o.titulo)}</strong><span class="sub">${esc(o.tipo)} · ${on ? 'até ' + fmtDate(o.prazo) : 'encerrada'} · ${esc(hostDe(o.link))}</span></div></button>`; }).join('')}</div>`;
+    return `<p class="small muted">Vagas, cursos e editais de fora do instituto. O aluno toca e vai direto para a inscrição no site de quem oferece. Somem depois do prazo. Cada toque no link é contado, para mostrar aos parceiros quantos alunos o Íris levou até eles.</p>
+      ${(() => { const t = l.reduce((n, o) => n + alcance(o).alunos, 0); return `<div class="minis"><div><b class="num">${l.length}</b><span>${l.length === 1 ? 'oportunidade' : 'oportunidades'}</span></div><div><b class="num">${t}</b><span>encaminhamentos de alunos no total</span></div></div>`; })()}
+      <div class="card list">${l.map((o) => { const on = o.prazo >= hoje; return `<button class="item${on ? '' : ' off'}" data-act="op-open" data-id="${o.id}"><div class="grow"><strong>${esc(o.titulo)}</strong><span class="sub">${esc(o.tipo)} · ${on ? 'até ' + fmtDate(o.prazo) : 'encerrada'} · ${esc(hostDe(o.link))}</span></div><span class="pill navy num" title="Alunos que clicaram no link">${plural(alcance(o).alunos, 'aluno clicou', 'alunos clicaram')}</span></button>`; }).join('')}</div>`;
   }
   function pCursos() {
     const ts = turmasList();
@@ -117,6 +118,33 @@
     if (await guard(() => put('mural', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.')) closeModal();
   }
 
+  // Alcance: quem tocou no link (cliques[alunoId] = número de toques).
+  function alcance(o) {
+    const c = o.cliques || {}; const ids = Object.keys(c);
+    const porCurso = {}; const porBairro = {};
+    for (const id of ids) {
+      const a = get('alunos', id); if (!a) continue;
+      const cs = [...new Set((a.turmaIds || []).map((t) => get('turmas', t)).filter(Boolean).map(cursoDe))];
+      for (const k of cs.length ? cs : ['Sem turma']) porCurso[k] = (porCurso[k] || 0) + 1;
+      const b = (a.bairro || '').trim() || 'Não informado'; porBairro[b] = (porBairro[b] || 0) + 1;
+    }
+    return { alunos: ids.length, toques: ids.reduce((n, k) => n + (Number(c[k]) || 0), 0), porCurso, porBairro };
+  }
+  function alcanceHtml(o) {
+    const r = alcance(o);
+    const bars = (m) => barList(Object.entries(m).sort((a, b) => b[1] - a[1]), r.alunos || 1, 5);
+    return `<div class="ficha-sec" style="border-top:1px solid var(--line);padding-top:16px;margin-top:18px">
+      <div class="section-title"><h2 style="font-size:16px">Alcance</h2><button type="button" class="btn sm" data-act="op-resumo" data-id="${o.id}">Copiar resumo para o parceiro</button></div>
+      <div class="minis"><div><b class="num">${r.alunos}</b><span>${r.alunos === 1 ? 'aluno clicou' : 'alunos clicaram'} no link</span></div><div><b class="num">${r.toques}</b><span>toques no total</span></div></div>
+      ${r.alunos ? `<div class="form-grid" style="margin-top:12px"><div><h3 class="ph">Por curso no Íris</h3>${bars(r.porCurso)}</div><div><h3 class="ph">Por bairro</h3>${bars(r.porBairro)}</div></div>` : '<p class="small muted" style="margin-top:8px">Ninguém clicou ainda.</p>'}
+    </div>`;
+  }
+  function resumoOp(id) {
+    const o = get('oportunidades', id); if (!o) return;
+    const r = alcance(o);
+    const txt = `Instituto Íris · ${o.titulo}\nDivulgamos esta oportunidade no Portal do Aluno${o.criadoEm ? ' desde ' + fmtDate(o.criadoEm.slice(0, 10)) : ''}.\n${r.alunos} ${r.alunos === 1 ? 'aluno acessou' : 'alunos acessaram'} o link de inscrição (${r.toques} acessos no total).\nPor curso: ${Object.entries(r.porCurso).map(([k, n]) => `${k} (${n})`).join(', ') || '—'}.`;
+    (navigator.clipboard?.writeText(txt) || Promise.reject()).then(() => toast('Resumo copiado. É só colar na mensagem para o parceiro.'), () => { openModal('Resumo para o parceiro', `<textarea class="textarea" style="min-height:160px" readonly>${esc(txt)}</textarea><p class="small muted" style="margin-top:8px">Selecione o texto e copie.</p>`, '<button class="btn" data-act="modal-close">Fechar</button>'); });
+  }
   function opModal(id) {
     const o = id ? get('oportunidades', id) : { tipo: 'Emprego', titulo: '', texto: '', quem: '', prazo: addDays(today(), 14), link: '' };
     openModal(id ? 'Editar oportunidade' : 'Nova oportunidade', `<div class="form-grid">
@@ -126,7 +154,7 @@
       <label class="field full"><span>Descrição</span><textarea class="textarea" id="o-txt">${esc(o.texto)}</textarea></label>
       <label class="field full"><span>Para quem</span><input class="input" id="o-quem" value="${esc(o.quem)}" placeholder="Ex.: de 16 a 24 anos, ensino médio"></label>
       <label class="field full"><span>Link da inscrição</span><input class="input" type="url" id="o-link" value="${esc(o.link)}" placeholder="https://"></label>
-    </div>`, delFoot('oportunidades', id, 'op-save'));
+    </div>${id ? alcanceHtml(o) : ''}`, delFoot('oportunidades', id, 'op-save'));
     $('#modal-root .modal').dataset.ctx = JSON.stringify({ col: 'oportunidades', id });
   }
   async function saveOp(id) {
@@ -134,7 +162,7 @@
     if (!body.titulo || !body.prazo) return toast('Preencha o título e o prazo.');
     if (!/^https?:\/\/\S+\.\S+/.test(body.link)) return toast('Cole o link da inscrição (começando com https://).');
     const prev = id ? get('oportunidades', id) : null;
-    if (await guard(() => put('oportunidades', id || uid(), { ...semId(prev), ...body }), id ? 'Oportunidade atualizada.' : 'Oportunidade publicada.')) closeModal();
+    if (await guard(() => put('oportunidades', id || uid(), { cliques: {}, ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Oportunidade atualizada.' : 'Oportunidade publicada.')) closeModal();
   }
 
   function cursoModal(id) {
@@ -189,9 +217,9 @@
     const ts = turmasDoCurso(curso);
     const sel = p.turmaId || ts[0]?.id || '';
     openModal('Pedido de inscrição', `<div class="row" style="margin-bottom:14px">${avatar(a || { nome: p.nome }, 44)}<div class="grow"><b>${esc(nomePedido(p))}</b><div class="small muted">${a ? 'Já é aluno(a) do instituto' : 'Pessoa nova: ainda não tem ficha'} · pedido em ${fmtDate((p.enviadoEm || '').slice(0, 10))}</div></div>${a ? `<button class="btn sm" data-act="aluno-open" data-id="${a.id}">Ver ficha</button>` : ''}</div>
-      <div class="card pad" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--green-soft);border-color:transparent;box-shadow:none">
-        <div class="grow"><div class="small" style="color:var(--green);font-weight:700">Telefone / WhatsApp</div><div class="num" style="font-family:var(--display);font-size:22px;font-weight:800;white-space:nowrap">${esc(p.telefone || '—')}</div></div>
-        <a class="btn primary" style="background:var(--green);border-color:var(--green);text-decoration:none" href="${esc(waLink(p.telefone))}" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      <div class="card pad" style="display:grid;gap:10px;background:var(--green-soft);border-color:transparent;box-shadow:none">
+        <div><div class="small" style="color:var(--green);font-weight:700">Telefone / WhatsApp</div><div class="num" style="font-family:var(--display);font-size:22px;font-weight:800">${esc(p.telefone || '—')}</div></div>
+        <a class="btn primary block" style="background:var(--green);border-color:var(--green);text-decoration:none" href="${esc(waLink(p.telefone))}" target="_blank" rel="noopener">Chamar no WhatsApp</a>
       </div>
       <dl class="kv" style="margin-top:14px"><dt>Curso pedido</dt><dd>${esc(curso)}</dd>${p.nascimento ? `<dt>Nascimento</dt><dd>${fmtDate(p.nascimento)} · ${age(p.nascimento)} anos</dd>` : ''}${p.obs ? `<dt>Recado</dt><dd style="font-weight:400">${esc(p.obs)}</dd>` : ''}</dl>
       <div class="form-grid" style="margin-top:16px">
