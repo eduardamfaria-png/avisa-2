@@ -517,27 +517,16 @@ body:not(.gated) #gate { display: none; }
     return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : ''}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Sem vagas no momento'}</span></div>
       <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
       <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe no Início</span>' : c.vagas ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
+      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : c.vagas ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
   }
   function postCard(m) {
     return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
       <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
   }
   function vPInicio() {
-    const abertos = CURSOS.filter((c) => c.vagas > 0);
-    return pHeader() + `
-      <section class="card hero"><div class="eyebrow">Oportunidade para todos</div><h1>Cursos gratuitos em Éden</h1><p>Informática, dança, reforço escolar e muito mais. Faça sua inscrição em poucos minutos.</p>
-        <div class="row wrapx" style="margin-top:12px"><button class="btn gold" data-nav="p-cursos">Ver cursos com vaga</button><button class="btn on-navy" data-nav="p-associado">Seja um associado</button></div></section>
-      ${minhasInsc()}
-      <div class="feed">
-        ${abertos[0] ? `<div class="stack"><span class="eyebrow">Inscrições abertas</span>${cursoCard(abertos[0])}</div>` : ''}
-        ${MURAL[0] ? postCard(MURAL[0]) : ''}
-        ${MURAL[1] ? postCard(MURAL[1]) : ''}
-        ${abertos[1] ? `<div class="stack"><span class="eyebrow">Inscrições abertas</span>${cursoCard(abertos[1])}</div>` : ''}
-        <article class="card pad cta"><h3>Quer ajudar o Íris a crescer?</h3><p class="muted">Empresas e pessoas podem patrocinar, doar ou ser parceiras do instituto.</p><button class="btn primary" data-nav="p-associado" style="margin-top:10px">Seja um associado</button></article>
-        ${MURAL.slice(2).map(postCard).join('')}
-      </div>
-      <section><div class="section-title"><h2>Quem apoia o Íris</h2><button class="btn sm" data-nav="p-parceiros">Ver todos</button></div><div class="logos">${PARCEIROS.map((p) => `<span class="logo-chip" style="--c:${p.cor}">${esc(p.nome)}</span>`).join('')}</div></section>`;
+    // Início do site aberto: só as fotos e novidades do mural, como um feed.
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Acontece no Íris</div><h1>Nosso dia a dia</h1></div>
+      ${MURAL.length ? `<div class="feed">${MURAL.map(postCard).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
   }
   function vPCursos() {
     return pHeader() + `<div class="page-head"><div class="eyebrow">Cursos do Íris</div><h1>Nossos cursos</h1><p>Todos gratuitos. Escolha um curso com vaga e faça sua inscrição.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(!!b.vagas) - Number(!!a.vagas)).map(cursoCard).join('')}</div>`;
@@ -595,8 +584,8 @@ body:not(.gated) #gate { display: none; }
     if (S.modal.erro) return render();
     S.vis.dados = { ...t, telefone: fmtTel(dig) };
     S.vis.pedidos.push({ curso: form.dataset.c, status: 'enviada', em: H });
-    salvarVis(); S.modal = null; S.pview = 'p-inicio'; render(); try { window.scrollTo(0, 0); } catch {}
-    toast('Inscrição enviada! Acompanhe aqui no início do site.');
+    salvarVis(); S.modal = null; S.pview = 'p-cursos'; render(); try { window.scrollTo(0, 0); } catch {}
+    toast('Inscrição enviada! Acompanhe aqui na aba Cursos.');
   }
 
   // Entrar (a "pessoinha"): só aluno e equipe.
