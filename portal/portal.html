@@ -359,7 +359,7 @@ textarea.input { resize: vertical; }
       const st = !j ? `<button class="btn" data-just="${esc(k)}">Justificar</button>`
         : j.status === 'pendente' ? '<span class="pill amber">Em análise</span>'
         : j.status === 'aceita' ? '<span class="pill green">Justificativa aceita</span>'
-        : `<span class="pill red">Não aceita</span><button class="btn sm" data-just="${esc(k)}">Enviar de novo</button>`;
+        : '<span class="pill red">Não aceita</span>';
       return `<div class="falta-row"><span class="grow"><b>${DIAS_LONGO[d.getDay()].replace(/^./, (c) => c.toUpperCase())}, ${fmtCurto(d)}</b>${j ? `<br><span class="small muted">Motivo: ${esc(j.motivo)}${j.arquivo ? ' · anexo: ' + esc(j.arquivo) : ''}</span>${j.obs ? `<br><span class="small"><b>Coordenação:</b> ${esc(j.obs)}</span>` : ''}` : ''}</span>
         ${st}</div>`;
     }).join('')}${faltas.some((x) => S.just[`${a.id}|${tid}|${x.data}`]?.status === 'pendente') ? '<p class="small muted">Enquanto a justificativa está em análise, a falta continua contando. Se for aceita, vira justificada.</p>' : ''}</div>`;
