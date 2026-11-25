@@ -1,0 +1,351 @@
+<title>Portal do Aluno Íris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f4f5fa; --surface: #ffffff; --surface-2: #eef0f7; --ink: #141c40; --muted: #5b6386; --faint: #8a91ad; --line: #e1e4ef;
+  --navy: #1c2d6b; --navy-ink: #ffffff; --navy-soft: #e6eaf7; --gold: #d99a12; --gold-soft: #fbf1d9; --gold-ink: #7a5508;
+  --green: #17885a; --green-soft: #dff3e9; --red: #c8403a; --red-soft: #fbe5e3; --amber: #a8700f; --amber-soft: #fbefd6;
+  --shadow: 0 1px 2px rgba(20, 28, 64, .06), 0 6px 20px rgba(20, 28, 64, .05);
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Figtree', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1326; --surface: #161d37; --surface-2: #1d2645; --ink: #edf0fa; --muted: #a2aac8; --faint: #7a83a6; --line: #283255;
+    --navy: #8ea6ff; --navy-ink: #0e1326; --navy-soft: #222d55; --gold: #f2b93b; --gold-soft: #3a2f14; --gold-ink: #f6d58a;
+    --green: #4fcf92; --green-soft: #173a2b; --red: #ff7a72; --red-soft: #45201f; --amber: #f2b93b; --amber-soft: #3a2f14;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1326; --surface: #161d37; --surface-2: #1d2645; --ink: #edf0fa; --muted: #a2aac8; --faint: #7a83a6; --line: #283255;
+  --navy: #8ea6ff; --navy-ink: #0e1326; --navy-soft: #222d55; --gold: #f2b93b; --gold-soft: #3a2f14; --gold-ink: #f6d58a;
+  --green: #4fcf92; --green-soft: #173a2b; --red: #ff7a72; --red-soft: #45201f; --amber: #f2b93b; --amber-soft: #3a2f14;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+p { margin: 0; }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.app { min-height: 100%; display: grid; grid-template-columns: 1fr; }
+.side { display: none; }
+.main { min-width: 0; padding-inline: 16px; padding-block: 14px calc(84px + env(safe-area-inset-bottom, 0px)); }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.wrap > * { min-width: 0; }
+.logo-img { display: block; height: 48px; width: auto; background: #fff; border-radius: 10px; padding: 3px 6px; }
+.top { display: flex; align-items: center; gap: 10px; }
+.top .grow { min-width: 0; }
+.top b { display: block; font-family: var(--display); font-size: 16px; }
+.top small { color: var(--muted); font-size: 12.5px; }
+.who-select { margin-left: auto; min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 4px 30px 4px 10px; font-size: 13.5px; font-weight: 600; max-width: 46vw; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 2px 8px; border: 0; background: none; color: var(--faint); font-size: 10.5px; font-weight: 600; position: relative; }
+.tab svg { width: 22px; height: 22px; }
+.tab.on { color: var(--navy); }
+.tab.on::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--gold); }
+.tab .dot { position: absolute; top: 6px; left: calc(50% + 6px); min-width: 16px; height: 16px; border-radius: 9px; background: var(--gold); color: #1a1405; font-size: 10px; line-height: 16px; padding: 0 4px; }
+@media (min-width: 960px) {
+  .app { grid-template-columns: 236px 1fr; }
+  .side { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; padding: 22px 14px; background: var(--surface); border-right: 1px solid var(--line); }
+  .side .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-bottom: 18px; text-align: center; }
+  .side .brand .logo-img { height: auto; width: 100%; max-width: 180px; padding: 6px 10px; }
+  .side .brand small { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .side .tab { flex-direction: row; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; color: var(--muted); }
+  .side .tab:hover { background: var(--surface-2); color: var(--ink); }
+  .side .tab.on { background: var(--navy-soft); color: var(--navy); }
+  .side .tab.on::before { top: 9px; bottom: 9px; left: -14px; right: auto; width: 4px; height: auto; border-radius: 0 3px 3px 0; }
+  .side .tab .dot { position: static; margin-left: auto; }
+  .tabs, .top .logo-img { display: none; }
+  .main { padding-inline: 32px; padding-block: 26px 48px; }
+}
+
+.page-head h1 { font-size: 28px; font-weight: 800; }
+.page-head p { color: var(--muted); margin-top: 4px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-ink); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.pad { padding: 16px; }
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.section-title h2 { font-size: 18px; }
+.section-title span { font-size: 13px; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 10px; }
+.wrapx { flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.small { font-size: 13px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 99px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--surface-2); color: var(--muted); }
+.pill.green { background: var(--green-soft); color: var(--green); }
+.pill.red { background: var(--red-soft); color: var(--red); }
+.pill.amber { background: var(--amber-soft); color: var(--amber); }
+.pill.navy { background: var(--navy-soft); color: var(--navy); }
+.pill.gold { background: var(--gold-soft); color: var(--gold-ink); }
+.dotc { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 12px; background: var(--gold-soft); color: var(--gold-ink); font-size: 13.5px; border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); }
+.banner svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.grid2 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .grid2 { grid-template-columns: 1.15fr 1fr; align-items: start; } }
+
+/* Avisos */
+.aviso { display: flex; gap: 12px; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--gold); box-shadow: var(--shadow); }
+.aviso.urgente { border-left-color: var(--red); }
+.aviso .ic { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold-ink); }
+.aviso.urgente .ic { background: var(--red-soft); color: var(--red); }
+.aviso .ic svg { width: 19px; height: 19px; }
+.aviso h3 { font-size: 15.5px; }
+.aviso p { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.aviso .foot { font-size: 12px; color: var(--faint); margin-top: 6px; }
+
+/* Próxima aula */
+.next { padding: 18px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
+.next .eyebrow { color: color-mix(in srgb, var(--navy-ink) 70%, transparent); }
+.next h2 { font-size: 24px; margin-top: 4px; }
+.next .meta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: color-mix(in srgb, var(--navy-ink) 85%, transparent); }
+
+/* Aulas */
+.turma { padding: 16px; border-left: 5px solid var(--c); }
+.turma h3 { font-size: 18px; }
+.turma dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 10px 0 0; font-size: 14px; }
+.turma dt { color: var(--muted); }
+.turma dd { margin: 0; font-weight: 600; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.wd { border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 8px 4px; text-align: center; min-height: 92px; display: flex; flex-direction: column; gap: 4px; }
+.wd.today { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.wd b { font-size: 12px; color: var(--muted); }
+.wd .n { font-family: var(--display); font-weight: 800; font-size: 18px; }
+.wd em { font-style: normal; font-size: 10.5px; font-weight: 700; border-radius: 6px; padding: 2px 3px; background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Frequência */
+.freq { padding: 16px; display: flex; gap: 16px; align-items: center; }
+.ring { --p: 0; width: 84px; height: 84px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--rc) calc(var(--p) * 1%), var(--surface-2) 0); }
+.ring span { width: 64px; height: 64px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 19px; }
+.hist { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.hist i { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; }
+.hist .P { background: var(--green); } .hist .F { background: var(--red); } .hist .J { background: var(--amber); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+/* Mural */
+.post { overflow: hidden; }
+.post .foto { aspect-ratio: 16 / 9; max-width: 100%; display: grid; place-items: center; color: #fff; font-family: var(--display); font-weight: 800; font-size: 20px; text-align: center; padding: 16px; position: relative; }
+.post .foto small { position: absolute; right: 10px; bottom: 8px; font-family: var(--body); font-size: 11px; font-weight: 600; opacity: .85; }
+.post .body { padding: 14px 16px 16px; }
+.post h3 { font-size: 17px; }
+.post p { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
+.post .foot { font-size: 12px; color: var(--faint); margin-top: 10px; }
+.feed { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .feed { grid-template-columns: 1fr 1fr; } }
+
+/* Oportunidades */
+.op { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.op h3 { font-size: 16.5px; }
+.op p { color: var(--muted); font-size: 14px; }
+.op .row .small { color: var(--muted); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { min-height: 36px; padding: 0 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.chip.on { background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
+.empty { text-align: center; padding: 22px; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
+.install { display: flex; gap: 12px; align-items: center; padding: 14px; }
+.install svg { flex: none; width: 26px; height: 26px; color: var(--navy); }
+.toast { position: fixed; z-index: 80; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; }
+@media (min-width: 960px) { .toast { bottom: 24px; left: auto; right: 24px; } }
+</style>
+
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main class="main"><div class="wrap" id="view"></div></main>
+  <nav class="tabs" id="tabs" aria-label="Seções"></nav>
+</div>
+<div id="toast-root"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (d, k) => { const x = new Date(d); x.setDate(x.getDate() + k); return x; };
+  const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const DIAS_LONGO = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const fmtCurto = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const fmtLongo = (d) => d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+  const LOGO = '<img class="logo-img" src="%%LOGO%%" alt="Instituto Íris">';
+  const ICON = {
+    home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/>',
+    check: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/>',
+    rocket: '<path d="M5 15c-1.5 1.5-2 4-2 6 2 0 4.5-.5 6-2"/><path d="M9 15l-3-3a11 11 0 0 1 11-9c1 0 1.9.1 2.7.3.2.8.3 1.7.3 2.7a11 11 0 0 1-9 11z"/><circle cx="15" cy="9" r="1.5"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+    alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v5h1"/>',
+    phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  };
+  const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+
+  // ───── Dados de exemplo (protótipo) ─────
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const H = ymd(hoje);
+  const TURMAS = {
+    info: { nome: 'Informática básica', dias: [1, 3], inicio: '14:00', fim: '16:00', professor: 'Prof. Carla', local: 'Sala 2', cor: '#1c2d6b' },
+    danca: { nome: 'Dança', dias: [6], inicio: '10:00', fim: '11:30', professor: 'Prof. Bia', local: 'Salão principal', cor: '#17885a' },
+    reforco: { nome: 'Reforço escolar', dias: [2, 4], inicio: '09:00', fim: '11:00', professor: 'Prof. Marcos', local: 'Sala 1', cor: '#d99a12' },
+  };
+  // Histórico de presença gerado a partir das últimas aulas de cada turma.
+  function historico(tid, padrao) {
+    const out = []; let d = addDays(hoje, -1); let i = 0;
+    while (out.length < 12 && i < 120) { if (TURMAS[tid].dias.includes(d.getDay())) out.unshift({ data: ymd(d), v: padrao[out.length % padrao.length] }); d = addDays(d, -1); i++; }
+    return out;
+  }
+  const ALUNOS = [
+    { id: 'ana', nome: 'Ana Clara Souza', turmas: ['info', 'danca'], hist: { info: historico('info', ['P', 'P', 'P', 'F', 'P', 'P']), danca: historico('danca', ['P', 'J', 'P', 'P']) } },
+    { id: 'davi', nome: 'Davi Souza', turmas: ['reforco'], hist: { reforco: historico('reforco', ['P', 'F', 'P', 'F', 'P', 'F', 'P']) } },
+  ];
+  const AVISOS = [
+    { titulo: 'Sem aula de Dança neste sábado', texto: 'O salão estará em manutenção. As aulas voltam no sábado seguinte, no horário normal.', ate: ymd(addDays(hoje, 4)), urgente: true, turma: 'danca' },
+    { titulo: 'Aula de Informática começa às 15h na quarta', texto: 'Só nesta semana, por causa da reunião de pais. O término continua às 16h.', ate: ymd(addDays(hoje, 3)), turma: 'info' },
+    { titulo: 'Festa de fim de ano: dia 13/12', texto: 'Todos os alunos e famílias estão convidados. Traga um prato para dividir!', ate: ymd(addDays(hoje, 18)) },
+    { titulo: 'Aviso que já venceu (não aparece)', texto: 'Este aviso tinha data para sumir no passado.', ate: ymd(addDays(hoje, -2)) },
+  ];
+  const MURAL = [
+    { titulo: 'Apresentação da turma de Dança', texto: 'As alunas e alunos da Dança se apresentaram na praça do Éden no domingo. Obrigado a todas as famílias que foram prestigiar!', data: ymd(addDays(hoje, -3)), cor: '#17885a', foto: 'Foto da apresentação' },
+    { titulo: 'Nova turma de Informática à tarde', texto: 'Com a chegada de 5 computadores doados, abrimos mais uma turma. Fale com a coordenação para entrar na lista de espera.', data: ymd(addDays(hoje, -9)), cor: '#1c2d6b', foto: 'Foto do laboratório' },
+    { titulo: 'Mutirão de pintura do instituto', texto: 'Voluntários pintaram as salas no último fim de semana. O espaço ficou lindo!', data: ymd(addDays(hoje, -16)), cor: '#d99a12', foto: 'Foto do mutirão' },
+  ];
+  const OPORTUNIDADES = [
+    { tipo: 'Emprego', titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando. Ajuda com currículo na coordenação.', prazo: ymd(addDays(hoje, 10)), quem: 'De 14 a 22 anos' },
+    { tipo: 'Curso', titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades' },
+    { tipo: 'Edital', titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos. A coordenação ajuda na inscrição.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando' },
+    { tipo: 'Curso Íris', titulo: 'Inglês para iniciantes (novo!)', texto: 'Nova turma no Instituto Íris a partir de fevereiro. Vagas limitadas.', prazo: ymd(addDays(hoje, 30)), quem: 'A partir de 12 anos' },
+  ];
+
+  const S = { view: 'inicio', aluno: 'ana', opTipo: 'Todos' };
+  try { S.view = localStorage.getItem('portal:view') || 'inicio'; } catch {}
+  const aluno = () => ALUNOS.find((a) => a.id === S.aluno);
+
+  function proximaAula(a) {
+    for (let k = 0; k < 14; k++) {
+      const d = addDays(hoje, k);
+      const ts = a.turmas.filter((t) => TURMAS[t].dias.includes(d.getDay())).sort((x, y) => TURMAS[x].inicio.localeCompare(TURMAS[y].inicio));
+      for (const t of ts) {
+        if (k === 0) { const [h, m] = TURMAS[t].fim.split(':').map(Number); const agora = new Date(); if (agora.getHours() * 60 + agora.getMinutes() > h * 60 + m) continue; }
+        return { t, d };
+      }
+    }
+    return null;
+  }
+  const freq = (hist) => { const pres = hist.filter((x) => x.v !== 'F').length; return hist.length ? pres / hist.length : null; };
+  const avisosAtivos = (a) => AVISOS.filter((x) => x.ate >= H && (!x.turma || a.turmas.includes(x.turma))).sort((x, y) => Number(!!y.urgente) - Number(!!x.urgente) || x.ate.localeCompare(y.ate));
+
+  function header(eyebrow, title, sub) {
+    return `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}</div>
+      <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
+  }
+  function selector() {
+    return `<select class="who-select" id="who" aria-label="Ver dados de">${ALUNOS.map((a) => `<option value="${a.id}"${a.id === S.aluno ? ' selected' : ''}>${esc(a.nome.split(' ')[0])}</option>`).join('')}</select>`;
+  }
+  const demoBanner = () => `<div class="banner">${icon('info')}<span><b>Protótipo com dados de exemplo.</b> Este e-mail tem dois filhos cadastrados (Ana Clara e Davi): troque no seletor do topo para ver cada um.</span></div>`;
+
+  function avisoHtml(x) {
+    const t = x.turma ? TURMAS[x.turma] : null;
+    return `<article class="aviso${x.urgente ? ' urgente' : ''}"><span class="ic">${icon(x.urgente ? 'alert' : 'bell')}</span><div class="grow"><h3>${esc(x.titulo)}</h3><p>${esc(x.texto)}</p>
+      <div class="foot">${t ? `<span class="dotc" style="background:${t.cor};width:8px;height:8px;margin-right:5px"></span>${esc(t.nome)} · ` : 'Para todos · '}aviso até ${fmtCurto(parse(x.ate))}</div></div></article>`;
+  }
+
+  function vInicio() {
+    const a = aluno();
+    const nx = proximaAula(a);
+    const av = avisosAtivos(a);
+    const resumo = a.turmas.map((t) => ({ t, f: freq(a.hist[t]) }));
+    return header(fmtLongo(hoje), `Olá, ${esc(a.nome.split(' ')[0])}!`, '') + demoBanner() + `
+      <section><div class="section-title"><h2>Avisos</h2><span>${plural(av.length, 'aviso', 'avisos')}</span></div>
+        ${av.length ? `<div class="stack">${av.map(avisoHtml).join('')}</div>` : '<div class="empty">Nenhum aviso no momento.</div>'}</section>
+      <div class="grid2">
+        ${nx ? (() => { const t = TURMAS[nx.t]; const k = Math.round((nx.d - hoje) / 864e5); return `<section class="card next"><div class="eyebrow">Próxima aula · ${k === 0 ? 'hoje' : k === 1 ? 'amanhã' : DIAS_LONGO[nx.d.getDay()]}</div><h2>${esc(t.nome)}</h2>
+          <div class="meta"><span>${fmtCurto(nx.d)} · ${t.inicio}–${t.fim}</span><span>${esc(t.local)}</span><span>${esc(t.professor)}</span></div></section>`; })() : '<section class="card pad">Nenhuma aula nos próximos dias.</section>'}
+        <section class="card pad"><div class="section-title"><h2>Minha frequência</h2><button class="btn" data-nav="frequencia" style="min-height:32px;font-size:13px">Ver detalhes</button></div>
+          <div class="stack">${resumo.map(({ t, f }) => `<div class="row small"><span class="dotc" style="background:${TURMAS[t].cor}"></span><b class="grow">${esc(TURMAS[t].nome)}</b><span class="pill ${f < 0.75 ? 'red' : 'green'} num">${Math.round(f * 100)}%</span></div>`).join('')}</div></section>
+      </div>
+      <section class="card install"><span>${icon('phone')}</span><div class="grow small"><b>Use como aplicativo</b><br><span class="muted">No celular, toque em "Adicionar à tela inicial" para abrir o portal direto, já conectado.</span></div></section>`;
+  }
+
+  function vAulas() {
+    const a = aluno();
+    const seg = addDays(hoje, -((hoje.getDay() + 6) % 7));
+    const semana = Array.from({ length: 7 }, (_, i) => addDays(seg, i));
+    return header('Minhas aulas', 'Cursos e horários', `${plural(a.turmas.length, 'curso', 'cursos')} em que ${esc(a.nome.split(' ')[0])} está matriculado(a).`) + `
+      <section><div class="section-title"><h2>Esta semana</h2><span>${fmtCurto(semana[0])} a ${fmtCurto(semana[6])}</span></div>
+        <div class="week">${semana.map((d) => { const ts = a.turmas.filter((t) => TURMAS[t].dias.includes(d.getDay())); return `<div class="wd${ymd(d) === H ? ' today' : ''}"><b>${DIAS[d.getDay()]}</b><span class="n num">${d.getDate()}</span>${ts.map((t) => `<em style="--c:${TURMAS[t].cor}" title="${esc(TURMAS[t].nome)} ${TURMAS[t].inicio}">${TURMAS[t].inicio}</em>`).join('')}</div>`; }).join('')}</div></section>
+      <div class="stack">${a.turmas.map((id) => { const t = TURMAS[id]; return `<article class="card turma" style="--c:${t.cor}"><h3>${esc(t.nome)}</h3>
+        <dl><dt>Dias</dt><dd>${t.dias.map((d) => DIAS_LONGO[d]).join(' e ')}</dd><dt>Horário</dt><dd class="num">${t.inicio} às ${t.fim}</dd><dt>Professor(a)</dt><dd>${esc(t.professor)}</dd><dt>Local</dt><dd>${esc(t.local)}</dd></dl></article>`; }).join('')}</div>`;
+  }
+
+  function vFrequencia() {
+    const a = aluno();
+    return header('Minha frequência', 'Presenças e faltas', 'O mínimo para concluir o curso é 75% de presença. Faltas justificadas não contam como falta.') + a.turmas.map((id) => {
+      const t = TURMAS[id]; const h = a.hist[id]; const f = freq(h); const p = Math.round(f * 100);
+      const P = h.filter((x) => x.v === 'P').length, F = h.filter((x) => x.v === 'F').length, J = h.filter((x) => x.v === 'J').length;
+      const cor = f < 0.75 ? 'var(--red)' : f < 0.85 ? 'var(--amber)' : 'var(--green)';
+      return `<section class="card"><div class="freq"><div class="ring" style="--p:${p};--rc:${cor}"><span class="num">${p}%</span></div>
+        <div class="grow"><h3 style="font-size:18px">${esc(t.nome)}</h3><p class="small muted num">${plural(P, 'presença', 'presenças')} · ${plural(F, 'falta', 'faltas')} · ${plural(J, 'justificada', 'justificadas')} · ${h.length} aulas</p>
+        ${f < 0.75 ? '<p class="small" style="color:var(--red);font-weight:700;margin-top:4px">Atenção: abaixo de 75%. Converse com a coordenação.</p>' : f < 0.85 ? '<p class="small" style="color:var(--amber);font-weight:700;margin-top:4px">Perto do mínimo. Evite novas faltas.</p>' : '<p class="small" style="color:var(--green);font-weight:700;margin-top:4px">Frequência ótima!</p>'}</div></div>
+        <div style="padding:0 16px 16px"><span class="small muted">Últimas aulas</span><div class="hist">${h.map((x) => `<i class="${x.v}" title="${fmtCurto(parse(x.data))}: ${{ P: 'presente', F: 'falta', J: 'justificada' }[x.v]}">${{ P: '✓', F: '✕', J: 'J' }[x.v]}</i>`).join('')}</div>
+        <div class="legend"><span><i style="background:var(--green)"></i>Presente</span><span><i style="background:var(--red)"></i>Falta</span><span><i style="background:var(--amber)"></i>Justificada</span></div></div></section>`;
+    }).join('');
+  }
+
+  function vMural() {
+    return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + `<div class="feed">${MURAL.map((m) => `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small></div>
+      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Publicado em ${fmtCurto(parse(m.data))} pela coordenação</div></div></article>`).join('')}</div>`;
+  }
+
+  function vOportunidades() {
+    const tipos = ['Todos', 'Emprego', 'Curso', 'Edital', 'Curso Íris'];
+    const lista = OPORTUNIDADES.filter((o) => S.opTipo === 'Todos' || o.tipo === S.opTipo).sort((a, b) => a.prazo.localeCompare(b.prazo));
+    const cor = { Emprego: 'green', Curso: 'navy', Edital: 'gold', 'Curso Íris': 'amber' };
+    return header('Oportunidades', 'Oportunidade para todos!', 'Vagas, cursos e editais escolhidos pela coordenação.') + `
+      <div class="chips">${tipos.map((t) => `<button class="chip${S.opTipo === t ? ' on' : ''}" data-op="${t}">${t}</button>`).join('')}</div>
+      ${lista.length ? `<div class="feed">${lista.map((o) => { const dias = Math.round((parse(o.prazo) - hoje) / 864e5); return `<article class="card op"><div class="row wrapx"><span class="pill ${cor[o.tipo]}">${o.tipo}</span><span class="small grow" style="text-align:right">${dias <= 7 ? `<b style="color:var(--red)">Termina em ${plural(dias, 'dia', 'dias')}</b>` : `Até ${fmtCurto(parse(o.prazo))}`}</span></div>
+        <h3>${esc(o.titulo)}</h3><p>${esc(o.texto)}</p><div class="small muted">Para quem: ${esc(o.quem)}</div>
+        <div><button class="btn primary" data-saber="1">Saber mais</button></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
+  }
+
+  const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunidades', 'rocket']];
+  function render() {
+    const n = avisosAtivos(aluno()).length;
+    const btn = ([id, l, ic]) => `<button class="tab${S.view === id ? ' on' : ''}" data-nav="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${id === 'inicio' && n ? `<span class="dot num">${n}</span>` : ''}</button>`;
+    $('#tabs').innerHTML = NAV.map(btn).join('');
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>Portal do Aluno</small></div>${NAV.map(btn).join('')}`;
+    $('#view').innerHTML = ({ inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, mural: vMural, oportunidades: vOportunidades }[S.view] || vInicio)();
+  }
+  function toast(m) { $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => ($('#toast-root').innerHTML = ''), 3000); }
+
+  document.addEventListener('click', (e) => {
+    const nav = e.target.closest('[data-nav]');
+    if (nav) { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} render(); try { window.scrollTo(0, 0); } catch {} return; }
+    const op = e.target.closest('[data-op]');
+    if (op) { S.opTipo = op.dataset.op; render(); return; }
+    if (e.target.closest('[data-saber]')) toast('No portal de verdade, este botão abre o link da oportunidade.');
+  });
+  document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });
+  render();
+})();
+</script>
