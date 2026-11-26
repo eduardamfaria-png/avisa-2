@@ -213,6 +213,13 @@ td.r, th.r { text-align: right; }
 .icon-btn svg { width: 20px; height: 20px; }
 .toast { position: fixed; z-index: 80; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
 @media (min-width: 960px) { .toast { bottom: 24px; left: auto; right: 24px; } }
+.ptabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.ptabs::-webkit-scrollbar { display: none; }
+.ptabs .chip { white-space: nowrap; flex: none; }
+.quote { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14.5px; white-space: pre-wrap; }
+.mural-thumb { width: 52px; height: 40px; border-radius: 8px; flex: none; object-fit: cover; background: var(--surface-2); }
+.foto-prev { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; margin-top: 8px; }
+.item.off { opacity: .6; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14.5px; margin: 0; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--gold-soft); color: var(--gold-ink); font-size: 14px; border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); }
@@ -368,6 +375,7 @@ body.gated .app { grid-template-columns: 1fr; }
     right: '<path d="m9 18 6-6-6-6"/>',
     cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v5h1"/>',
+    mega: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a3 3 0 0 1 0 6M18 6a7 7 0 0 1 0 12"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   };
   const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
@@ -392,7 +400,7 @@ body.gated .app { grid-template-columns: 1fr; }
     view: 'painel',
     alunosQ: '', alunosTurma: '', alunosStatus: 'todos', qOpen: false, inscQ: '', qDraft: {}, alunosBairro: '', alunosFaixa: '', alunosIncompletos: false, alunosModo: 'lista',
     calMes: ym(new Date()), calDia: ymd(new Date()),
-    finMes: ym(new Date()),
+    finMes: ym(new Date()), portalSub: 'justificativas', inscAba: 'alunos',
     chamada: { turmaId: '', data: today(), registros: {}, key: '', dirty: false, rev: 0, status: '' },
     confirm: null,
     me: null,
@@ -545,12 +553,14 @@ body.gated .app { grid-template-columns: 1fr; }
     ['chamada', 'Chamada', 'check'],
     ['turmas', 'Turmas', 'book'],
     ['inscricoes', 'Inscrições', 'form'],
+    ['portal', 'Portal', 'mega'],
     ['financas', 'Finanças', 'cash'],
   ];
 
   function renderNav() {
     const novas = alunosList().filter((a) => sit(a) === 'inscrito').length + pedidosPend().filter((p) => !p.espera).length;
-    const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
+    const dots = { inscricoes: novas, portal: pendentes('justificativas').length };
+    const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
     const nav = NAV.filter(([id]) => id !== 'financas' || S.canFinance);
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
     $('#tabs').innerHTML = nav.map((n) => btn(...n)).join('');
@@ -630,7 +640,7 @@ body.gated .app { grid-template-columns: 1fr; }
       return;
     }
     if (S.view === 'financas' && !S.canFinance) S.view = 'painel';
-    const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, financas: vFinancas }[S.view] || vPainel;
+    const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, portal: vPortal, financas: vFinancas }[S.view] || vPainel;
     $('#view').innerHTML = v();
     syncPublico();
     if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
@@ -741,6 +751,7 @@ body.gated .app { grid-template-columns: 1fr; }
       <div class="grid2">
         ${calendar()}
         <section class="stack" style="gap:18px">
+          ${justCard()}
           <div>
             <div class="section-title"><h2>Fichas incompletas</h2><span>${plural(incompletas.length, 'aluno', 'alunos')}</span></div>
             <div class="card list">${incompletas.length ? incompletas.slice(0, 5).map(({ a, miss }) => `<button class="item" data-act="aluno-open" data-id="${a.id}">${avatar(a, 36)}<div class="grow"><strong>${esc(a.nome)}</strong><span class="sub">Falta: ${miss.slice(0, 3).map(fieldLabel).join(', ')}${miss.length > 3 ? ` e mais ${miss.length - 3}` : ''}</span></div><span class="pill amber num">${miss.length}</span></button>`).join('') + (incompletas.length > 5 ? `<button class="item small" data-act="alunos-incompletos" style="justify-content:center;color:var(--navy);font-weight:700">Ver todos os ${incompletas.length}</button>` : '') : '<div class="pad small muted">Todas as fichas dos alunos ativos estão completas.</div>'}</div>
@@ -755,6 +766,7 @@ body.gated .app { grid-template-columns: 1fr; }
           </div>
         </section>
       </div>
+      ${divulgacaoSec()}
       <section>
         <div class="section-title"><h2>Quem são os alunos</h2><span>${plural(ativos.length, 'aluno ativo', 'alunos ativos')}</span></div>
         <div class="profile-grid">
@@ -865,6 +877,7 @@ body.gated .app { grid-template-columns: 1fr; }
         <h1>${fmtLong(ch.data).replace(/^./, (c) => c.toUpperCase())}</h1>
         <p>${ch.data === hoje ? 'Aula de hoje' : futuro ? 'Aula futura' : 'Aula anterior'}${diaOk ? '' : ' · <b style="color:var(--amber)">não é dia de aula desta turma</b>'}</p></div></div>
       ${notices()}
+      ${(() => { const js = pendentes('justificativas').filter((j) => j.turmaId === ch.turmaId && j.data === ch.data); return js.length ? `<div class="banner">${icon('info')}<span class="grow">${plural(js.length, 'justificativa', 'justificativas')} de falta desta aula para avaliar: ${js.map((j) => esc(get('alunos', j.alunoId)?.nome || '')).join(', ')}.</span><button class="btn sm" data-act="just-open" data-id="${js[0].id}">Avaliar</button></div>` : ''; })()}
       <div class="card pad stack" style="gap:10px">
         <span class="small muted" style="font-weight:700">Dias de aula</span>
         <div class="chips date-chips">${datas.map((d) => `<button class="chip${d === ch.data ? ' on' : ''}" data-act="ch-date" data-d="${d}"${d > hoje ? ' disabled' : ''}>${d === hoje ? 'Hoje' : fmtWeekday(d)}</button>`).join('')}
@@ -985,8 +998,8 @@ body.gated .app { grid-template-columns: 1fr; }
     return header('Banco de dados', 'Inscrições', `${plural(total, 'pessoa inscrita', 'pessoas inscritas')} · ${plural(alunosList().filter(isAtivo).length, 'matriculada', 'matriculadas')}`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button><button class="btn primary" data-act="aluno-new">${icon('plus')}Nova inscrição</button>`) + notices() + (total ? '' : `
       <div class="empty card"><h3>Nenhuma inscrição ainda</h3><p>Toque em "Nova inscrição" e preencha a ficha da pessoa. Só o nome é obrigatório; o resto pode ser completado depois.</p><button class="btn primary" data-act="aluno-new">${icon('plus')}Nova inscrição</button></div>`) + `
       ${pedidosSec()}
-      <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>
-      ${alunosPanel()}`;
+      ${inscAbas()}
+      ${S.inscAba === 'interessados' ? interessadosPanel() : `<div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>${alunosPanel()}`}`;
   }
 
 
@@ -1074,6 +1087,249 @@ body.gated .app { grid-template-columns: 1fr; }
       <dl class="kv" style="margin-top:14px"><dt>Como quer ajudar</dt><dd>${esc(c.ajuda || '—')}</dd><dt>E-mail</dt><dd>${esc(c.email || '—')}</dd><dt>Enviado em</dt><dd>${fmtDate(toISO(c.enviadoEm).slice(0, 10))}</dd>${c.mensagem ? `<dt>Mensagem</dt><dd style="font-weight:400">${esc(c.mensagem)}</dd>` : ''}</dl>`,
       `${confirmBtn('del-contato', 'Apagar contato', 'Confirmar: apagar', 'btn ghost')}<span class="grow"></span><button class="btn" data-act="modal-close">Fechar</button>`);
     $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'contato', id });
+  }
+
+  // ───────────── Aba Portal: justificativas, avisos, mural e oportunidades ─────────────
+  const semId = (o) => { if (!o) return {}; const { id, ...r } = o; return r; };
+  const pendentes = (col) => list(col).filter((x) => x.status === 'pendente');
+  const nomeAluno = (id) => get('alunos', id)?.nome || 'Aluno removido';
+  const turmaNome = (id) => get('turmas', id)?.nome || '—';
+  const turmaOptions = (sel, todas) => (todas ? `<option value="">${todas}</option>` : '') + turmasList().map((t) => `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.nome)}</option>`).join('');
+  const STJ = { pendente: ['Em análise', 'amber'], aceita: ['Aceita', 'green'], recusada: ['Não aceita', 'red'], aprovado: ['Matriculado', 'green'], recusado: ['Recusado', 'red'] };
+  const stPill = (s) => `<span class="pill ${STJ[s]?.[1] || ''}">${STJ[s]?.[0] || esc(s)}</span>`;
+  const delFoot = (col, id, saveAct) => `${id ? confirmBtn('del-portal', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="${saveAct}" data-id="${id || ''}">${id ? 'Salvar' : 'Publicar'}</button>`;
+
+  function justRow(j) {
+    return `<button class="item" data-act="just-open" data-id="${j.id}">${avatar(get('alunos', j.alunoId), 36)}<div class="grow"><strong>${esc(nomeAluno(j.alunoId))}</strong><span class="sub">${esc(turmaNome(j.turmaId))} · falta em ${fmtWeekday(j.data)}</span></div>${stPill(j.status)}</button>`;
+  }
+  function justCard() {
+    const p = pendentes('justificativas');
+    if (!p.length) return '';
+    return `<div><div class="section-title"><h2>Justificativas para avaliar</h2><span>${plural(p.length, 'pendente', 'pendentes')}</span></div>
+      <div class="card list">${p.map(justRow).join('')}</div></div>`;
+  }
+
+  function vPortal() {
+    const subs = [['justificativas', 'Justificativas'], ['avisos', 'Avisos'], ['mural', 'Mural'], ['oportunidades', 'Oportunidades']];
+    const nj = pendentes('justificativas').length;
+    const acao = { avisos: `<button class="btn primary" data-act="aviso-new">${icon('plus')}Novo aviso</button>`, mural: `<button class="btn primary" data-act="mural-new">${icon('plus')}Nova publicação</button>`, oportunidades: `<button class="btn primary" data-act="op-new">${icon('plus')}Nova oportunidade</button>` }[S.portalSub] || '';
+    const sub = { avisos: pAvisos, mural: pMural, oportunidades: pOport, justificativas: pJust }[S.portalSub] || pJust;
+    return header('Portal do Aluno', 'Portal', 'O que os alunos veem no Portal do Aluno: avisos, mural e oportunidades. O mural também aparece no Início do site aberto.', acao) + notices() + `
+      <div class="ptabs" role="tablist" aria-label="Seções do portal">${subs.map(([k, l]) => `<button class="chip${S.portalSub === k ? ' on' : ''}" role="tab" aria-selected="${S.portalSub === k}" data-act="p-sub" data-v="${k}">${l}${k === 'justificativas' && nj ? ` <i class="num">${nj}</i>` : ''}</button>`).join('')}</div>
+      ${sub()}`;
+  }
+
+  function pAvisos() {
+    const l = list('avisos').sort((a, b) => String(b.ate).localeCompare(String(a.ate)));
+    const hoje = today();
+    if (!l.length) return `<div class="empty card"><h3>Nenhum aviso</h3><p>Os avisos aparecem na tela inicial do portal e somem sozinhos na data escolhida.</p><button class="btn primary" data-act="aviso-new">${icon('plus')}Novo aviso</button></div>`;
+    return `<p class="small muted">Aparecem na tela inicial do aluno até a data escolhida. Depois somem sozinhos.</p>
+      <div class="card list">${l.map((a) => { const on = a.ate >= hoje; return `<button class="item${on ? '' : ' off'}" data-act="aviso-open" data-id="${a.id}"><div class="grow"><strong>${esc(a.titulo)}</strong><span class="sub">${a.turmaId ? esc(turmaNome(a.turmaId)) : 'Todos os alunos'} · ${on ? 'até ' + fmtDate(a.ate) : 'venceu em ' + fmtDate(a.ate)}</span></div>${a.importante ? '<span class="pill red">Importante</span>' : ''}<span class="pill ${on ? 'green' : ''}">${on ? 'No ar' : 'Vencido'}</span></button>`; }).join('')}</div>`;
+  }
+  function pMural() {
+    const l = list('mural').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
+    if (!l.length) return `<div class="empty card"><h3>Mural vazio</h3><p>Publique fotos e novidades do instituto.</p><button class="btn primary" data-act="mural-new">${icon('plus')}Nova publicação</button></div>`;
+    return `<p class="small muted">Fotos e novidades que aparecem no Início do site aberto e na aba Mural do Portal do Aluno. Antes de postar foto de aluno, confira se a ficha autoriza uso de imagem.</p>
+      <div class="card list">${l.map((m) => `<button class="item" data-act="mural-open" data-id="${m.id}">${m.foto ? `<img class="mural-thumb" src="${esc(m.foto)}" alt="">` : `<span class="mural-thumb" style="display:grid;place-items:center;color:var(--faint)">${icon('cam')}</span>`}<div class="grow"><strong>${esc(m.titulo)}</strong><span class="sub">Publicado em ${fmtDate((m.criadoEm || '').slice(0, 10))}</span></div></button>`).join('')}</div>`;
+  }
+  function pOport() {
+    const l = list('oportunidades').sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
+    const hoje = today();
+    if (!l.length) return `<div class="empty card"><h3>Nenhuma oportunidade</h3><p>Vagas, cursos e editais de fora do instituto, com o link da inscrição.</p><button class="btn primary" data-act="op-new">${icon('plus')}Nova oportunidade</button></div>`;
+    return `<p class="small muted">Vagas, cursos e editais de fora do instituto. O aluno toca e vai direto para a inscrição no site de quem oferece. Somem depois do prazo. Cada toque no link é contado, para mostrar aos parceiros quantos alunos o Íris levou até eles.</p>
+      ${(() => { const t = l.reduce((n, o) => n + alcance(o).alunos, 0); return `<div class="minis"><div><b class="num">${l.length}</b><span>${l.length === 1 ? 'oportunidade' : 'oportunidades'}</span></div><div><b class="num">${t}</b><span>encaminhamentos de alunos no total</span></div></div>`; })()}
+      <div class="card list">${l.map((o) => { const on = o.prazo >= hoje; return `<button class="item${on ? '' : ' off'}" data-act="op-open" data-id="${o.id}"><div class="grow"><strong>${esc(o.titulo)}</strong><span class="sub">${esc(o.tipo)} · ${on ? 'até ' + fmtDate(o.prazo) : 'encerrada'} · ${esc(hostDe(o.link))}</span></div><span class="pill navy num" title="Alunos que clicaram no link">${plural(alcance(o).alunos, 'aluno clicou', 'alunos clicaram')}</span></button>`; }).join('')}</div>`;
+  }
+  function pJust() {
+    const l = list('justificativas').sort((a, b) => Number(b.status === 'pendente') - Number(a.status === 'pendente') || String(b.enviadoEm).localeCompare(String(a.enviadoEm)));
+    if (!l.length) return '<div class="empty card"><h3>Nenhuma justificativa</h3><p>Quando um aluno justificar uma falta pelo portal, ela aparece aqui.</p></div>';
+    return `<p class="small muted">A falta só passa a contar como justificada depois que alguém da equipe aceita. Até lá, continua como falta.</p>
+      <div class="card list">${l.map(justRow).join('')}</div>`;
+  }
+  function hostDe(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u || 'sem link'; } }
+
+  // Janelas de edição
+  function avisoModal(id) {
+    const a = id ? get('avisos', id) : { titulo: '', texto: '', turmaId: '', ate: addDays(today(), 7), importante: false };
+    openModal(id ? 'Editar aviso' : 'Novo aviso', `<div class="form-grid">
+      <label class="field full"><span>Título</span><input class="input" id="a-tit" maxlength="90" value="${esc(a.titulo)}" placeholder="Ex.: Sem aula na sexta-feira"></label>
+      <label class="field full"><span>Mensagem</span><textarea class="textarea" id="a-txt">${esc(a.texto)}</textarea></label>
+      <label class="field"><span>Para quem</span><select class="select" id="a-turma">${turmaOptions(a.turmaId, 'Todos os alunos')}</select></label>
+      <label class="field"><span>Mostrar até</span><input class="input" type="date" id="a-ate" value="${esc(a.ate)}"></label>
+      <label class="check full"><input type="checkbox" id="a-imp"${a.importante ? ' checked' : ''}><span>Importante: aparece em vermelho e no topo</span></label>
+    </div>`, delFoot('avisos', id, 'aviso-save'));
+    $('#modal-root .modal').dataset.ctx = JSON.stringify({ col: 'avisos', id });
+  }
+  async function saveAviso(id) {
+    const body = { titulo: val('a-tit'), texto: val('a-txt'), turmaId: val('a-turma'), ate: val('a-ate'), importante: document.getElementById('a-imp').checked };
+    if (!body.titulo || !body.ate) return toast('Preencha o título e a data em que o aviso some.');
+    const prev = id ? get('avisos', id) : null;
+    if (await guard(() => put('avisos', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Aviso atualizado.' : 'Aviso publicado no portal.')) closeModal();
+  }
+
+  let fotoMural = null;
+  function muralModal(id) {
+    const m = id ? get('mural', id) : { titulo: '', texto: '', foto: '' };
+    fotoMural = m.foto || '';
+    openModal(id ? 'Editar publicação' : 'Nova publicação no mural', `<div class="form-grid">
+      <label class="field full"><span>Foto</span><input class="input" type="file" id="m-foto" accept="image/*"><img class="foto-prev" id="m-prev" alt=""${m.foto ? ` src="${esc(m.foto)}"` : ' hidden'}></label>
+      <label class="field full"><span>Título</span><input class="input" id="m-tit" maxlength="90" value="${esc(m.titulo)}"></label>
+      <label class="field full"><span>Texto</span><textarea class="textarea" id="m-txt">${esc(m.texto)}</textarea></label>
+    </div>`, delFoot('mural', id, 'mural-save'));
+    $('#modal-root .modal').dataset.ctx = JSON.stringify({ col: 'mural', id });
+  }
+  function lerFotoMural(file) {
+    if (!file) return;
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, 1200 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      fotoMural = c.toDataURL('image/jpeg', 0.75); URL.revokeObjectURL(url);
+      const p = document.getElementById('m-prev'); if (p) { p.src = fotoMural; p.hidden = false; }
+    };
+    img.src = url;
+  }
+  async function saveMural(id) {
+    const body = { titulo: val('m-tit'), texto: val('m-txt'), foto: fotoMural || '' };
+    if (!body.titulo) return toast('Escreva um título.');
+    const prev = id ? get('mural', id) : null;
+    if (await guard(() => put('mural', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.')) closeModal();
+  }
+
+  // Alcance: quem tocou no link (cliques[alunoId] = número de toques).
+  function alcance(o) {
+    const c = o.cliques || {}; const ids = Object.keys(c);
+    const porCurso = {}; const porBairro = {};
+    for (const id of ids) {
+      const a = get('alunos', id); if (!a) continue;
+      const cs = [...new Set((a.turmaIds || []).map((t) => get('turmas', t)).filter(Boolean).map((t) => capitalizar(cursoKey(t))))];
+      for (const k of cs.length ? cs : ['Sem turma']) porCurso[k] = (porCurso[k] || 0) + 1;
+      const b = (a.bairro || '').trim() || 'Não informado'; porBairro[b] = (porBairro[b] || 0) + 1;
+    }
+    return { alunos: ids.length, toques: ids.reduce((n, k) => n + (Number(c[k]) || 0), 0), porCurso, porBairro };
+  }
+  function alcanceHtml(o) {
+    const r = alcance(o);
+    const bars = (m) => barList(Object.entries(m).sort((a, b) => b[1] - a[1]), r.alunos || 1, 5);
+    return `<div class="ficha-sec" style="border-top:1px solid var(--line);padding-top:16px;margin-top:18px">
+      <div class="section-title"><h2 style="font-size:16px">Alcance</h2><button type="button" class="btn sm" data-act="op-resumo" data-id="${o.id}">Copiar resumo para o parceiro</button></div>
+      <div class="minis"><div><b class="num">${r.alunos}</b><span>${r.alunos === 1 ? 'aluno clicou' : 'alunos clicaram'} no link</span></div><div><b class="num">${r.toques}</b><span>toques no total</span></div></div>
+      ${r.alunos ? `<div class="form-grid" style="margin-top:12px"><div><h3 class="ph">Por curso no Íris</h3>${bars(r.porCurso)}</div><div><h3 class="ph">Por bairro</h3>${bars(r.porBairro)}</div></div>` : '<p class="small muted" style="margin-top:8px">Ninguém clicou ainda.</p>'}
+    </div>`;
+  }
+  function resumoOp(id) {
+    const o = get('oportunidades', id); if (!o) return;
+    const r = alcance(o);
+    const txt = `Instituto Íris · ${o.titulo}\nDivulgamos esta oportunidade no Portal do Aluno${o.criadoEm ? ' desde ' + fmtDate(o.criadoEm.slice(0, 10)) : ''}.\n${r.alunos} ${r.alunos === 1 ? 'aluno acessou' : 'alunos acessaram'} o link de inscrição (${r.toques} acessos no total).\nPor curso: ${Object.entries(r.porCurso).map(([k, n]) => `${k} (${n})`).join(', ') || '—'}.`;
+    (navigator.clipboard?.writeText(txt) || Promise.reject()).then(() => toast('Resumo copiado. É só colar na mensagem para o parceiro.'), () => { openModal('Resumo para o parceiro', `<textarea class="textarea" style="min-height:160px" readonly>${esc(txt)}</textarea><p class="small muted" style="margin-top:8px">Selecione o texto e copie.</p>`, '<button class="btn" data-act="modal-close">Fechar</button>'); });
+  }
+  function opModal(id) {
+    const o = id ? get('oportunidades', id) : { tipo: 'Emprego', titulo: '', texto: '', quem: '', prazo: addDays(today(), 14), link: '' };
+    openModal(id ? 'Editar oportunidade' : 'Nova oportunidade', `<div class="form-grid">
+      <label class="field"><span>Tipo</span><select class="select" id="o-tipo">${['Emprego', 'Estágio', 'Curso', 'Edital'].map((x) => `<option${o.tipo === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="field"><span>Inscrições até</span><input class="input" type="date" id="o-prazo" value="${esc(o.prazo)}"></label>
+      <label class="field full"><span>Título</span><input class="input" id="o-tit" maxlength="100" value="${esc(o.titulo)}"></label>
+      <label class="field full"><span>Descrição</span><textarea class="textarea" id="o-txt">${esc(o.texto)}</textarea></label>
+      <label class="field full"><span>Para quem</span><input class="input" id="o-quem" value="${esc(o.quem)}" placeholder="Ex.: de 16 a 24 anos, ensino médio"></label>
+      <label class="field full"><span>Link da inscrição</span><input class="input" type="url" id="o-link" value="${esc(o.link)}" placeholder="https://"></label>
+    </div>${id ? alcanceHtml(o) : ''}`, delFoot('oportunidades', id, 'op-save'));
+    $('#modal-root .modal').dataset.ctx = JSON.stringify({ col: 'oportunidades', id });
+  }
+  async function saveOp(id) {
+    const body = { tipo: val('o-tipo'), prazo: val('o-prazo'), titulo: val('o-tit'), texto: val('o-txt'), quem: val('o-quem'), link: val('o-link') };
+    if (!body.titulo || !body.prazo) return toast('Preencha o título e o prazo.');
+    if (!/^https?:\/\/\S+\.\S+/.test(body.link)) return toast('Cole o link da inscrição (começando com https://).');
+    const prev = id ? get('oportunidades', id) : null;
+    if (await guard(() => put('oportunidades', id || uid(), { cliques: {}, ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Oportunidade atualizada.' : 'Oportunidade publicada.')) closeModal();
+  }
+
+  function justModal(id) {
+    const j = get('justificativas', id); if (!j) return;
+    const a = get('alunos', j.alunoId);
+    const pend = j.status === 'pendente';
+    openModal('Justificativa de falta', `<div class="row" style="margin-bottom:14px">${avatar(a, 44)}<div class="grow"><b>${esc(nomeAluno(j.alunoId))}</b><div class="small muted">${esc(turmaNome(j.turmaId))} · falta em ${fmtLong(j.data)}</div></div>${stPill(j.status)}</div>
+      <div class="quote">${esc(j.motivo)}</div>
+      ${j.anexoUrl ? `<p style="margin-top:10px"><a class="btn sm" href="${esc(j.anexoUrl)}" target="_blank" rel="noopener">Ver anexo</a></p>` : j.anexo ? `<p class="small muted" style="margin-top:8px">Anexo: <b>${esc(j.anexo)}</b></p>` : '<p class="small muted" style="margin-top:8px">Sem anexo.</p>'}
+      ${pend ? `<label class="field" style="margin-top:14px"><span>Resposta para o aluno (opcional)</span><textarea class="textarea" id="j-resp" placeholder="Ex.: traga o atestado original na próxima aula"></textarea></label>
+        <p class="small muted" style="margin-top:8px">Ao aceitar, a chamada desse dia muda de <b>Falta</b> para <b>Justificada</b>.</p>` : j.resposta ? `<p class="small" style="margin-top:12px"><b>Resposta enviada:</b> ${esc(j.resposta)}</p>` : ''}`,
+      pend ? `<button class="btn" data-act="go-chamada" data-t="${j.turmaId}" data-d="${j.data}">Ver chamada</button><span class="grow"></span><button class="btn danger" data-act="just-dec" data-id="${id}" data-v="recusada">Não aceitar</button><button class="btn primary" data-act="just-dec" data-id="${id}" data-v="aceita">Aceitar</button>`
+        : `<button class="btn" data-act="go-chamada" data-t="${j.turmaId}" data-d="${j.data}">Ver chamada</button><span class="grow"></span><button class="btn" data-act="modal-close">Fechar</button>`);
+  }
+  async function decidirJust(id, status) {
+    const j = get('justificativas', id); if (!j) return;
+    const resposta = val('j-resp');
+    const key = `${j.turmaId}_${j.data}`; const ch = get('chamadas', key);
+    const ok = await guard(async () => {
+      await patch('justificativas', id, { status, resposta, avaliadoEm: new Date().toISOString(), avaliadoPor: S.me?.email || '' });
+      if (status === 'aceita' && ch) await patch('chamadas', key, { registros: { ...(ch.registros || {}), [j.alunoId]: 'J' } });
+    }, status === 'aceita' ? 'Aceita: a falta agora conta como justificada.' : 'Justificativa não aceita: a falta continua contando.');
+    if (ok) closeModal();
+  }
+
+  const capitalizar = (v) => String(v || '').replace(/^./, (c) => c.toUpperCase());
+
+  // ───────────── Interessados: quem se inscreveu pelo site (para a análise de alcance) ─────────────
+  function inscAbas() {
+    const n = interessados().filter((x) => !x.virouAluno).length;
+    return `<div class="seg" role="tablist" aria-label="Lista" style="align-self:flex-start"><button class="${S.inscAba !== 'interessados' ? 'on' : ''}" data-act="insc-aba" data-v="alunos">Inscrições e alunos</button><button class="${S.inscAba === 'interessados' ? 'on' : ''}" data-act="insc-aba" data-v="interessados">Interessados pelo site <span class="num">${n}</span></button></div>`;
+  }
+  // Uma pessoa por e-mail (ou telefone), com o pedido mais recente.
+  function interessados() {
+    const g = new Map();
+    for (const p of list('pedidos').sort((a, b) => toISO(a.enviadoEm).localeCompare(toISO(b.enviadoEm)))) {
+      const k = String(p.email || '').toLowerCase() || String(p.telefone || '').replace(/\D/g, '') || p.id;
+      const x = g.get(k) || { pedidos: [] };
+      x.pedidos.push(p); Object.assign(x, { id: p.id, nome: p.nome, email: p.email, telefone: p.telefone, nascimento: p.nascimento, bairro: p.bairro, comoConheceu: p.comoConheceu || x.comoConheceu, aceitaComunicacoes: p.aceitaComunicacoes, enviadoEm: p.enviadoEm });
+      g.set(k, x);
+    }
+    return [...g.values()].map((x) => {
+      const ps = x.pedidos;
+      x.virouAluno = ps.some((p) => p.status === 'aprovado');
+      x.situacao = x.virouAluno ? ['Virou aluno', 'green'] : ps.some((p) => p.status === 'pendente' && !p.espera) ? ['Pedido em análise', 'amber'] : ps.some((p) => p.status === 'pendente') ? ['Na lista de espera', ''] : ['Não aprovado', 'red'];
+      return x;
+    }).sort((a, b) => toISO(b.enviadoEm).localeCompare(toISO(a.enviadoEm)));
+  }
+  function interessadosPanel() {
+    const l = interessados();
+    if (!l.length) return '<div class="empty card"><h3>Ninguém se inscreveu pelo site ainda</h3><p>Quem fizer a inscrição pelo site aberto aparece aqui, com idade, bairro e como conheceu o Íris.</p></div>';
+    const mes = ym(new Date());
+    const viraram = l.filter((x) => x.virouAluno).length;
+    const porFaixa = countBy(l, (x) => faixa({ nascimento: x.nascimento })).sort((a, b) => FAIXAS.findIndex((f) => f[0] === a[0]) - FAIXAS.findIndex((f) => f[0] === b[0]));
+    return `<p class="small muted">Pessoas que se inscreveram pelo site aberto. Mostram até onde a divulgação do Íris está chegando.</p>
+      <div class="minis">
+        <div><b class="num">${l.length}</b><span>${l.length === 1 ? 'pessoa' : 'pessoas'}</span></div>
+        <div><b class="num">${l.filter((x) => toISO(x.enviadoEm).startsWith(mes)).length}</b><span>novas em ${MESES[new Date().getMonth()]}</span></div>
+        <div><b class="num">${viraram}</b><span>viraram alunos (${Math.round((viraram / l.length) * 100)}%)</span></div>
+        <div><b class="num">${l.filter((x) => x.situacao[0] === 'Na lista de espera').length}</b><span>na lista de espera</span></div>
+        <div><b class="num">${l.filter((x) => x.aceitaComunicacoes === 'Sim').length}</b><span>aceitam receber novidades</span></div>
+      </div>
+      <div class="profile-grid">
+        <div class="card pad"><h3 class="ph">Faixa etária</h3>${barList(porFaixa, l.length, 7)}</div>
+        <div class="card pad"><h3 class="ph">Bairro</h3>${barList(countBy(l, (x) => (x.bairro || '').trim()), l.length)}</div>
+        <div class="card pad"><h3 class="ph">Como conheceu</h3>${barList(countBy(l, (x) => x.comoConheceu), l.length)}</div>
+      </div>
+      <div class="section-title" style="margin-top:6px"><h2>Pessoas</h2><span>${plural(l.length, 'pessoa', 'pessoas')}</span></div>
+      <div class="card list">${l.map((x) => `<button class="item" data-act="ped-open" data-id="${x.id}">${avatar({ nome: x.nome }, 36)}<div class="grow"><strong>${esc(x.nome)}</strong><span class="sub">${age(x.nascimento) ?? '—'} anos · ${esc(x.bairro || '—')} · <span class="num" style="white-space:nowrap">${esc(x.telefone || '')}</span></span></div><span class="pill ${x.situacao[1]}">${x.situacao[0]}</span></button>`).join('')}</div>`;
+  }
+
+  // ───────────── Divulgação: como as pessoas conheceram o Íris (para o marketing) ─────────────
+  function divulgacaoSec() {
+    const alunos = alunosList();
+    const ints = interessados();
+    const pessoas = [...alunos.map((a) => a.comoConheceu), ...ints.filter((x) => !x.virouAluno).map((x) => x.comoConheceu)];
+    if (!pessoas.length) return '';
+    const fontes = countBy(pessoas, (c) => c);
+    const validas = fontes.filter(([k]) => k !== 'Não informado');
+    const top = validas.length ? [validas.filter(([, n]) => n === validas[0][1]).map(([k]) => k), validas[0][1]] : null;
+    const porOrigem = countBy(ints, (x) => x.comoConheceu).map(([k, n]) => [k, n, ints.filter((x) => (x.comoConheceu || 'Não informado') === k && x.virouAluno).length]);
+    return `<section>
+      <div class="section-title"><h2>Divulgação</h2><span>como as pessoas conheceram o Íris</span></div>
+      ${top ? `<p class="small muted" style="margin:-4px 0 10px">${top[0].length > 1 ? 'Maiores origens, empatadas' : 'Maior origem'}: <b>${top[0].map(esc).join(' e ')}</b> (${Math.round((top[1] / pessoas.length) * 100)}% ${top[0].length > 1 ? 'cada ' : ''}de ${plural(pessoas.length, 'pessoa', 'pessoas')}).</p>` : ''}
+      <div class="grid2">
+        <div class="card pad"><h3 class="ph">Alunos e interessados</h3>${barList(fontes, pessoas.length, 7)}</div>
+        <div class="card pad"><h3 class="ph">Inscrições pelo site: quantas viraram matrícula</h3>
+          ${porOrigem.length ? `<div class="stack" style="gap:10px">${porOrigem.map(([k, n, v]) => `<div><div class="row small"><span class="grow">${esc(k)}</span><span class="num muted">${plural(n, 'pessoa', 'pessoas')} · ${v} ${v === 1 ? 'matrícula' : 'matrículas'}</span><b class="num" style="min-width:42px;text-align:right">${Math.round((v / n) * 100)}%</b></div><div class="meter gold" style="margin-top:4px"><i style="width:${(v / n) * 100}%"></i></div></div>`).join('')}</div>` : '<p class="small muted">Ainda não houve inscrições pelo site.</p>'}</div>
+      </div></section>`;
   }
 
   // ───────────── Finanças ─────────────
@@ -1445,7 +1701,7 @@ body.gated .app { grid-template-columns: 1fr; }
     if (act !== 'confirm' && S.confirm) { S.confirm = null; refreshModalFoot(); schedule(); }
     switch (act) {
       case 'nav': flushChamada(); if (t.dataset.v === 'chamada' && S.view === 'chamada') S.chamada.turmaId = ''; S.view = t.dataset.v; try { localStorage.setItem('iris:view', S.view); } catch {} render(); window.scrollTo?.(0, 0); break;
-      case 'go-chamada': openChamada(t.dataset.t, t.dataset.d); break;
+      case 'go-chamada': closeModal(); openChamada(t.dataset.t, t.dataset.d); break;
       case 'cal-dia': S.calDia = t.dataset.d; if (t.dataset.d.slice(0, 7) !== S.calMes) S.calMes = t.dataset.d.slice(0, 7); render(); break;
       case 'cal-prev': S.calMes = addMonths(S.calMes, -1); render(); break;
       case 'cal-next': S.calMes = addMonths(S.calMes, 1); render(); break;
@@ -1462,6 +1718,7 @@ body.gated .app { grid-template-columns: 1fr; }
         if (key === 'apagar-exemplos') { await deleteExamples(); return; }
         if (key === 'del-aluno') { if (await guard(async () => { await del('alunos', ctx.id); if (S.platform === 'firebase' && S.data.fotos?.[ctx.id]) await del('fotos', ctx.id); }, 'Cadastro excluído.')) closeModal(); }
         if (key === 'del-turma') { if (await guard(() => del('turmas', ctx.id), 'Turma excluída.')) closeModal(); }
+        if (key === 'del-portal') { if (await guard(() => del(ctx.col, ctx.id), 'Removido.')) closeModal(); }
         if (key === 'del-contato') { if (await guard(() => del('contatos', ctx.id), 'Contato apagado.')) closeModal(); }
         if (key === 'del-lanc') { if (await guard(() => del('lancamentos', ctx.id), 'Lançamento excluído.')) closeModal(); }
         break;
@@ -1502,6 +1759,20 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'ped-ficha': fichaDoPedido(t.dataset.id); break;
       case 'ped-recusar': recusarPedido(t.dataset.id); break;
       case 'contato-open': contatoModal(t.dataset.id); break;
+      case 'insc-aba': S.inscAba = t.dataset.v; render(); break;
+      case 'p-sub': S.portalSub = t.dataset.v; render(); break;
+      case 'aviso-new': avisoModal(null); break;
+      case 'aviso-open': avisoModal(t.dataset.id); break;
+      case 'aviso-save': saveAviso(t.dataset.id); break;
+      case 'mural-new': muralModal(null); break;
+      case 'mural-open': muralModal(t.dataset.id); break;
+      case 'mural-save': saveMural(t.dataset.id); break;
+      case 'op-new': opModal(null); break;
+      case 'op-open': opModal(t.dataset.id); break;
+      case 'op-save': saveOp(t.dataset.id); break;
+      case 'op-resumo': resumoOp(t.dataset.id); break;
+      case 'just-open': justModal(t.dataset.id); break;
+      case 'just-dec': decidirJust(t.dataset.id, t.dataset.v); break;
       case 'csv-fin': csvFin(); break;
     }
   });
@@ -1534,6 +1805,7 @@ body.gated .app { grid-template-columns: 1fr; }
     return 'Não foi possível entrar. Tente de novo.';
   }
 
+  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') lerFotoMural(e.target.files[0]); });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'f-cep') {
       const d = e.target.value.replace(/\D/g, '').slice(0, 8);
@@ -1594,7 +1866,7 @@ body.gated .app { grid-template-columns: 1fr; }
       S.gate = ''; S.mode = 'db';
       S.canFinance = backend.canFinance ? await backend.canFinance(S.me.email).catch(() => false) : true;
       if (!subscribed) {
-        subscribed = true; subscribeAll(['fotos', 'config', 'pedidos', 'contatos', 'publico'], S.canFinance ? [] : ['lancamentos']);
+        subscribed = true; subscribeAll(['fotos', 'config', 'pedidos', 'contatos', 'publico', 'avisos', 'mural', 'oportunidades', 'justificativas'], S.canFinance ? [] : ['lancamentos']);
         // Completa a lista de e-mails liberados (para quem foi liberado antes da checagem prévia existir).
         setTimeout(() => { const em = S.data.config?.acesso?.emails || []; if (em.length && backend.syncPermitidos) backend.syncPermitidos(em, []).catch(() => {}); }, 4000);
       }

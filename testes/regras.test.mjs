@@ -9,6 +9,10 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(d, 'pedidos/p1'), { nome: 'X', telefone: '1', curso: 'pilates', espera: true, origem: 'site', status: 'pendente', enviadoEm: 'x' });
   await setDoc(doc(d, 'acompanhamento/p1'), { status: 'analise' });
   await setDoc(doc(d, 'contatos/c1'), { nome: 'C', telefone: '1', enviadoEm: 'x' });
+  await setDoc(doc(d, 'mural/m1'), { titulo: 'Inauguração', foto: '' });
+  await setDoc(doc(d, 'avisos/av1'), { titulo: 'Aviso' });
+  await setDoc(doc(d, 'oportunidades/o1'), { titulo: 'Vaga' });
+  await setDoc(doc(d, 'justificativas/j1'), { motivo: 'x' });
 });
 const anon = env.unauthenticatedContext().firestore();
 const equipe = env.authenticatedContext('u1', { email: 'eduardamfaria@gmail.com', email_verified: true }).firestore();
@@ -43,4 +47,12 @@ await t('equipe escreve situação', setDoc(doc(equipe, 'acompanhamento/p1'), { 
 await t('equipe lê e apaga contatos', deleteDoc(doc(equipe, 'contatos/c1')), true);
 await t('equipe publica cursos', setDoc(doc(equipe, 'publico/cursos'), { lista: [] }), true);
 await t('equipe lê alunos', getDoc(doc(equipe, 'alunos/a1')), true);
+await t('site lê o mural', getDocs(collection(anon, 'mural')), true);
+await t('site NÃO publica no mural', setDoc(doc(anon, 'mural/x'), { titulo: 'x' }), false);
+await t('site NÃO lê avisos', getDocs(collection(anon, 'avisos')), false);
+await t('site NÃO lê oportunidades', getDocs(collection(anon, 'oportunidades')), false);
+await t('site NÃO lê justificativas', getDocs(collection(anon, 'justificativas')), false);
+await t('equipe publica no mural', setDoc(doc(equipe, 'mural/m2'), { titulo: 'x' }), true);
+await t('equipe aceita justificativa', updateDoc(doc(equipe, 'justificativas/j1'), { status: 'aceita' }), true);
+await t('equipe publica aviso e oportunidade', setDoc(doc(equipe, 'avisos/av2'), { titulo: 'x' }), true);
 console.log(r.join('\n')); await env.cleanup(); process.exit(r.some((x) => x.startsWith('ERRO')) ? 1 : 0);

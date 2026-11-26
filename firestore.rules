@@ -1,6 +1,6 @@
 rules_version = '2';
 // Só a equipe do Instituto Íris lê e escreve os dados. De fora, só o site aberto:
-// ler os cursos publicados e enviar pedidos de inscrição e contatos de apoio.
+// ler os cursos publicados e o mural, e enviar pedidos de inscrição e contatos de apoio.
 service cloud.firestore {
   match /databases/{database}/documents {
     // E-mails da coordenação: sempre têm acesso e liberam os demais pelo botão "Equipe".
@@ -32,6 +32,10 @@ service cloud.firestore {
     function txt(v, max) { return v is string && v.size() <= max; }
     // Cursos e turmas publicados pela equipe (só curso, dias, horário e vagas): qualquer um lê.
     match /publico/{doc} {
+      allow read: if true;
+    }
+    // Mural: fotos e novidades que a equipe publica para todos (site aberto e alunos). Só a equipe escreve.
+    match /mural/{id} {
       allow read: if true;
     }
     // Pedido de inscrição ou lista de espera feito no site: qualquer um cria, com campos conferidos.

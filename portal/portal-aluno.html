@@ -591,6 +591,11 @@ body:not(.gated) #gate { display: none; }
         const d = snap.exists() ? snap.data() : null;
         if (d && Array.isArray(d.lista) && d.lista.length) { CURSOS_SITE.splice(0, CURSOS_SITE.length, ...cursosDoBanco(d.lista)); render(); }
       }, () => {});
+      // Mural publicado pela equipe → Início do site (as fotos de exemplo saem quando houver publicações).
+      fs.onSnapshot(fs.collection(FB.db, 'mural'), (snap) => {
+        const posts = snap.docs.map((d) => d.data()).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map((m) => ({ titulo: m.titulo || '', texto: m.texto || '', img: m.foto || '' }));
+        if (posts.length) { MURAL_SITE.splice(0, MURAL_SITE.length, ...posts); render(); }
+      }, () => {});
       atualizarSituacoes();
     } catch (e) { console.warn('Sem conexão com o banco', e); }
   }
@@ -699,7 +704,7 @@ body:not(.gated) #gate { display: none; }
           <p>Acreditamos que todos merecem oportunidades para aprender, cuidar da saúde, desenvolver seus talentos e viver melhor.</p>
           <p>O Instituto Íris nasceu para transformar vidas e construir um futuro melhor junto com você.</p></div></section>
       <div class="section-title" style="margin-top:6px"><h2>Acontece no Íris</h2></div>
-      ${MURAL_SITE.length ? `<div class="feed">${MURAL_SITE.map((m) => `<article class="card post"><div class="foto"><img src="${m.img}" alt="${esc(m.titulo)}"></div><div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Instituto Íris</div></div></article>`).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
+      ${MURAL_SITE.length ? `<div class="feed">${MURAL_SITE.map((m) => `<article class="card post">${m.img ? `<div class="foto"><img src="${esc(m.img)}" alt="${esc(m.titulo)}"></div>` : ''}<div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Instituto Íris</div></div></article>`).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
   }
   function vPCursos() {
     // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
