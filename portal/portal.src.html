@@ -237,6 +237,8 @@ textarea.input { resize: vertical; }
 .prop h3 { font-size: 16px; } .prop p { font-size: 13.5px; color: var(--muted); }
 .faca { padding: 20px 18px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); display: flex; flex-direction: column; gap: 8px; }
 .faca p { opacity: .92; }
+.turmas-site { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.ts-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
 /* Entrada */
 body.gated .app, body.gated .tabs { display: none; }
 body:not(.gated) #gate { display: none; }
@@ -518,6 +520,35 @@ body:not(.gated) #gate { display: none; }
         <div><button class="btn primary" data-saber="${esc(o.link || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
+  // Cursos reais do Instituto (cópia das turmas do site de gestão em 26/11).
+  // No site publicado, esta lista virá direto do site de gestão e se atualiza sozinha.
+  const CURSOS_SITE = [
+    { id: 'informatica', nome: 'Informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', foto: '%%FOTO:curso-informatica%%', turmas: [
+      { id: 'info-1400', dias: 'Segundas e quartas', horario: '14:00 às 16:00', vagas: 2 },
+      { id: 'info-1630', dias: 'Segundas e quartas', horario: '16:30 às 18:30', vagas: 3 },
+      { id: 'info-1900', dias: 'Segundas e quartas', horario: '19:00 às 21:00', vagas: 1 },
+      { id: 'info-sab', dias: 'Sábados', horario: '09:00 às 13:00', vagas: 3 },
+    ] },
+    { id: 'pilates', nome: 'Pilates', texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', foto: '%%FOTO:pilates%%', turmas: [
+      { id: 'pil-1430', dias: 'Segundas e quartas', horario: '14:30 às 15:30', vagas: 0 },
+      { id: 'pil-1600', dias: 'Segundas e quartas', horario: '16:00 às 17:00', vagas: 0 },
+      { id: 'pil-1800', dias: 'Segundas e quartas', horario: '18:00 às 19:00', vagas: 0 },
+      { id: 'pil-1900', dias: 'Segundas e quartas', horario: '19:00 às 20:00', vagas: 0 },
+      { id: 'pil-0830', dias: 'Sábados', horario: '08:30 às 09:30', vagas: 0 },
+      { id: 'pil-1000', dias: 'Sábados', horario: '10:00 às 11:00', vagas: 0 },
+      { id: 'pil-1130', dias: 'Sábados', horario: '11:30 às 12:30', vagas: 0 },
+    ] },
+  ];
+  // Feed do Início do site aberto: só fotos reais. No site publicado, vem do Mural que a equipe publica.
+  const MURAL_SITE = [
+    { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%' },
+    { titulo: 'Aula de pilates', texto: 'Movimento, saúde e bem-estar para a comunidade.', img: '%%FOTO:pilates%%' },
+    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti. Venha nos conhecer!', img: '%%FOTO:fachada%%' },
+  ];
+  const vagasCurso = (c) => c.turmas.reduce((n, t) => n + (t.vagas || 0), 0);
+  const turmaTxt = (t) => `${t.dias} · ${t.horario}`;
+  const acharTurma = (cid, tid) => { const c = CURSOS_SITE.find((x) => x.id === cid); return { c, t: c?.turmas.find((x) => x.id === tid) }; };
+
   // ───── Site aberto (sem login) para quem ainda não é aluno · login só para aluno e equipe ─────
   // No site de verdade estes e-mails vêm das fichas (alunos) e da lista da equipe.
   const EMAIL_ALUNOS = { 'familia.souza@exemplo.com': ['ana', 'davi'] };
@@ -558,9 +589,9 @@ body:not(.gated) #gate { display: none; }
   function minhasInsc() {
     const ps = S.vis.pedidos; if (!ps.length) return '';
     return `<section><div class="section-title"><h2>Sua inscrição</h2><span>${esc(S.vis.dados?.nome?.split(' ')[0] || '')}</span></div><div class="stack">${ps.map((p, i) => ({ ...p, i })).reverse().map((p) => {
-      const c = CURSOS.find((x) => x.id === p.curso); const k = STI[p.status];
+      const { c, t: tm } = acharTurma(p.curso, p.turma); const k = STI[p.status];
       const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, na barra do site, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
-      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
+      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}${tm ? `<span class="small muted" style="display:block;font-family:var(--body);font-weight:600">${esc(turmaTxt(tm))}</span>` : ''}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
         <div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
         <p class="small" style="margin-top:10px">${txt}</p>
         ${p.status !== 'matriculado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
@@ -571,11 +602,13 @@ body:not(.gated) #gate { display: none; }
   }
   function cursoCard(c) {
     const p = S.vis.pedidos.find((x) => x.curso === c.id);
-    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${temVaga(c) ? 'green' : ''}">${temVaga(c) ? vagasTxt(c) : 'Sem vagas no momento'}</span></div>
+    const v = vagasCurso(c);
+    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx"><span class="pill ${v ? 'green' : ''}">${v ? plural(v, 'vaga', 'vagas') : 'Turmas cheias no momento'}</span></div>
       <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
-      <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : temVaga(c) ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
+      <div class="turmas-site"><span class="small muted" style="font-weight:700">${plural(c.turmas.length, 'turma', 'turmas')}</span>${c.turmas.map((t) => `<div class="ts-row"><span class="grow">${esc(turmaTxt(t))}</span><span class="pill ${t.vagas ? 'green' : ''}">${t.vagas ? plural(t.vagas, 'vaga', 'vagas') : 'Cheia'}</span></div>`).join('')}</div>
+      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : v ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
   }
+
   function postCard(m) {
     return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
       <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
@@ -588,11 +621,11 @@ body:not(.gated) #gate { display: none; }
           <p>Acreditamos que todos merecem oportunidades para aprender, cuidar da saúde, desenvolver seus talentos e viver melhor.</p>
           <p>O Instituto Íris nasceu para transformar vidas e construir um futuro melhor junto com você.</p></div></section>
       <div class="section-title" style="margin-top:6px"><h2>Acontece no Íris</h2></div>
-      ${MURAL.length ? `<div class="feed">${MURAL.map(postCard).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
+      ${MURAL_SITE.length ? `<div class="feed">${MURAL_SITE.map((m) => `<article class="card post"><div class="foto"><img src="${m.img}" alt="${esc(m.titulo)}"></div><div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Instituto Íris</div></div></article>`).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
   }
   function vPCursos() {
     // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(temVaga(b)) - Number(temVaga(a))).map(cursoCard).join('')}</div>`;
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS_SITE.slice().sort((a, b) => Number(!!vagasCurso(b)) - Number(!!vagasCurso(a))).map(cursoCard).join('')}</div>`;
   }
   const PROPOSITO = [['book', 'Educação', 'Conhecimento que abre portas.'], ['pulse', 'Saúde', 'Cuidado que transforma vidas.'], ['run', 'Esporte e bem-estar', 'Mais movimento, saúde e qualidade de vida.'], ['brief', 'Trabalho e renda', 'Oportunidades para conquistar autonomia.']];
   function vPSobre() {
@@ -658,16 +691,16 @@ body:not(.gated) #gate { display: none; }
 
   // Inscrição de quem ainda não é aluno: cadastro rápido junto com a inscrição (sem login).
   function modalPInsc(cid) {
-    // cid vazio = veio do "Não sou aluno" do Entrar: a pessoa escolhe o curso aqui.
-    const c = CURSOS.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
+    // cid vazio = veio do "Não sou aluno" do Entrar: a pessoa escolhe curso e turma aqui.
+    const c = CURSOS_SITE.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
     const v = (k) => esc(t[k] ?? d[k] ?? '');
     const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id);
-    const opcoes = CURSOS.filter((x) => temVaga(x) && !jaPediu(x.id));
+    const opcoes = (c ? [c] : CURSOS_SITE.filter((x) => !jaPediu(x.id))).flatMap((x) => x.turmas.filter((tt) => tt.vagas > 0).map((tt) => ({ c: x, t: tt })));
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
-      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${vagasTxt(c)}</p>`
+      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">Escolha a turma e preencha o cadastro rápido.</p>`
         : `<h2>Quero me inscrever</h2><p class="muted small" style="margin:4px 0 14px">Escolha um curso com vaga e preencha o cadastro rápido.</p>`}
       <form id="form-pinsc" class="stack" data-c="${esc(cid || '')}" novalidate>
-        ${c ? '' : opcoes.length ? `<label class="field"><span>Curso <b class="req">*</b></span><select class="input" id="pi-curso"><option value="">Escolha o curso</option>${opcoes.map((x) => `<option value="${x.id}"${t.curso === x.id ? ' selected' : ''}>${esc(x.nome)} · ${esc(x.dias)} ${esc(x.horario)} · ${vagasTxt(x)}</option>`).join('')}</select></label>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>'}
+        ${opcoes.length ? `<label class="field"><span>${c ? 'Turma' : 'Curso e turma'} <b class="req">*</b></span><select class="input" id="pi-turma">${opcoes.length > 1 ? '<option value="">Escolha</option>' : ''}${opcoes.map(({ c: x, t: tt }) => { const val = `${x.id}|${tt.id}`; return `<option value="${val}"${t.turmaSel === val ? ' selected' : ''}>${c ? '' : esc(x.nome) + ' · '}${esc(turmaTxt(tt))} · ${plural(tt.vagas, 'vaga', 'vagas')}</option>`; }).join('')}</select></label>` : '<div class="empty">Nenhuma turma com vaga aberta agora. Volte em breve!</div>'}
         ${d.nome ? `<p class="small muted">Seus dados do cadastro já estão preenchidos. Confira e envie.</p>` : '<p class="small muted">Cadastro rápido: leva menos de um minuto.</p>'}
         <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
         <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
@@ -682,13 +715,15 @@ body:not(.gated) #gate { display: none; }
   }
   function enviarPInsc(form) {
     const g = (id) => document.getElementById(id).value.trim();
-    const t = S.modal.tmp = { curso: form.dataset.c || (document.getElementById('pi-curso')?.value || ''), nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
+    const turmaSel = document.getElementById('pi-turma')?.value || '';
+    const t = S.modal.tmp = { turmaSel, curso: turmaSel.split('|')[0], turma: turmaSel.split('|')[1] || '', nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
     const dig = t.telefone.replace(/\D/g, '');
-    const falta = [!t.curso && 'curso', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
+    const falta = [!t.turma && 'turma', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
     S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
     if (S.modal.erro) return render();
-    S.vis.dados = { ...t, telefone: fmtTel(dig) };
-    S.vis.pedidos.push({ curso: t.curso, status: 'enviada', em: H });
+    const { turmaSel: _ts, curso: _c, turma: _t, ...dados } = t;
+    S.vis.dados = { ...dados, telefone: fmtTel(dig) };
+    S.vis.pedidos.push({ curso: t.curso, turma: t.turma, status: 'enviada', em: H });
     salvarVis(); S.modal = null; S.pview = 'p-cursos'; render(); try { window.scrollTo(0, 0); } catch {}
     toast('Inscrição enviada! Acompanhe aqui na aba Cursos.');
   }
