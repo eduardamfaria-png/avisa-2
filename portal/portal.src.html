@@ -561,6 +561,52 @@ body:not(.gated) #gate { display: none; }
     ] },
   ];
   // Feed do Início do site aberto: só fotos reais. No site publicado, vem do Mural que a equipe publica.
+  // ───── Site publicado (window.IRIS_SITE): cursos, inscrições e contatos ligados ao banco real ─────
+  const REAL = !!window.IRIS_SITE;
+  const INFO_CURSOS = {
+    informatica: { nome: 'Informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', foto: '%%FOTO:curso-informatica%%' },
+    pilates: { nome: 'Pilates', resumir: true, texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', foto: '%%FOTO:pilates%%' },
+  };
+  const DIA_NOME = ['Domingos', 'Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados'];
+  const diasTxt = (ds) => { const n = [...ds].sort().map((d, i) => (i ? DIA_NOME[d].toLowerCase() : DIA_NOME[d])); return n.length > 1 ? `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}` : n[0] || 'Dias a definir'; };
+  const capitalizar = (v) => String(v || '').replace(/^./, (c) => c.toUpperCase());
+  // Turmas publicadas pela gestão → cursos do site (agrupados pelo curso de cada turma).
+  function cursosDoBanco(lista) {
+    const g = new Map();
+    for (const t of lista) {
+      const k = t.curso || 'curso';
+      if (!g.has(k)) { const info = INFO_CURSOS[k] || {}; g.set(k, { id: k, nome: info.nome || capitalizar(String(t.nome || k).split(' ')[0]), texto: info.texto || '', foto: info.foto || '', resumir: !!info.resumir, turmas: [] }); }
+      g.get(k).turmas.push({ id: t.id, dias: diasTxt(t.dias || []), ordem: `${[...(t.dias || [])].sort().join(',')}|${t.horario || ''}`, horario: t.horario ? (t.horarioFim ? `${t.horario} às ${t.horarioFim}` : t.horario) : 'horário a definir', vagas: t.vagas == null ? 99 : t.vagas });
+    }
+    for (const c of g.values()) c.turmas.sort((a, b) => a.ordem.localeCompare(b.ordem));
+    return [...g.values()];
+  }
+  let FB = null;
+  async function iniciarBanco() {
+    try {
+      const [{ initializeApp }, fs] = await Promise.all([import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')]);
+      FB = { db: fs.getFirestore(initializeApp(window.IRIS_FIREBASE_CONFIG)), ...fs };
+      fs.onSnapshot(fs.doc(FB.db, 'publico', 'cursos'), (snap) => {
+        const d = snap.exists() ? snap.data() : null;
+        if (d && Array.isArray(d.lista) && d.lista.length) { CURSOS_SITE.splice(0, CURSOS_SITE.length, ...cursosDoBanco(d.lista)); render(); }
+      }, () => {});
+      atualizarSituacoes();
+    } catch (e) { console.warn('Sem conexão com o banco', e); }
+  }
+  // Situação dos pedidos feitos neste aparelho (enviada, em análise, matriculado, recusado).
+  async function atualizarSituacoes() {
+    if (!FB) return;
+    let mudou = false;
+    for (const p of S.vis.pedidos) {
+      if (!p.pid) continue;
+      try {
+        const snap = await FB.getDoc(FB.doc(FB.db, 'acompanhamento', p.pid));
+        if (snap.exists()) { const d = snap.data(); const st = { analise: 'analise', espera: 'enviada', matriculado: 'matriculado', recusado: 'recusado' }[d.status] || p.status; if (st !== p.status || (d.resposta || '') !== (p.resposta || '')) { p.status = st; p.resposta = d.resposta || ''; mudou = true; } }
+      } catch {}
+    }
+    if (mudou) { salvarVis(); render(); }
+  }
+
   const MURAL_SITE = [
     { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%' },
     { titulo: 'Aula de pilates', texto: 'Movimento, saúde e bem-estar para a comunidade.', img: '%%FOTO:pilates%%' },
@@ -603,7 +649,7 @@ body:not(.gated) #gate { display: none; }
   const lerLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
   const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   // Quem entrou fica salvo no aparelho: na próxima vez o site já abre na tela certa.
-  S.auth = lerLS('portal:auth', null);
+  S.auth = REAL ? null : lerLS('portal:auth', null);
   // Versão do protótipo que já abre na tela do aluno (link separado para mostrar à coordenação).
   if (!S.auth && window.PORTAL_INICIO === 'aluno') S.auth = { tipo: 'aluno', email: 'familia.souza@exemplo.com' };
   if (S.auth?.tipo === 'aluno' && EMAIL_ALUNOS[S.auth.email]) S.aluno = EMAIL_ALUNOS[S.auth.email][0];
@@ -622,19 +668,20 @@ body:not(.gated) #gate { display: none; }
   function minhasInsc() {
     const ps = S.vis.pedidos; if (!ps.length) return '';
     return `<section><div class="section-title"><h2>Sua inscrição</h2><span>${esc(S.vis.dados?.nome?.split(' ')[0] || '')}</span></div><div class="stack">${ps.map((p, i) => ({ ...p, i })).reverse().map((p) => {
-      const { c, t: tm } = acharTurma(p.curso, p.turma); const k = STI[p.status];
-      const txt = { enviada: p.espera ? 'Você está na lista de espera. Quando abrir vaga, a coordenação fala com você pelo WhatsApp.' : 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, na barra do site, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
+      const { c, t: tm } = acharTurma(p.curso, p.turma); const k = STI[p.status] ?? -1;
+      if (!c) return '';
+      const txt = { enviada: p.espera ? 'Você está na lista de espera. Quando abrir vaga, a coordenação fala com você pelo WhatsApp.' : 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Em breve você vai poder entrar no Portal do Aluno com este mesmo e-mail para ver suas aulas e sua frequência.', recusado: `Não foi possível desta vez.${p.resposta ? ` <b>Coordenação:</b> ${esc(p.resposta)}` : ''}` }[p.status];
       return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}${tm || p.turma === 'qualquer' ? `<span class="small muted" style="display:block;font-family:var(--body);font-weight:600">${tm ? esc(turmaTxt(tm)) : 'Qualquer horário'}</span>` : ''}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
-        <div class="tl">${[p.espera ? 'Lista de espera' : 'Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
+        ${p.status === 'recusado' ? '<span class="pill red" style="margin-top:8px">Não aprovada</span>' : `<div class="tl">${[p.espera ? 'Lista de espera' : 'Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>`}
         <p class="small" style="margin-top:10px">${txt}</p>
-        ${p.status !== 'matriculado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
+        ${!REAL && p.status !== 'matriculado' && p.status !== 'recusado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
     }).join('')}</div></section>`;
   }
   function fotoBox(src, rotulo, cls = '') {
     return src ? `<img class="foto-real ${cls}" src="${src}" alt="${esc(rotulo)}">` : `<div class="foto-ph ${cls}">${icon('cam')}<span>Foto: ${esc(rotulo)}</span></div>`;
   }
   function cursoCard(c) {
-    const p = S.vis.pedidos.find((x) => x.curso === c.id);
+    const p = S.vis.pedidos.find((x) => x.curso === c.id && x.status !== 'recusado');
     return cursoBase(c, p ? `<span class="pill amber">${p.espera ? 'Você está na lista de espera · acompanhe acima' : 'Inscrição enviada · acompanhe acima'}</span>` : `<button class="btn primary" data-pinsc="${c.id}">${vagasCurso(c) ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`);
   }
 
@@ -724,7 +771,7 @@ body:not(.gated) #gate { display: none; }
     // cid vazio = veio do "Não sou aluno" do Entrar: a pessoa escolhe curso e turma aqui.
     const c = CURSOS_SITE.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
     const v = (k) => esc(t[k] ?? d[k] ?? '');
-    const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id);
+    const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id && p.status !== 'recusado');
     const opcoes = (c ? [c] : CURSOS_SITE.filter((x) => !jaPediu(x.id))).flatMap((x) => opcoesTurma(x).map((o) => ({ c: x, o })));
     const soEspera = c && !vagasCurso(c);
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
@@ -741,22 +788,36 @@ body:not(.gated) #gate { display: none; }
         <label class="field"><span>Como conheceu o Íris</span><select class="input" id="pi-como"><option value="">Escolha (opcional)</option>${COMO.map((x) => `<option${(t.comoConheceu ?? d.comoConheceu) === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
         <label class="check"><input type="checkbox" id="pi-aceite"${(t.aceite ?? d.aceite) ? ' checked' : ''}><span class="small">Aceito receber comunicações do Instituto Íris sobre novos cursos e novidades por e-mail ou WhatsApp. Posso cancelar quando quiser.</span></label>
         ${S.modal.erro ? ERR(S.modal.erro) : ''}
-        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit"${S.modal.enviando ? ' disabled' : ''}>${S.modal.enviando ? 'Enviando…' : 'Enviar inscrição'}</button></div>
       </form></div></div>`;
   }
-  function enviarPInsc(form) {
+  async function enviarPInsc(form) {
+    if (S.modal.enviando) return;
     const g = (id) => document.getElementById(id).value.trim();
     const turmaSel = document.getElementById('pi-turma')?.value || '';
     const t = S.modal.tmp = { turmaSel, curso: turmaSel.split('|')[0], turma: turmaSel.split('|')[1] || '', nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
     const dig = t.telefone.replace(/\D/g, '');
     const falta = [!t.turma && 'turma', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
-    S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
+    S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : !REAL && EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
     if (S.modal.erro) return render();
     const { turmaSel: _ts, curso: _c, turma: _t, ...dados } = t;
     S.vis.dados = { ...dados, telefone: fmtTel(dig) };
     const cc = CURSOS_SITE.find((x) => x.id === t.curso); const tt = cc && linhasCurso(cc).find((x) => x.id === t.turma);
     const espera = t.turma === 'qualquer' || !tt || !tt.vagas;
-    S.vis.pedidos.push({ curso: t.curso, turma: t.turma, espera, status: 'enviada', em: H });
+    let pid = '';
+    if (REAL) {
+      if (!FB) { S.modal.erro = 'Sem conexão agora. Verifique a internet e tente de novo.'; return render(); }
+      S.modal.enviando = true; render();
+      try {
+        const ref = await FB.addDoc(FB.collection(FB.db, 'pedidos'), {
+          nome: t.nome.slice(0, 120), email: t.email.slice(0, 120), telefone: fmtTel(dig), nascimento: t.nascimento, bairro: t.bairro.slice(0, 80), comoConheceu: t.comoConheceu, aceitaComunicacoes: t.aceite ? 'Sim' : 'Não',
+          curso: t.curso, cursoNome: cc ? cc.nome : '', turmaId: t.turma, turmaTxt: tt ? turmaTxt(tt) : t.turma === 'qualquer' ? 'Qualquer horário' : '',
+          espera, origem: 'site', status: 'pendente', enviadoEm: new Date().toISOString(),
+        });
+        pid = ref.id;
+      } catch (err) { S.modal.enviando = false; S.modal.erro = 'Não foi possível enviar agora. Verifique a internet e tente de novo.'; return render(); }
+    }
+    S.vis.pedidos.push({ pid, curso: t.curso, turma: t.turma, turmaTxt: tt ? turmaTxt(tt) : '', espera, status: 'enviada', em: H });
     salvarVis(); S.modal = null; S.pview = 'p-cursos'; render(); try { window.scrollTo(0, 0); } catch {}
     toast(espera ? 'Pronto! Você está na lista de espera. Acompanhe aqui na aba Cursos.' : 'Inscrição enviada! Acompanhe aqui na aba Cursos.');
   }
@@ -771,10 +832,11 @@ body:not(.gated) #gate { display: none; }
       <button class="choice" data-ent="aluno"><span class="ic">${icon('book')}</span><span class="grow"><b>Sou aluno</b><small>Ver minhas aulas, frequência e avisos</small></span></button>
       <button class="choice" data-ent="equipe"><span class="ic">${icon('check')}</span><span class="grow"><b>Sou da equipe</b><small>Coordenação e professores</small></span></button>
       <button class="choice" data-ent="naoaluno"><span class="ic">${icon('plus')}</span><span class="grow"><b>Não sou aluno</b><small>Quero escolher um curso e me inscrever</small></span></button></div>`;
+    else if (REAL && L.modo === 'aluno') body = `${voltar}<h2>Portal do Aluno</h2><p style="margin-top:8px">O Portal do Aluno está chegando! Em breve você vai poder ver suas aulas, sua frequência e os avisos do Íris por aqui.</p><p class="small muted" style="margin-top:8px">Enquanto isso, qualquer dúvida fale com a coordenação.</p>`;
     else body = `${voltar}<h2>${L.modo === 'aluno' ? 'Sou aluno' : 'Sou da equipe'}</h2><p class="muted small" style="margin:4px 0 14px">${L.modo === 'aluno' ? 'Digite o e-mail que você deu na sua ficha de inscrição.' : 'Digite seu e-mail da equipe.'} Vamos enviar um link para você entrar, sem senha.</p>
       <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block">Receber link de acesso</button></form>
       ${L.erro ? `<div style="margin-top:12px">${ERR(L.erro)}</div>` : ''}
-      <div class="banner" style="margin-top:12px">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>.</span></div>`;
+      ${REAL ? '' : `<div class="banner" style="margin-top:12px">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>.</span></div>`}`;
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Entrar"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>${body}</div></div>`;
   }
   function enviarEntrar() {
@@ -826,6 +888,7 @@ body:not(.gated) #gate { display: none; }
       if (v === 'voltar') S.modal = { tipo: 'entrar', modo: '', etapa: '' };
       else if (v === 'naoaluno') S.modal = { tipo: 'pinsc', c: '' };
       else if (v === 'abrir') { S.auth = { tipo: L.modo, email: L.email }; gravarLS('portal:auth', S.auth); if (L.modo === 'aluno') { S.aluno = EMAIL_ALUNOS[L.email][0]; S.view = 'inicio'; } S.modal = null; try { window.scrollTo(0, 0); } catch {} }
+      else if (REAL && v === 'equipe') { location.href = '/gestao/'; return; }
       else { L.modo = v; L.erro = ''; }
       render(); document.getElementById('ent-email')?.focus(); return;
     }
@@ -833,7 +896,7 @@ body:not(.gated) #gate { display: none; }
     const av = e.target.closest('[data-avancar]');
     if (av) { const p = S.vis.pedidos[Number(av.dataset.avancar)]; p.status = p.status === 'enviada' ? 'analise' : 'matriculado'; salvarVis(); render(); return; }
     const pi = e.target.closest('[data-pinsc]'); if (pi) { S.modal = { tipo: 'pinsc', c: pi.dataset.pinsc }; render(); return; }
-    if (e.target.closest('[data-insta]')) { toast('No site de verdade, abre o Instagram @instituto__iris.'); return; }
+    if (e.target.closest('[data-insta]')) { if (REAL) window.open('https://www.instagram.com/instituto__iris/', '_blank', 'noopener'); else toast('No site de verdade, abre o Instagram @instituto__iris.'); return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
     const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
@@ -848,8 +911,14 @@ body:not(.gated) #gate { display: none; }
     if (e.target.id === 'form-assoc') {
       const g = (id) => document.getElementById(id).value.trim(); const dig = g('as-tel').replace(/\D/g, '');
       S.assocErro = !g('as-nome') ? 'Escreva seu nome.' : (dig.length < 10 || dig.length > 11) ? 'Digite um WhatsApp com DDD.' : '';
-      if (!S.assocErro) S.assocEnviado = true;
-      render(); document.getElementById('associado')?.scrollIntoView({ block: 'start' }); return;
+      const fim = () => { render(); document.getElementById('associado')?.scrollIntoView({ block: 'start' }); };
+      if (S.assocErro) return fim();
+      if (!REAL) { S.assocEnviado = true; return fim(); }
+      if (!FB) { S.assocErro = 'Sem conexão agora. Verifique a internet e tente de novo.'; return fim(); }
+      const btn = e.target.querySelector('button'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+      FB.addDoc(FB.collection(FB.db, 'contatos'), { nome: g('as-nome').slice(0, 120), empresa: g('as-emp').slice(0, 120), telefone: fmtTel(dig), email: g('as-email').slice(0, 120), ajuda: g('as-ajuda').slice(0, 60), mensagem: g('as-msg').slice(0, 1000), enviadoEm: new Date().toISOString() })
+        .then(() => { S.assocEnviado = true; fim(); }, () => { S.assocErro = 'Não foi possível enviar agora. Verifique a internet e tente de novo.'; fim(); });
+      return;
     }
     if (e.target.id === 'form-just') {
       const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
@@ -867,6 +936,7 @@ body:not(.gated) #gate { display: none; }
       S.insc[`${S.aluno}|${e.target.dataset.c}`] = { turma, espera, tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast(espera ? 'Pronto! Você está na lista de espera.' : 'Inscrição enviada! A coordenação vai analisar.'); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
+  if (REAL) iniciarBanco();
   document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });
   render();
 })();

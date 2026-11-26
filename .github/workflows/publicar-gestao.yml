@@ -30,7 +30,7 @@ jobs:
           fi
       - name: Montar o site
         if: steps.cfg.outputs.ok == 'true'
-        run: node scripts/build-gestao.mjs
+        run: node scripts/build-gestao.mjs && node scripts/build-site.mjs
       - name: Publicar site e regras de acesso
         if: steps.cfg.outputs.ok == 'true'
         env:
