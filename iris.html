@@ -223,7 +223,10 @@ td.r, th.r { text-align: right; }
 .fotos-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fotos-grid .ft b { position: absolute; left: 6px; top: 6px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; border-radius: 99px; padding: 1px 7px; }
 .fotos-grid .ft button { position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 99px; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
-.fotos-grid .ft button.esq { right: auto; left: 4px; top: auto; bottom: 4px; }
+.fotos-grid .ordem { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 4px; background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+.fotos-grid .ordem span { color: #fff; font-size: 10px; font-weight: 700; }
+.fotos-grid .ft .ordem button { position: static; width: 30px; height: 26px; border-radius: 8px; background: rgba(255,255,255,.92); color: #111; font-size: 12px; }
+.fotos-grid .ft .ordem button:disabled { opacity: .3; cursor: default; }
 .item.off { opacity: .6; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14.5px; margin: 0; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
@@ -1232,7 +1235,7 @@ body.gated .app { grid-template-columns: 1fr; }
   const tituloPost = (m) => m.titulo || String(m.texto || '').split('\n')[0].slice(0, 80) || 'Publicação';
   function fotosMuralHtml() {
     if (!fotosMural.length) return '<p class="small muted" style="margin-top:6px">Nenhuma foto ainda.</p>';
-    return `<div class="fotos-grid">${fotosMural.map((f, i) => `<div class="ft"><img src="${esc(f)}" alt=""><b>${i + 1}</b><button type="button" data-act="mural-foto-del" data-i="${i}" aria-label="Tirar foto">×</button>${i ? `<button type="button" class="esq" data-act="mural-foto-esq" data-i="${i}" aria-label="Mover para antes">‹</button>` : ''}</div>`).join('')}</div>`;
+    return `<div class="fotos-grid">${fotosMural.map((f, i) => `<div class="ft"><img src="${esc(f)}" alt=""><b>${i + 1}</b><button type="button" data-act="mural-foto-del" data-i="${i}" aria-label="Tirar foto ${i + 1}" title="Tirar esta foto">×</button>${fotosMural.length > 1 ? `<div class="ordem"><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="-1" aria-label="Mover foto ${i + 1} para antes" title="Mover para antes"${i ? '' : ' disabled'}>◀</button><span>ordem</span><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="1" aria-label="Mover foto ${i + 1} para depois" title="Mover para depois"${i < fotosMural.length - 1 ? '' : ' disabled'}>▶</button></div>` : ''}</div>`).join('')}</div>`;
   }
   function atualizarFotosMural() { const g = document.getElementById('m-fotos'); if (g) g.innerHTML = fotosMuralHtml(); const n = document.getElementById('m-n'); if (n) n.textContent = `${fotosMural.length}/${MAX_FOTOS}`; }
   function muralModal(id) {
@@ -1242,7 +1245,7 @@ body.gated .app { grid-template-columns: 1fr; }
     openModal(id ? 'Editar publicação' : 'Nova publicação no mural', `<div class="form-grid">
       <div class="field full"><span>Fotos <small class="muted" id="m-n">${fotosMural.length}/${MAX_FOTOS}</small></span>
         <input class="input" type="file" id="m-foto" accept="image/*" multiple>
-        <small class="small muted">Pode escolher várias de uma vez. Com mais de uma, aparece em carrossel (arrasta para o lado). A ordem é a dos números; use ‹ para trocar.</small>
+        <small class="small muted">Pode escolher várias de uma vez. Com mais de uma, aparece em carrossel (arrasta para o lado). O número é a ordem em que aparecem; para mudar a ordem, use ◀ ▶ embaixo da foto. O × tira a foto.</small>
         <div id="m-fotos">${fotosMuralHtml()}</div></div>
       <label class="field full"><span>Legenda</span><textarea class="textarea" id="m-txt" rows="6" placeholder="O mesmo texto do post do Instagram">${esc(legenda)}</textarea></label>
     </div>`, delFoot('mural', id, 'mural-save'));
@@ -1853,7 +1856,7 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'mural-open': muralModal(t.dataset.id); break;
       case 'mural-save': saveMural(t.dataset.id); break;
       case 'mural-foto-del': fotosMural.splice(Number(t.dataset.i), 1); atualizarFotosMural(); break;
-      case 'mural-foto-esq': { const i = Number(t.dataset.i); [fotosMural[i - 1], fotosMural[i]] = [fotosMural[i], fotosMural[i - 1]]; atualizarFotosMural(); break; }
+      case 'mural-foto-mover': { const i = Number(t.dataset.i), j = i + Number(t.dataset.d); if (j >= 0 && j < fotosMural.length) { [fotosMural[i], fotosMural[j]] = [fotosMural[j], fotosMural[i]]; atualizarFotosMural(); } break; }
       case 'op-new': opModal(null); break;
       case 'op-open': opModal(t.dataset.id); break;
       case 'op-save': saveOp(t.dataset.id); break;
