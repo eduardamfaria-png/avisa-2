@@ -609,6 +609,9 @@ body:not(.gated) #gate { display: none; }
     const { au, auth } = FB;
     try {
       if (au.isSignInWithEmailLink(auth, location.href)) {
+        // Link de entrada da equipe que caiu na página principal (ex.: pedido antes da mudança de endereço): vai para a gestão.
+        let daEquipe = false; try { daEquipe = !localStorage.getItem('portal:loginEmail') && !!localStorage.getItem('iris:loginEmail'); } catch {}
+        if (daEquipe) { location.replace('/gestao/' + location.search); return; }
         let email = lerLS('portal:loginEmail', '');
         if (!email) email = (window.prompt('Para terminar a entrada, confirme seu e-mail:') || '').trim().toLowerCase();
         if (email) await au.signInWithEmailLink(auth, email, location.href);

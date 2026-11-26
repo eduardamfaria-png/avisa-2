@@ -50,5 +50,9 @@ for (const pasta of ['fotos', 'parceiros']) {
   for (const f of readdirSync(`assets/${pasta}`)) if (f.endsWith('.webp')) copyFileSync(`assets/${pasta}/${f}`, `site/${pasta}/${f}`);
 }
 copyFileSync('gestao/firebase-config.js', 'site/firebase-config.js');
-for (const f of ['index.html', 'backend.js', 'firebase-config.js']) copyFileSync(`gestao/${f}`, `site/gestao/${f}`);
+for (const f of ['backend.js', 'firebase-config.js']) copyFileSync(`gestao/${f}`, `site/gestao/${f}`);
+// Caminhos absolutos: a gestão funciona aberta como /gestao ou /gestao/.
+const gestao = readFileSync('gestao/index.html', 'utf8').replace('<script src="firebase-config.js"', '<script src="/gestao/firebase-config.js"').replace('<script type="module" src="backend.js"', '<script type="module" src="/gestao/backend.js"');
+if (!gestao.includes('/gestao/backend.js') || !gestao.includes('/gestao/firebase-config.js')) throw new Error('Não achei os scripts da gestão para ajustar o caminho');
+writeFileSync('site/gestao/index.html', gestao);
 console.log('site/ montado: site aberto em / e gestão em /gestao/');
