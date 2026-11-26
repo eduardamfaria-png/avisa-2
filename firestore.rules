@@ -1,5 +1,6 @@
 rules_version = '2';
-// Só a equipe do Instituto Íris lê e escreve. Ninguém mais vê nenhum dado.
+// Só a equipe do Instituto Íris lê e escreve os dados. De fora, só o site aberto:
+// ler os cursos publicados e enviar pedidos de inscrição e contatos de apoio.
 service cloud.firestore {
   match /databases/{database}/documents {
     // E-mails da coordenação: sempre têm acesso e liberam os demais pelo botão "Equipe".
@@ -25,6 +26,50 @@ service cloud.firestore {
     }
     match /lancamentos/{id} {
       allow read, write: if financeiro();
+    }
+
+    // ── Site aberto (sem login) ──
+    function txt(v, max) { return v is string && v.size() <= max; }
+    // Cursos e turmas publicados pela equipe (só curso, dias, horário e vagas): qualquer um lê.
+    match /publico/{doc} {
+      allow read: if true;
+    }
+    // Pedido de inscrição ou lista de espera feito no site: qualquer um cria, com campos conferidos.
+    // Ninguém de fora lê, lista, altera ou apaga pedidos.
+    match /pedidos/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['nome', 'email', 'telefone', 'nascimento', 'bairro', 'comoConheceu', 'aceitaComunicacoes', 'curso', 'cursoNome', 'turmaId', 'turmaTxt', 'espera', 'origem', 'status', 'enviadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'telefone', 'curso', 'espera', 'origem', 'status', 'enviadoEm'])
+        && txt(request.resource.data.nome, 120) && request.resource.data.nome.size() >= 2
+        && txt(request.resource.data.telefone, 20)
+        && (!('email' in request.resource.data) || txt(request.resource.data.email, 120))
+        && (!('nascimento' in request.resource.data) || txt(request.resource.data.nascimento, 10))
+        && (!('bairro' in request.resource.data) || txt(request.resource.data.bairro, 80))
+        && (!('comoConheceu' in request.resource.data) || txt(request.resource.data.comoConheceu, 40))
+        && (!('aceitaComunicacoes' in request.resource.data) || request.resource.data.aceitaComunicacoes in ['Sim', 'Não'])
+        && txt(request.resource.data.curso, 60)
+        && (!('cursoNome' in request.resource.data) || txt(request.resource.data.cursoNome, 80))
+        && (!('turmaId' in request.resource.data) || txt(request.resource.data.turmaId, 80))
+        && (!('turmaTxt' in request.resource.data) || txt(request.resource.data.turmaTxt, 120))
+        && request.resource.data.espera is bool
+        && request.resource.data.origem == 'site' && request.resource.data.status == 'pendente'
+        && txt(request.resource.data.enviadoEm, 30);
+    }
+    // Situação do pedido (enviada, em análise, matriculado...): quem fez o pedido consulta pelo código dele.
+    // Só guarda a situação, nenhum dado pessoal. Só a equipe escreve.
+    match /acompanhamento/{id} {
+      allow get: if true;
+    }
+    // "Seja um associado": qualquer um cria um contato, ninguém de fora lê.
+    match /contatos/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['nome', 'empresa', 'telefone', 'email', 'ajuda', 'mensagem', 'enviadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'telefone', 'enviadoEm'])
+        && txt(request.resource.data.nome, 120) && request.resource.data.nome.size() >= 2
+        && txt(request.resource.data.telefone, 20)
+        && (!('empresa' in request.resource.data) || txt(request.resource.data.empresa, 120))
+        && (!('email' in request.resource.data) || txt(request.resource.data.email, 120))
+        && (!('ajuda' in request.resource.data) || txt(request.resource.data.ajuda, 60))
+        && (!('mensagem' in request.resource.data) || txt(request.resource.data.mensagem, 1000))
+        && txt(request.resource.data.enviadoEm, 30);
     }
 
     // Só a "impressão digital" dos e-mails liberados: qualquer um pode perguntar por UM

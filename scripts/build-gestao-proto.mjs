@@ -3,7 +3,8 @@
 // Quando aprovado, as mesmas mudanças são levadas para iris.html.
 import { readFileSync, writeFileSync } from 'node:fs';
 
-let app = readFileSync('iris.html', 'utf8');
+// Parte de uma cópia congelada do site de gestão (o protótipo não acompanha as mudanças reais).
+let app = readFileSync('portal/iris-base-prototipo.html', 'utf8');
 const rep = (a, b) => {
   const n = app.split(a).length - 1;
   if (n !== 1) throw new Error(`Trecho encontrado ${n} vezes: ${a.slice(0, 80)}`);

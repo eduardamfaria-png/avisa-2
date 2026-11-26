@@ -212,6 +212,8 @@ td.r, th.r { text-align: right; }
 .icon-btn svg { width: 20px; height: 20px; }
 .toast { position: fixed; z-index: 80; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; padding: 12px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
 @media (min-width: 960px) { .toast { bottom: 24px; left: auto; right: 24px; } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14.5px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--gold-soft); color: var(--gold-ink); font-size: 14px; border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); }
 .banner svg { flex: none; width: 18px; height: 18px; margin-top: 2px; }
 .photo-edit { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
@@ -402,7 +404,7 @@ body.gated .app { grid-template-columns: 1fr; }
 
   let db = null, assets = null, downloads = null, backend = null;
 
-  const list = (col) => Object.entries(S.data[col]).map(([id, d]) => ({ id, ...d }));
+  const list = (col) => Object.entries(S.data[col] || {}).map(([id, d]) => ({ id, ...d }));
   const get = (col, id) => (S.data[col][id] ? { id, ...S.data[col][id] } : null);
   const turmasList = () => list('turmas').sort(sortByName);
   const alunosList = () => list('alunos').sort(sortByName);
@@ -546,7 +548,7 @@ body.gated .app { grid-template-columns: 1fr; }
   ];
 
   function renderNav() {
-    const novas = alunosList().filter((a) => sit(a) === 'inscrito').length;
+    const novas = alunosList().filter((a) => sit(a) === 'inscrito').length + pedidosPend().filter((p) => !p.espera).length;
     const btn = (id, label, ic) => `<button class="tab${S.view === id ? ' on' : ''}" data-act="nav" data-v="${id}" aria-current="${S.view === id ? 'page' : 'false'}">${icon(ic)}<span>${label}</span>${id === 'inscricoes' && novas ? `<span class="dot num">${novas}</span>` : ''}</button>`;
     const nav = NAV.filter(([id]) => id !== 'financas' || S.canFinance);
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
@@ -629,6 +631,7 @@ body.gated .app { grid-template-columns: 1fr; }
     if (S.view === 'financas' && !S.canFinance) S.view = 'painel';
     const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, financas: vFinancas }[S.view] || vPainel;
     $('#view').innerHTML = v();
+    syncPublico();
     if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   }
 
@@ -980,10 +983,97 @@ body.gated .app { grid-template-columns: 1fr; }
     const total = alunosList().length;
     return header('Banco de dados', 'Inscrições', `${plural(total, 'pessoa inscrita', 'pessoas inscritas')} · ${plural(alunosList().filter(isAtivo).length, 'matriculada', 'matriculadas')}`, `<button class="btn" data-act="csv-alunos">${icon('down')}Planilha completa</button><button class="btn primary" data-act="aluno-new">${icon('plus')}Nova inscrição</button>`) + notices() + (total ? '' : `
       <div class="empty card"><h3>Nenhuma inscrição ainda</h3><p>Toque em "Nova inscrição" e preencha a ficha da pessoa. Só o nome é obrigatório; o resto pode ser completado depois.</p><button class="btn primary" data-act="aluno-new">${icon('plus')}Nova inscrição</button></div>`) + `
+      ${pedidosSec()}
       <div class="section-title" style="margin:6px 0 -6px"><h2>Todas as inscrições</h2><span>separadas por situação</span></div>
       ${alunosPanel()}`;
   }
 
+
+  // ───────────── Site aberto: pedidos de inscrição, lista de espera, contatos e cursos publicados ─────────────
+  // Curso de uma turma: o campo "curso" ou a primeira palavra do nome ("informatica 14:00" → informatica).
+  const semAcento = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const cursoKey = (t) => semAcento(t.curso || String(t.nome || '').trim().split(/\s+/)[0]).replace(/[^a-z0-9-]/g, '') || 'curso';
+  const vagasLivres = (t) => { const cap = Number(t.capacidade) || 0; return cap ? Math.max(0, cap - alunosDaTurma(t.id).length) : null; };
+  const toISO = (v) => (v && v.toDate ? v.toDate().toISOString() : String(v || ''));
+  const waLink = (tel) => { let d = String(tel || '').replace(/\D/g, ''); if (d.length && d.length <= 11) d = '55' + d; return `https://wa.me/${d}`; };
+  const pedidosPend = () => list('pedidos').filter((p) => p.status === 'pendente').sort((a, b) => toISO(a.enviadoEm).localeCompare(toISO(b.enviadoEm)));
+  const turmasDoCurso = (key) => turmasList().filter((t) => cursoKey(t) === key);
+
+  // Publica, para o site aberto, só o que é público de cada turma: curso, dias, horário e se tem vaga.
+  let pubTimer = 0;
+  function syncPublico() {
+    if (S.platform !== 'firebase' || S.mode !== 'db' || !S.canWrite || S.loaded.size < COLS.length || !S.publicoPronto) return;
+    const lista = turmasList().filter((t) => !t.exemplo).map((t) => ({ id: t.id, curso: cursoKey(t), nome: t.nome || '', dias: t.dias || [], horario: t.horario || '', horarioFim: t.horarioFim || '', vagas: vagasLivres(t) }));
+    const atual = S.data.publico?.cursos?.lista;
+    if (JSON.stringify(atual || null) === JSON.stringify(lista)) return;
+    clearTimeout(pubTimer);
+    pubTimer = setTimeout(() => { put('publico', 'cursos', { lista, atualizadoEm: new Date().toISOString() }).catch(() => {}); }, 1500);
+  }
+
+  function pedidoRow(p) {
+    return `<button class="item" data-act="ped-open" data-id="${p.id}">${avatar({ nome: p.nome }, 36)}<div class="grow"><strong>${esc(p.nome)}</strong><span class="sub">${esc(p.cursoNome || p.curso)}${p.turmaTxt ? ' · ' + esc(p.turmaTxt) : ''}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(p.telefone || '—')}</span></div><span class="pill ${p.espera ? '' : 'amber'}">${p.espera ? 'Na espera' : 'Avaliar'}</span></button>`;
+  }
+  function pedidosSec() {
+    const ps = pedidosPend(); const novos = ps.filter((p) => !p.espera), espera = ps.filter((p) => p.espera);
+    const contatos = list('contatos').sort((a, b) => toISO(b.enviadoEm).localeCompare(toISO(a.enviadoEm)));
+    let out = '';
+    if (novos.length) out += `<section><div class="section-title"><h2>Pedidos pelo site</h2><span>${plural(novos.length, 'aguardando avaliação', 'aguardando avaliação')}</span></div><div class="card list">${novos.map(pedidoRow).join('')}</div></section>`;
+    if (espera.length) out += `<section><div class="section-title"><h2>Lista de espera</h2><span>${plural(espera.length, 'pessoa', 'pessoas')}</span></div><div class="card list">${espera.map(pedidoRow).join('')}</div></section>`;
+    if (contatos.length) out += `<section><div class="section-title"><h2>Quer apoiar o Íris</h2><span>contatos do "Seja um associado"</span></div><div class="card list">${contatos.map((c) => `<button class="item" data-act="contato-open" data-id="${c.id}"><div class="grow"><strong>${esc(c.nome)}${c.empresa ? ' · ' + esc(c.empresa) : ''}</strong><span class="sub">${esc(c.ajuda || '')} · ${fmtDate(toISO(c.enviadoEm).slice(0, 10))}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(c.telefone || '—')}</span></div></button>`).join('')}</div></section>`;
+    return out;
+  }
+  const waCard = (tel) => `<div class="card pad" style="display:grid;gap:10px;background:var(--green-soft);border-color:transparent;box-shadow:none">
+      <div><div class="small" style="color:var(--green);font-weight:700">Telefone / WhatsApp</div><div class="num" style="font-family:var(--display);font-size:22px;font-weight:800">${esc(tel || '—')}</div></div>
+      <a class="btn primary block" style="background:var(--green);border-color:var(--green);text-decoration:none" href="${esc(waLink(tel))}" target="_blank" rel="noopener">Chamar no WhatsApp</a></div>`;
+
+  function pedidoModal(id) {
+    const p = get('pedidos', id); if (!p) return;
+    // Ao abrir, quem pediu passa a ver "Em análise" no site.
+    if (S.canWrite && S.mode === 'db' && !p.vistoEm) { patch('pedidos', id, { vistoEm: new Date().toISOString() }).catch(() => {}); put('acompanhamento', id, { status: p.espera ? 'espera' : 'analise' }).catch(() => {}); }
+    const ts = turmasDoCurso(p.curso);
+    const sel = ts.find((t) => t.id === p.turmaId)?.id || ts.find((t) => vagasLivres(t) !== 0)?.id || ts[0]?.id || '';
+    const idade = age(p.nascimento);
+    openModal(p.espera ? 'Lista de espera' : 'Pedido de inscrição', `<div class="row" style="margin-bottom:14px">${avatar({ nome: p.nome }, 44)}<div class="grow"><b>${esc(p.nome)}</b><div class="small muted">Pelo site em ${fmtDate(toISO(p.enviadoEm).slice(0, 10))}${p.espera ? ' · na lista de espera' : ''}</div></div></div>
+      ${waCard(p.telefone)}
+      <dl class="kv" style="margin-top:14px"><dt>Curso</dt><dd>${esc(p.cursoNome || p.curso)}</dd><dt>Horário pedido</dt><dd>${esc(p.turmaTxt || '—')}</dd>
+        <dt>Nascimento</dt><dd>${p.nascimento ? `${fmtDate(p.nascimento)}${idade != null ? ` · ${idade} anos` : ''}` : '—'}</dd><dt>Bairro</dt><dd>${esc(p.bairro || '—')}</dd>
+        <dt>E-mail</dt><dd>${esc(p.email || '—')}</dd><dt>Como conheceu</dt><dd>${esc(p.comoConheceu || 'Não informou')}</dd><dt>Recebe novidades</dt><dd>${esc(p.aceitaComunicacoes || 'Não')}</dd></dl>
+      <div class="form-grid" style="margin-top:16px">
+        <label class="field full"><span>Colocar na turma</span><select class="select" id="p-turma">${ts.length ? ts.map((t) => { const v = vagasLivres(t); return `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.nome)} · ${esc(horarioTxt(t) || '--:--')} · ${v == null ? 'vagas não definidas' : v ? plural(v, 'vaga', 'vagas') : 'cheia'}</option>`; }).join('') : '<option value="">Nenhuma turma deste curso</option>'}</select></label>
+        <label class="field full"><span>Se for recusar: motivo (opcional)</span><input class="input" id="p-resp" placeholder="Ex.: idade mínima do curso"></label>
+      </div>
+      <p class="small muted" style="margin-top:10px">Combine com a pessoa pelo WhatsApp e toque em <b>Matricular e preencher ficha</b>: a ficha abre com os dados do cadastro e a turma escolhida.</p>`,
+      `<button class="btn danger" data-act="ped-recusar" data-id="${id}">Recusar</button><span class="grow"></span><button class="btn" data-act="modal-close">Depois</button><button class="btn primary" data-act="ped-ficha" data-id="${id}">Matricular e preencher ficha</button>`);
+  }
+  function fichaDoPedido(id) {
+    const p = get('pedidos', id); if (!p) return;
+    const turmaId = val('p-turma');
+    if (!turmaId) return toast('Escolha a turma.');
+    const t = get('turmas', turmaId);
+    const email = String(p.email || '').toLowerCase();
+    const ja = email ? alunosList().find((a) => String(a.email || '').toLowerCase() === email) : null;
+    const campos = ja
+      ? { turmaIds: [...new Set([...(ja.turmaIds || []), turmaId])], status: 'matriculado', matriculaEm: ja.matriculaEm || today(), telefone: ja.telefone || p.telefone }
+      : { nome: p.nome || '', email: p.email || '', telefone: p.telefone || '', nascimento: p.nascimento || '', bairro: p.bairro || '', comoConheceu: p.comoConheceu || '', aceitaComunicacoes: p.aceitaComunicacoes || '', turmaIds: [turmaId], status: 'matriculado', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente', obs: 'Inscrição feita pelo site.' };
+    const banner = `<div class="banner" style="margin-bottom:14px">${icon('info')}<span class="grow">Matrícula em <b>${esc(t ? t.nome : '')}</b>${t && horarioTxt(t) ? ' · ' + esc(horarioTxt(t)) : ''}. WhatsApp: <b class="num">${esc(p.telefone || '—')}</b>.${ja ? ' Esta pessoa já tem ficha: a turma foi acrescentada.' : ''} Complete a ficha e toque em <b>Salvar ficha</b> para concluir.</span></div>`;
+    alunoModal(ja ? ja.id : null, null, { pedidoId: id, turmaId, campos, banner });
+  }
+  async function concluirPedido(pedidoId, alunoId, turmaId) {
+    await patch('pedidos', pedidoId, { status: 'aprovado', alunoId, turmaFinal: turmaId || '', avaliadoEm: new Date().toISOString(), avaliadoPor: S.me?.email || '' });
+    await put('acompanhamento', pedidoId, { status: 'matriculado' });
+  }
+  async function recusarPedido(id) {
+    const resposta = val('p-resp');
+    if (await guard(async () => { await patch('pedidos', id, { status: 'recusado', resposta, avaliadoEm: new Date().toISOString(), avaliadoPor: S.me?.email || '' }); await put('acompanhamento', id, { status: 'recusado', resposta }); }, 'Pedido recusado.')) closeModal();
+  }
+  function contatoModal(id) {
+    const c = get('contatos', id); if (!c) return;
+    openModal('Quer apoiar o Íris', `<div style="margin-bottom:14px"><b style="font-size:17px">${esc(c.nome)}</b>${c.empresa ? `<div class="small muted">${esc(c.empresa)}</div>` : ''}</div>
+      ${waCard(c.telefone)}
+      <dl class="kv" style="margin-top:14px"><dt>Como quer ajudar</dt><dd>${esc(c.ajuda || '—')}</dd><dt>E-mail</dt><dd>${esc(c.email || '—')}</dd><dt>Enviado em</dt><dd>${fmtDate(toISO(c.enviadoEm).slice(0, 10))}</dd>${c.mensagem ? `<dt>Mensagem</dt><dd style="font-weight:400">${esc(c.mensagem)}</dd>` : ''}</dl>`,
+      `${confirmBtn('del-contato', 'Apagar contato', 'Confirmar: apagar', 'btn ghost')}<span class="grow"></span><button class="btn" data-act="modal-close">Fechar</button>`);
+    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'contato', id });
+  }
 
   // ───────────── Finanças ─────────────
   const CAT_IN = ['Doação', 'Patrocínio', 'Edital / projeto', 'Evento / rifa', 'Outros'];
@@ -1070,9 +1160,10 @@ body.gated .app { grid-template-columns: 1fr; }
     return wrap(`<input class="input" id="${id}" type="${type === 'tel' ? 'text' : type}" value="${esc(v)}"${extra} autocomplete="off">`);
   }
 
-  function alunoModal(id, presetTurma) {
+  function alunoModal(id, presetTurma, pre) {
     if (id && !get('alunos', id)) return;
     const a = id ? { ...get('alunos', id), status: sit(get('alunos', id)) } : { nome: '', turmaIds: presetTurma ? [presetTurma] : [], status: 'matriculado', matriculaEm: today(), autorizaImagem: 'Pendente', termoAssinado: 'Pendente' };
+    if (pre) Object.assign(a, pre.campos);
     const s = id ? freqStats()[id] : null;
     const miss = id ? missingFields(a) : [];
     const photo = id ? `<div class="photo-edit">${avatar(a, 84)}<div class="stack" style="gap:6px">${S.canUpload ? `<label class="btn sm">${icon('cam')}${a.fotoId ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/*" class="hide" data-photo="${id}"></label>` : `<span class="small muted">Para enviar fotos é preciso acesso de Editor.</span>`}
@@ -1080,10 +1171,10 @@ body.gated .app { grid-template-columns: 1fr; }
         ${miss.length ? `<span class="pill amber" style="align-self:flex-start">Ficha incompleta: falta ${miss.slice(0, 3).map(fieldLabel).join(', ')}${miss.length > 3 ? '…' : ''}</span>` : '<span class="pill green" style="align-self:flex-start">Ficha completa</span>'}</div></div>`
       : `<p class="small muted" style="margin-bottom:12px">Só o nome é obrigatório. Preencha o que tiver agora e complete depois. A foto entra depois de salvar. Dica: digite o CEP para preencher o endereço.</p>`;
     const nav = `<div class="chips ficha-nav">${FICHA.map(([sec], i) => `<button type="button" class="chip" data-act="ficha-jump" data-i="${i}">${esc(sec.replace(/ \(.*\)/, ''))}</button>`).join('')}</div>`;
-    openModal(id ? esc(a.nome) : 'Nova inscrição', `${photo}${nav}
+    openModal(pre ? 'Matrícula: ficha do aluno' : id ? esc(a.nome) : 'Nova inscrição', `${pre ? pre.banner : ''}${photo}${nav}
       ${FICHA.map(([sec, fields], i) => `<fieldset class="ficha-sec" id="ficha-${i}"><legend>${esc(sec)}</legend><div class="form-grid">${fields.map((f) => fieldHtml(f, a)).join('')}</div></fieldset>`).join('')}`,
       `${id ? confirmBtn('del-aluno', 'Excluir', 'Confirmar exclusão', 'btn ghost') : ''}<span class="grow"></span><button class="btn" data-act="modal-close">Cancelar</button><button class="btn primary" data-act="aluno-save" data-id="${id || ''}">Salvar ficha</button>`);
-    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'aluno', id });
+    $('#modal-root .modal').dataset.ctx = JSON.stringify({ type: 'aluno', id, pedidoId: pre ? pre.pedidoId : '', pedTurma: pre ? pre.turmaId : '' });
     $('#modal-root .modal').classList.add('wide');
   }
 
@@ -1122,6 +1213,11 @@ body.gated .app { grid-template-columns: 1fr; }
     body.status = body.status || 'matriculado';
     body.atualizadoEm = new Date().toISOString();
     const newId = id || uid();
+    const ctxA = JSON.parse($('#modal-root .modal')?.dataset.ctx || '{}');
+    if (ctxA.pedidoId) {
+      if (await guard(async () => { await put('alunos', newId, body); await concluirPedido(ctxA.pedidoId, newId, ctxA.pedTurma); }, `Matrícula concluída: ${nome.split(' ')[0]} foi matriculado(a).`)) closeModal();
+      return;
+    }
     if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Inscrição salva. Se quiser, adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }
   }
 
@@ -1365,6 +1461,7 @@ body.gated .app { grid-template-columns: 1fr; }
         if (key === 'apagar-exemplos') { await deleteExamples(); return; }
         if (key === 'del-aluno') { if (await guard(async () => { await del('alunos', ctx.id); if (S.platform === 'firebase' && S.data.fotos?.[ctx.id]) await del('fotos', ctx.id); }, 'Cadastro excluído.')) closeModal(); }
         if (key === 'del-turma') { if (await guard(() => del('turmas', ctx.id), 'Turma excluída.')) closeModal(); }
+        if (key === 'del-contato') { if (await guard(() => del('contatos', ctx.id), 'Contato apagado.')) closeModal(); }
         if (key === 'del-lanc') { if (await guard(() => del('lancamentos', ctx.id), 'Lançamento excluído.')) closeModal(); }
         break;
       }
@@ -1400,6 +1497,10 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'fin-prev': S.finMes = addMonths(S.finMes, -1); render(); break;
       case 'fin-next': S.finMes = addMonths(S.finMes, 1); render(); break;
       case 'csv-alunos': csvAlunos(); break;
+      case 'ped-open': pedidoModal(t.dataset.id); break;
+      case 'ped-ficha': fichaDoPedido(t.dataset.id); break;
+      case 'ped-recusar': recusarPedido(t.dataset.id); break;
+      case 'contato-open': contatoModal(t.dataset.id); break;
       case 'csv-fin': csvFin(); break;
     }
   });
@@ -1466,6 +1567,7 @@ body.gated .app { grid-template-columns: 1fr; }
         const next = {};
         for (const doc of snap.docs) next[doc.id] = doc.data();
         S.data[col] = next;
+        if (col === 'publico' && !snap.metadata.fromCache) S.publicoPronto = true;
         if (!snap.metadata.fromCache && COLS.includes(col)) { S.loaded.add(col); if (S.loaded.size === COLS.length) { clearTimeout(timer); S.slow = false; } }
         schedule();
       }, () => { if (COLS.includes(col)) S.loaded.add(col); schedule(); });
@@ -1491,7 +1593,7 @@ body.gated .app { grid-template-columns: 1fr; }
       S.gate = ''; S.mode = 'db';
       S.canFinance = backend.canFinance ? await backend.canFinance(S.me.email).catch(() => false) : true;
       if (!subscribed) {
-        subscribed = true; subscribeAll(['fotos', 'config'], S.canFinance ? [] : ['lancamentos']);
+        subscribed = true; subscribeAll(['fotos', 'config', 'pedidos', 'contatos', 'publico'], S.canFinance ? [] : ['lancamentos']);
         // Completa a lista de e-mails liberados (para quem foi liberado antes da checagem prévia existir).
         setTimeout(() => { const em = S.data.config?.acesso?.emails || []; if (em.length && backend.syncPermitidos) backend.syncPermitidos(em, []).catch(() => {}); }, 4000);
       }
