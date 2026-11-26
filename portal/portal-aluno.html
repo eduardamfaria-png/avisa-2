@@ -565,11 +565,16 @@ body:not(.gated) #gate { display: none; }
 
   // Inscrição de quem ainda não é aluno: cadastro rápido junto com a inscrição (sem login).
   function modalPInsc(cid) {
+    // cid vazio = veio do "Não sou aluno" do Entrar: a pessoa escolhe o curso aqui.
     const c = CURSOS.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
     const v = (k) => esc(t[k] ?? d[k] ?? '');
+    const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id);
+    const opcoes = CURSOS.filter((x) => x.vagas > 0 && !jaPediu(x.id));
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
-      <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${plural(c.vagas, 'vaga', 'vagas')}</p>
-      <form id="form-pinsc" class="stack" data-c="${esc(cid)}" novalidate>
+      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${plural(c.vagas, 'vaga', 'vagas')}</p>`
+        : `<h2>Quero me inscrever</h2><p class="muted small" style="margin:4px 0 14px">Escolha um curso com vaga e preencha o cadastro rápido.</p>`}
+      <form id="form-pinsc" class="stack" data-c="${esc(cid || '')}" novalidate>
+        ${c ? '' : opcoes.length ? `<label class="field"><span>Curso <b class="req">*</b></span><select class="input" id="pi-curso"><option value="">Escolha o curso</option>${opcoes.map((x) => `<option value="${x.id}"${t.curso === x.id ? ' selected' : ''}>${esc(x.nome)} · ${esc(x.dias)} ${esc(x.horario)} · ${plural(x.vagas, 'vaga', 'vagas')}</option>`).join('')}</select></label>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>'}
         ${d.nome ? `<p class="small muted">Seus dados do cadastro já estão preenchidos. Confira e envie.</p>` : '<p class="small muted">Cadastro rápido: leva menos de um minuto.</p>'}
         <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
         <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
@@ -584,13 +589,13 @@ body:not(.gated) #gate { display: none; }
   }
   function enviarPInsc(form) {
     const g = (id) => document.getElementById(id).value.trim();
-    const t = S.modal.tmp = { nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
+    const t = S.modal.tmp = { curso: form.dataset.c || (document.getElementById('pi-curso')?.value || ''), nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
     const dig = t.telefone.replace(/\D/g, '');
-    const falta = [!t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
+    const falta = [!t.curso && 'curso', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
     S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
     if (S.modal.erro) return render();
     S.vis.dados = { ...t, telefone: fmtTel(dig) };
-    S.vis.pedidos.push({ curso: form.dataset.c, status: 'enviada', em: H });
+    S.vis.pedidos.push({ curso: t.curso, status: 'enviada', em: H });
     salvarVis(); S.modal = null; S.pview = 'p-cursos'; render(); try { window.scrollTo(0, 0); } catch {}
     toast('Inscrição enviada! Acompanhe aqui na aba Cursos.');
   }
@@ -601,10 +606,10 @@ body:not(.gated) #gate { display: none; }
     const voltar = '<button class="btn ghost sm" data-ent="voltar">← Voltar</button>';
     if (L.etapa === 'enviado') body = `${voltar}<h2>Confira seu e-mail</h2><p style="margin-top:6px">Enviamos um link de acesso para <b>${esc(L.email)}</b>. Toque nele para entrar. Depois disso você continua conectado(a) neste aparelho.</p>
       <button class="btn primary block" data-ent="abrir" style="margin-top:14px">Simular: abrir o link do e-mail</button><p class="small faint" style="margin-top:6px">No protótipo não chega e-mail de verdade: use o botão acima.</p>`;
-    else if (!L.modo) body = `<h2>Entrar</h2><p class="muted small" style="margin:4px 0 14px">Área para alunos e equipe do Íris.</p><div class="stack">
+    else if (!L.modo) body = `<h2>Entrar</h2><p class="muted small" style="margin:4px 0 14px">Como você quer entrar?</p><div class="stack">
       <button class="choice" data-ent="aluno"><span class="ic">${icon('book')}</span><span class="grow"><b>Sou aluno</b><small>Ver minhas aulas, frequência e avisos</small></span></button>
-      <button class="choice" data-ent="equipe"><span class="ic">${icon('check')}</span><span class="grow"><b>Sou da equipe</b><small>Coordenação e professores</small></span></button></div>
-      <p class="small muted" style="margin-top:14px">Ainda não é aluno? Não precisa entrar: escolha um curso com vaga e faça sua inscrição.</p>`;
+      <button class="choice" data-ent="equipe"><span class="ic">${icon('check')}</span><span class="grow"><b>Sou da equipe</b><small>Coordenação e professores</small></span></button>
+      <button class="choice" data-ent="naoaluno"><span class="ic">${icon('plus')}</span><span class="grow"><b>Não sou aluno</b><small>Quero escolher um curso e me inscrever</small></span></button></div>`;
     else body = `${voltar}<h2>${L.modo === 'aluno' ? 'Sou aluno' : 'Sou da equipe'}</h2><p class="muted small" style="margin:4px 0 14px">${L.modo === 'aluno' ? 'Digite o e-mail que você deu na sua ficha de inscrição.' : 'Digite seu e-mail da equipe.'} Vamos enviar um link para você entrar, sem senha.</p>
       <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block">Receber link de acesso</button></form>
       ${L.erro ? `<div style="margin-top:12px">${ERR(L.erro)}</div>` : ''}
@@ -638,10 +643,10 @@ body:not(.gated) #gate { display: none; }
     const nav = pub ? PNAV : NAV; const cur = pub ? S.pview : S.view;
     const dots = pub ? {} : { inicio: avisosAtivos(aluno()).length };
     const btn = ([id, l, ic]) => `<button class="tab${cur === id ? ' on' : ''}" data-nav="${id}" aria-current="${cur === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
-    const entrarTab = pub ? `<button class="tab" data-entrar="1" aria-label="Entrar (alunos e equipe)">${icon('user')}<span>Entrar</span></button>` : '';
+    const entrarTab = pub ? `<button class="tab" data-entrar="1">${icon('user')}<span>Entrar</span></button>` : '';
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length + (pub ? 1 : 0)}, 1fr)`;
     $('#tabs').innerHTML = nav.map(btn).join('') + entrarTab;
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}${entrarTab}<div class="side-foot">${pub ? '<p class="small faint">Entrar: só para alunos e equipe</p>' : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}${entrarTab}<div class="side-foot">${pub ? '<p class="small faint">Alunos, equipe ou quem quer se inscrever: toque em Entrar</p>' : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
     const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros };
     $('#view').innerHTML = (V[cur] || (pub ? vPInicio : vInicio))();
     const M = S.modal;
@@ -658,6 +663,7 @@ body:not(.gated) #gate { display: none; }
     if (en) {
       const v = en.dataset.ent; const L = S.modal;
       if (v === 'voltar') S.modal = { tipo: 'entrar', modo: '', etapa: '' };
+      else if (v === 'naoaluno') S.modal = { tipo: 'pinsc', c: '' };
       else if (v === 'abrir') { S.auth = { tipo: L.modo, email: L.email }; gravarLS('portal:auth', S.auth); if (L.modo === 'aluno') { S.aluno = EMAIL_ALUNOS[L.email][0]; S.view = 'inicio'; } S.modal = null; try { window.scrollTo(0, 0); } catch {} }
       else { L.modo = v; L.erro = ''; }
       render(); document.getElementById('ent-email')?.focus(); return;
