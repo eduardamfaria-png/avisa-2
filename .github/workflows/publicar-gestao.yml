@@ -1,12 +1,11 @@
-# Publica o sistema de gestão no Firebase (Google) a cada atualização.
+# Publica o sistema no Firebase (Google).
+# Só roda quando alguém manda publicar (aba Actions → "Publicar gestão" → Run workflow),
+# para que as mudanças em andamento não entrem no ar antes de aprovadas.
 # Precisa, nas configurações do repositório no GitHub:
 #   Secrets → FIREBASE_SERVICE_ACCOUNT  (chave da conta de serviço, arquivo .json inteiro)
 #   Variables → FIREBASE_PROJECT_ID     (ID do projeto no Firebase)
 name: Publicar gestão
 on:
-  push:
-    branches: [main, claude/confident-cannon-fk3jfq]
-    paths: [iris.html, gestao/**, firestore.rules, firebase.json, scripts/build-gestao.mjs, .github/workflows/publicar-gestao.yml]
   workflow_dispatch:
 
 jobs:
