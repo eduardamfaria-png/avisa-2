@@ -290,3 +290,25 @@
       ${peds.length ? `<div class="card list">${peds.map((p) => `<button class="item" data-act="ped-open" data-id="${p.id}"><div class="grow"><strong>${esc(cursoPedido(p))}</strong><span class="sub">enviado em ${fmtDate((p.enviadoEm || '').slice(0, 10))}</span></div>${p.status === 'pendente' ? '<span class="pill amber">Avaliar</span>' : stPill(p.status)}</button>`).join('')}</div>` : '<p class="small muted">Ainda não pediu inscrição em nenhum curso.</p>'}`,
       '<button class="btn" data-act="modal-close">Fechar</button>');
   }
+
+  // ───────────── Divulgação: como as pessoas conheceram o Íris (para o marketing) ─────────────
+  function divulgacaoSec() {
+    const alunos = alunosList();
+    const ints = list('interessados');
+    // Cada pessoa conta uma vez: alunos pela ficha; interessados que ainda não viraram alunos pelo cadastro do site.
+    const pessoas = [...alunos.map((a) => a.comoConheceu), ...ints.filter((x) => !x.alunoId).map((x) => x.comoConheceu)];
+    if (!pessoas.length) return '';
+    const fontes = countBy(pessoas, (c) => c);
+    const porOrigem = countBy(ints, (x) => x.comoConheceu).map(([k, n]) => [k, n, ints.filter((x) => (x.comoConheceu || 'Não informado') === k && x.alunoId).length]);
+    const validas = fontes.filter(([k]) => k !== 'Não informado');
+    const top = validas.length ? [validas.filter(([, n]) => n === validas[0][1]).map(([k]) => k), validas[0][1]] : null;
+    return `<section>
+      <div class="section-title"><h2>Divulgação</h2><span>como as pessoas conheceram o Íris</span></div>
+      ${top ? `<p class="small muted" style="margin:-4px 0 10px">${top[0].length > 1 ? 'Maiores origens, empatadas' : 'Maior origem'}: <b>${top[0].map(esc).join(' e ')}</b> (${Math.round((top[1] / pessoas.length) * 100)}% ${top[0].length > 1 ? 'cada' : ''} de ${plural(pessoas.length, 'pessoa', 'pessoas')}).</p>` : ''}
+      <div class="grid2">
+        <div class="card pad"><h3 class="ph">Alunos e interessados</h3>${barList(fontes, pessoas.length, 7)}</div>
+        <div class="card pad"><h3 class="ph">Inscrições pelo site: quantas viraram matrícula</h3>
+          ${porOrigem.length ? `<div class="stack" style="gap:10px">${porOrigem.map(([k, n, v]) => `<div><div class="row small"><span class="grow">${esc(k)}</span><span class="num muted">${plural(n, 'inscrição', 'inscrições')} · ${v} ${v === 1 ? 'matrícula' : 'matrículas'}</span><b class="num" style="min-width:42px;text-align:right">${Math.round((v / n) * 100)}%</b></div><div class="meter gold" style="margin-top:4px"><i style="width:${(v / n) * 100}%"></i></div></div>`).join('')}</div>
+            <p class="small muted" style="margin-top:10px">A barra mostra quantas pessoas de cada origem se matricularam.</p>` : '<p class="small muted">Ainda não houve inscrições pelo site.</p>'}</div>
+      </div></section>`;
+  }

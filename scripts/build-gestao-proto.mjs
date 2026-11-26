@@ -85,6 +85,12 @@ rep(`    const newId = id || uid();
     }
     if (await guard(() => put('alunos', newId, body), id ? 'Ficha atualizada.' : 'Inscrição salva. Se quiser, adicione a foto.')) { closeModal(); if (!id) alunoModal(newId); }`);
 
+// Painel: seção Divulgação (como as pessoas conheceram o Íris), para o marketing.
+rep(`      <section>
+        <div class="section-title"><h2>Quem são os alunos</h2>`, `      \${divulgacaoSec()}
+      <section>
+        <div class="section-title"><h2>Quem são os alunos</h2>`);
+
 // Visões e janelas novas.
 rep(`  // ───────────── Finanças ─────────────`, readFileSync('portal/coord-ext.js', 'utf8') + `\n  // ───────────── Finanças ─────────────`);
 
