@@ -1,7 +1,7 @@
 <title>Site Instituto Íris</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=Great+Vibes&display=swap">
 <style>
 :root {
   --bg: #f4f5fa; --surface: #ffffff; --surface-2: #eef0f7; --ink: #141c40; --muted: #5b6386; --faint: #8a91ad; --line: #e1e4ef;
@@ -198,6 +198,45 @@ textarea.input { resize: vertical; }
 .parceiro h3 { font-size: 16.5px; }
 .passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
 @media (min-width: 960px) { .user-btn { display: none; } }
+/* Fotos e Quem somos */
+.foto-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 16px; color: var(--muted); font-size: 13px; font-weight: 600;
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 12px, color-mix(in srgb, var(--surface-2) 70%, var(--surface)) 12px 24px); border: 1px dashed var(--line); }
+.foto-ph svg { width: 30px; height: 30px; color: var(--faint); }
+.foto-real { display: block; width: 100%; object-fit: cover; }
+.hero-foto { position: relative; border-radius: 18px; overflow: hidden; background: var(--navy); }
+.hero-foto .hero-img { width: 100%; aspect-ratio: 4 / 3; }
+@media (min-width: 860px) { .hero-foto .hero-img { aspect-ratio: 21 / 8; } }
+.hero-foto .foto-ph.hero-img { align-items: center; justify-content: flex-start; padding-top: 22px; }
+.hero-txt { position: absolute; left: 0; right: 0; bottom: 0; padding: 70px 18px 18px; color: #fff; background: linear-gradient(transparent, rgba(14, 22, 58, .88) 45%); }
+.hero-txt h1 { font-size: 27px; font-weight: 800; color: #fff; }
+.hero-txt p { margin-top: 6px; font-size: 14.5px; opacity: .92; }
+@media (min-width: 860px) { .hero-txt { padding: 90px 32px 28px; } .hero-txt h1 { font-size: 36px; } .hero-txt p { max-width: 640px; font-size: 15.5px; } }
+.atv { padding-top: 0; overflow: hidden; }
+.atv .atv-foto { margin: 0 -16px 4px; width: calc(100% + 32px); aspect-ratio: 16 / 9; border: 0; border-bottom: 1px solid var(--line); }
+.inst { display: grid; gap: 16px; }
+.inst .inst-foto { width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; }
+.inst-txt { display: flex; flex-direction: column; gap: 10px; }
+.inst-txt h1 { font-size: 28px; font-weight: 800; }
+.inst-txt p { color: var(--muted); }
+.sub { font-size: 17px; color: var(--gold-ink); font-weight: 700; }
+.tit { font-size: 23px; font-weight: 800; }
+.historia { padding: 16px; background: linear-gradient(180deg, var(--surface), var(--gold-soft)); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
+.historia .retrato { aspect-ratio: 3 / 4; max-width: 280px; justify-self: center; border: 3px solid var(--gold); }
+.historia .destaque { color: var(--gold-ink); font-weight: 700; font-style: italic; }
+@media (min-width: 860px) { .inst { grid-template-columns: 1fr 1.1fr; align-items: center; gap: 28px; } .historia { grid-template-columns: 280px 1fr; } }
+.mensagem { padding: 22px 18px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
+.mensagem .eyebrow { color: var(--gold); }
+.mensagem blockquote { margin: 12px 0 0; padding-left: 16px; border-left: 3px solid var(--gold); display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.55; }
+.mensagem .assinatura { font-family: 'Great Vibes', cursive; font-size: 40px; color: var(--gold); margin-top: 14px; line-height: 1; }
+.mensagem .small { color: color-mix(in srgb, var(--navy-ink) 80%, transparent) !important; }
+.proposito { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+@media (min-width: 860px) { .proposito { grid-template-columns: repeat(4, 1fr); } }
+.prop { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.prop .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold-ink); }
+.prop .ic svg { width: 24px; height: 24px; }
+.prop h3 { font-size: 16px; } .prop p { font-size: 13.5px; color: var(--muted); }
+.faca { padding: 20px 18px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); display: flex; flex-direction: column; gap: 8px; }
+.faca p { opacity: .92; }
 /* Entrada */
 body.gated .app, body.gated .tabs { display: none; }
 body:not(.gated) #gate { display: none; }
@@ -263,6 +302,10 @@ body:not(.gated) #gate { display: none; }
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v5h1"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    pulse: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+    run: '<circle cx="14" cy="4" r="2"/><path d="M8 21l3-6 3 3v3M6 12l3-3h5l3 4 3 1M11 9l-1 6"/>',
+    brief: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+    cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
   };
   const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
@@ -479,7 +522,8 @@ body:not(.gated) #gate { display: none; }
   const GESTAO_URL = 'https://claude.ai/artifact/TfqAExNJhaTgr9ba39c9az';
   const BAIRROS = ['Éden', 'Vilar dos Teles', 'Coelho da Rocha', 'Jardim Meriti', 'Centro'];
   const COMO = ['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro'];
-  const SOBRE = 'O Instituto Íris oferece cursos gratuitos para a comunidade de Éden e região: informática, dança, reforço escolar e novos cursos ao longo do ano. Acreditamos que oportunidade é para todos. (Texto de exemplo: a coordenação escreve o texto real no site de gestão.)';
+  // Fotos do site aberto: enquanto estiverem vazias, aparece um quadro dizendo qual foto vai ali.
+  const FOTOS = { hero: '', fachada: '', iris: '', fundador: '' };
   // Apoiadores reais do Íris. "logo": imagem do logo (entra quando a coordenação enviar o arquivo de cada um).
   const PARCEIROS = [
     { nome: 'Shine Rio', texto: 'Empresa de serviços do Rio de Janeiro.', cor: '#1c2d6b', logo: 'data:image/webp;base64,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' },
@@ -519,9 +563,12 @@ body:not(.gated) #gate { display: none; }
         ${p.status !== 'matriculado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
     }).join('')}</div></section>`;
   }
+  function fotoBox(src, rotulo, cls = '') {
+    return src ? `<img class="foto-real ${cls}" src="${src}" alt="${esc(rotulo)}">` : `<div class="foto-ph ${cls}">${icon('cam')}<span>Foto: ${esc(rotulo)}</span></div>`;
+  }
   function cursoCard(c) {
     const p = S.vis.pedidos.find((x) => x.curso === c.id);
-    return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : ''}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Sem vagas no momento'}</span></div>
+    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : ''}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Sem vagas no momento'}</span></div>
       <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
       <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
       <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : c.vagas ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
@@ -531,17 +578,57 @@ body:not(.gated) #gate { display: none; }
       <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
   }
   function vPInicio() {
-    // Início do site aberto: só as fotos e novidades do mural, como um feed.
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Acontece no Íris</div><h1>Nosso dia a dia</h1></div>
+    // 1. Página inicial: foto das atividades com a frase do Íris; depois, o feed do mural.
+    return pHeader() + `
+      <section class="hero-foto">${fotoBox(FOTOS.hero, 'atividades do Instituto, com pessoas reais sorrindo', 'hero-img')}
+        <div class="hero-txt"><h1>Um lugar de oportunidades para todos!</h1>
+          <p>Acreditamos que todos merecem oportunidades para aprender, cuidar da saúde, desenvolver seus talentos e viver melhor.</p>
+          <p>O Instituto Íris nasceu para transformar vidas e construir um futuro melhor junto com você.</p></div></section>
+      <div class="section-title" style="margin-top:6px"><h2>Acontece no Íris</h2></div>
       ${MURAL.length ? `<div class="feed">${MURAL.map(postCard).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
   }
   function vPCursos() {
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Cursos do Íris</div><h1>Nossos cursos</h1><p>Todos gratuitos. Escolha um curso com vaga e faça sua inscrição.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(!!b.vagas) - Number(!!a.vagas)).map(cursoCard).join('')}</div>`;
+    // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(!!b.vagas) - Number(!!a.vagas)).map(cursoCard).join('')}</div>`;
   }
+  const PROPOSITO = [['book', 'Educação', 'Conhecimento que abre portas.'], ['pulse', 'Saúde', 'Cuidado que transforma vidas.'], ['run', 'Esporte e bem-estar', 'Mais movimento, saúde e qualidade de vida.'], ['brief', 'Trabalho e renda', 'Oportunidades para conquistar autonomia.']];
   function vPSobre() {
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Sobre</div><h1>Instituto Íris</h1></div>
-      <section class="card pad"><p>${esc(SOBRE)}</p></section>
-      <section class="card pad"><h2 style="font-size:18px;margin-bottom:10px">Como se inscrever</h2><ol class="passos"><li><b>Escolha um curso com vaga</b> na aba Cursos.</li><li><b>Preencha o cadastro rápido</b>: nome, contato, nascimento e bairro.</li><li><b>A coordenação fala com você no WhatsApp</b> para combinar a turma.</li></ol><button class="btn primary" data-nav="p-cursos" style="margin-top:12px">Ver cursos</button></section>
+    return pHeader() + `
+      <section class="inst">${fotoBox(FOTOS.fachada, 'fachada ou inauguração do Instituto', 'inst-foto')}
+        <div class="inst-txt"><div class="eyebrow">Quem somos</div><h1>Conheça o Instituto Íris</h1><h2 class="sub">Cuidar de pessoas. Transformar vidas.</h2>
+          <p>O Instituto Íris nasceu em 2026, em São João de Meriti, com o propósito de oferecer novas oportunidades à comunidade.</p>
+          <p>Somos uma iniciativa social que acredita no poder da educação, da saúde, do esporte e do trabalho para transformar vidas.</p>
+          <p>Oferecemos atividades gratuitas e trabalhamos para ampliar cada vez mais nossos projetos, promovendo inclusão, conhecimento, bem-estar e qualidade de vida.</p>
+          <p><b>Aqui, todos são bem-vindos!</b></p></div></section>
+
+      <section class="card inst historia">${fotoBox(FOTOS.iris, 'Íris, mãe do fundador (fundo claro, detalhe dourado)', 'inst-foto retrato')}
+        <div class="inst-txt"><div class="eyebrow">Nossa história</div><h2 class="tit">Um nome que carrega amor e propósito</h2>
+          <p>O Instituto Íris recebeu esse nome em homenagem à mãe de seu fundador, Eduardo Faria.</p>
+          <p>Uma homenagem que ganhou um propósito ainda maior: cuidar de pessoas, criar oportunidades e contribuir para que outras famílias tenham uma vida melhor.</p>
+          <p class="destaque">Uma história de gratidão que se transforma em amor ao próximo.</p></div></section>
+
+      <section class="inst">${fotoBox(FOTOS.fundador, 'Eduardo Faria no Instituto, junto à comunidade', 'inst-foto')}
+        <div class="inst-txt"><div class="eyebrow">Conheça nosso fundador</div><h2 class="tit">Eduardo Faria</h2><h2 class="sub">Fundador e Presidente do Instituto Íris</h2>
+          <p>Empresário, cristão, esposo e pai, Eduardo Faria acredita que o sucesso também está na capacidade de contribuir para a vida de outras pessoas.</p>
+          <p>Fundador e presidente da Shine Rio, empresa que gera mais de 500 empregos diretos, dedica parte de sua vida ao ensino, ao empreendedorismo e ao desenvolvimento de pessoas.</p>
+          <p>Criou o Instituto Íris para colocar sua experiência e seus valores a serviço da sociedade, oferecendo oportunidades a quem mais precisa.</p>
+          <p>Seu desejo é construir um espaço onde as pessoas possam aprender, cuidar da saúde, desenvolver seus talentos e realizar sonhos.</p></div></section>
+
+      <section class="card mensagem"><div class="eyebrow">Uma mensagem do presidente</div>
+        <blockquote><p>Acredito que Deus nos permite conquistar muitas coisas na vida, mas também nos dá a responsabilidade de compartilhar nossas conquistas com o próximo.</p>
+          <p>O Instituto Íris nasce desse sentimento.</p>
+          <p>Queremos oferecer às pessoas oportunidades que, muitas vezes, elas não tiveram. Seja através da educação, da saúde, do esporte ou do trabalho.</p>
+          <p>Se conseguirmos mudar para melhor a realidade de uma família, nosso trabalho já terá valido a pena.</p></blockquote>
+        <div class="assinatura">Eduardo Faria</div><div class="small muted"><b>Eduardo Faria</b> · Fundador e Presidente</div></section>
+
+      <section><div class="eyebrow">Nosso propósito</div><h2 class="tit" style="margin:4px 0 12px">O que move o Íris</h2>
+        <div class="proposito">${PROPOSITO.map(([ic, t, d]) => `<div class="card prop"><span class="ic">${icon(ic)}</span><h3>${t}</h3><p>${d}</p></div>`).join('')}</div></section>
+
+      <section class="card faca"><h2 class="tit">Juntos, podemos fazer a diferença!</h2>
+        <p>Seja participando das nossas atividades, compartilhando conhecimento, sendo voluntário ou apoiando nossos projetos, você também pode fazer parte dessa história.</p>
+        <p><b>Venha conhecer o Instituto Íris!</b></p>
+        <div class="row wrapx" style="margin-top:14px"><button class="btn gold" data-nav="p-cursos">Ver atividades</button><button class="btn on-navy" data-nav="p-parceiros" data-depois="associado">Quero apoiar / ser voluntário</button></div></section>
+
       <section class="card pad row wrapx"><span class="grow">Acompanhe as novidades no Instagram <b>@instituto__iris</b></span><button class="btn" data-insta="1">Abrir Instagram ↗</button></section>`;
   }
   function vPParceiros() {
@@ -635,7 +722,7 @@ body:not(.gated) #gate { display: none; }
   }
 
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
-  const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Sobre', 'info'], ['p-parceiros', 'Parceiros', 'heart']];
+  const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Quem somos', 'info'], ['p-parceiros', 'Parceiros', 'heart']];
   const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
   function render() {
     const eq = S.auth?.tipo === 'equipe';
@@ -659,7 +746,7 @@ body:not(.gated) #gate { display: none; }
 
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
-    if (nav) { if (!S.auth) { S.pview = nav.dataset.nav; S.assocEnviado = false; } else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
+    if (nav) { if (!S.auth) { S.pview = nav.dataset.nav; S.assocEnviado = false; if (nav.dataset.depois) { render(); document.getElementById(nav.dataset.depois)?.scrollIntoView({ block: 'start' }); return; } } else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
     if (e.target.closest('[data-ir]')) { document.getElementById('associado')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (e.target.closest('[data-entrar]')) { S.modal = { tipo: 'entrar', modo: '', etapa: '' }; render(); return; }
     const en = e.target.closest('[data-ent]');
