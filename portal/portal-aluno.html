@@ -341,8 +341,11 @@ body:not(.gated) #gate { display: none; }
     return `<div class="top">${LOGO}<div class="grow"><b>Portal do Aluno</b><small>Instituto Íris</small></div>${selector()}<button class="btn sm sair-m" data-sair="1">Sair</button></div>
       <div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
   }
+  // O seletor só aparece quando o mesmo e-mail está na ficha de mais de um aluno.
   function selector() {
-    return `<select class="who-select" id="who" aria-label="Ver dados de">${ALUNOS.map((a) => `<option value="${a.id}"${a.id === S.aluno ? ' selected' : ''}>${esc(a.nome.split(' ')[0])}</option>`).join('')}</select>`;
+    const doEmail = ALUNOS.filter((a) => (EMAIL_ALUNOS[S.auth?.email] || []).includes(a.id));
+    if (doEmail.length < 2) return '';
+    return `<select class="who-select" id="who" aria-label="Ver dados de">${doEmail.map((a) => `<option value="${a.id}"${a.id === S.aluno ? ' selected' : ''}>${esc(a.nome.split(' ')[0])}</option>`).join('')}</select>`;
   }
   const demoBanner = () => `<div class="banner">${icon('info')}<span><b>Protótipo com dados de exemplo.</b> Este e-mail tem duas pessoas cadastradas (Ana Clara e Davi): troque no seletor do topo para ver cada um.</span></div>`;
 
