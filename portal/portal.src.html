@@ -348,11 +348,14 @@ body:not(.gated) #gate { display: none; }
     { titulo: 'Estágio em escritório de contabilidade', texto: 'Vaga de meio período, com bolsa-auxílio e vale-transporte.', prazo: ymd(addDays(hoje, 14)), quem: 'Ensino médio cursando, a partir de 16 anos', onde: 'site da vaga', link: 'https://exemplo.com/estagio' },
   ];
   // Cursos do Íris com inscrições abertas: a inscrição vai para a equipe aprovar e colocar numa turma.
+  const temVaga = (c) => c.vagas === null || c.vagas > 0;
+  const vagasTxt = (c) => (c.vagas === null ? 'Inscrições abertas' : plural(c.vagas, 'vaga', 'vagas'));
   const CURSOS = [
     { id: 'ingles', nome: 'Inglês para iniciantes', texto: 'Primeiros passos no inglês: conversação, vocabulário do dia a dia e música.', dias: 'Terças e quintas', horario: '16:00–17:30', inicio: 'Fevereiro', quem: 'A partir de 12 anos', vagas: 8, novo: true, turma: 'ingles' },
     { id: 'info', nome: 'Informática básica', texto: 'Computador, internet, e-mail, Word e Excel do zero.', dias: 'Segundas e quartas', horario: '14:00–16:00', inicio: 'Turma em andamento (lista de espera)', quem: 'A partir de 10 anos', vagas: 0, turma: 'info' , foto: '%%FOTO:curso-informatica%%' },
     { id: 'danca', nome: 'Dança', texto: 'Ritmos variados, expressão corporal e apresentações ao longo do ano.', dias: 'Sábados', horario: '10:00–11:30', inicio: 'Imediato', quem: 'A partir de 7 anos', vagas: 12, turma: 'danca' },
     { id: 'reforco', nome: 'Reforço escolar', texto: 'Apoio em português e matemática para o ensino fundamental.', dias: 'Terças e quintas', horario: '09:00–11:00', inicio: 'Imediato', quem: 'Ensino fundamental', vagas: 5, turma: 'reforco' },
+    { id: 'pilates', nome: 'Pilates', texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', dias: 'Dias a confirmar', horario: 'horário a confirmar', inicio: 'a confirmar', quem: 'a confirmar', vagas: null, foto: '%%FOTO:pilates%%' },
   ];
 
   let uid = 0; const nid = () => 'x' + (++uid);
@@ -479,7 +482,7 @@ body:not(.gated) #gate { display: none; }
       <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)}</p>
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
         <p>Inscrever <b>${esc(a.nome)}</b> neste curso?</p>
-        ${c.vagas ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
+        ${temVaga(c) ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
         <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${esc(int ? a.telefone : '')}"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
         <label class="field"><span>Observação para a coordenação (opcional)</span><textarea class="input" id="insc-obs" rows="2" placeholder="Ex.: só posso no período da tarde"></textarea></label>
         <p class="small muted">A coordenação analisa a inscrição e avisa quando ela for aprovada e a turma definida.</p>
@@ -492,10 +495,10 @@ body:not(.gated) #gate { display: none; }
     return header('Cursos do Íris', 'Inscreva-se', 'Cursos gratuitos do instituto com inscrições abertas.') + `<div class="feed">${CURSOS.map((c) => {
       const ja = c.turma && a.turmas.includes(c.turma);
       const ins = S.insc[`${a.id}|${c.id}`];
-      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : 'amber'}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Lista de espera'}</span></div>
+      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${temVaga(c) ? 'green' : 'amber'}">${temVaga(c) ? vagasTxt(c) : 'Lista de espera'}</span></div>
         <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
         <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-        <div>${ja ? '<span class="pill navy">Você já está neste curso</span>' : ins?.status === 'pendente' ? '<span class="pill amber">Inscrição enviada · aguardando aprovação</span>' : ins?.status === 'recusada' ? `<span class="pill red">Inscrição não aprovada</span>${ins.resp ? `<p class="small" style="margin-top:6px"><b>Coordenação:</b> ${esc(ins.resp)}</p>` : ''}` : `<button class="btn primary" data-insc="${c.id}">${c.vagas ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`}</div></article>`;
+        <div>${ja ? '<span class="pill navy">Você já está neste curso</span>' : ins?.status === 'pendente' ? '<span class="pill amber">Inscrição enviada · aguardando aprovação</span>' : ins?.status === 'recusada' ? `<span class="pill red">Inscrição não aprovada</span>${ins.resp ? `<p class="small" style="margin-top:6px"><b>Coordenação:</b> ${esc(ins.resp)}</p>` : ''}` : `<button class="btn primary" data-insc="${c.id}">${temVaga(c) ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`}</div></article>`;
     }).join('')}</div>`;
   }
 
@@ -568,10 +571,10 @@ body:not(.gated) #gate { display: none; }
   }
   function cursoCard(c) {
     const p = S.vis.pedidos.find((x) => x.curso === c.id);
-    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${c.vagas ? 'green' : ''}">${c.vagas ? plural(c.vagas, 'vaga', 'vagas') : 'Sem vagas no momento'}</span></div>
+    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${temVaga(c) ? 'green' : ''}">${temVaga(c) ? vagasTxt(c) : 'Sem vagas no momento'}</span></div>
       <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
       <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : c.vagas ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
+      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : temVaga(c) ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
   }
   function postCard(m) {
     return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
@@ -589,7 +592,7 @@ body:not(.gated) #gate { display: none; }
   }
   function vPCursos() {
     // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(!!b.vagas) - Number(!!a.vagas)).map(cursoCard).join('')}</div>`;
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS.slice().sort((a, b) => Number(temVaga(b)) - Number(temVaga(a))).map(cursoCard).join('')}</div>`;
   }
   const PROPOSITO = [['book', 'Educação', 'Conhecimento que abre portas.'], ['pulse', 'Saúde', 'Cuidado que transforma vidas.'], ['run', 'Esporte e bem-estar', 'Mais movimento, saúde e qualidade de vida.'], ['brief', 'Trabalho e renda', 'Oportunidades para conquistar autonomia.']];
   function vPSobre() {
@@ -659,12 +662,12 @@ body:not(.gated) #gate { display: none; }
     const c = CURSOS.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
     const v = (k) => esc(t[k] ?? d[k] ?? '');
     const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id);
-    const opcoes = CURSOS.filter((x) => x.vagas > 0 && !jaPediu(x.id));
+    const opcoes = CURSOS.filter((x) => temVaga(x) && !jaPediu(x.id));
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
-      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${plural(c.vagas, 'vaga', 'vagas')}</p>`
+      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)} · ${vagasTxt(c)}</p>`
         : `<h2>Quero me inscrever</h2><p class="muted small" style="margin:4px 0 14px">Escolha um curso com vaga e preencha o cadastro rápido.</p>`}
       <form id="form-pinsc" class="stack" data-c="${esc(cid || '')}" novalidate>
-        ${c ? '' : opcoes.length ? `<label class="field"><span>Curso <b class="req">*</b></span><select class="input" id="pi-curso"><option value="">Escolha o curso</option>${opcoes.map((x) => `<option value="${x.id}"${t.curso === x.id ? ' selected' : ''}>${esc(x.nome)} · ${esc(x.dias)} ${esc(x.horario)} · ${plural(x.vagas, 'vaga', 'vagas')}</option>`).join('')}</select></label>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>'}
+        ${c ? '' : opcoes.length ? `<label class="field"><span>Curso <b class="req">*</b></span><select class="input" id="pi-curso"><option value="">Escolha o curso</option>${opcoes.map((x) => `<option value="${x.id}"${t.curso === x.id ? ' selected' : ''}>${esc(x.nome)} · ${esc(x.dias)} ${esc(x.horario)} · ${vagasTxt(x)}</option>`).join('')}</select></label>` : '<div class="empty">Nenhum curso com vaga aberta agora. Volte em breve!</div>'}
         ${d.nome ? `<p class="small muted">Seus dados do cadastro já estão preenchidos. Confira e envie.</p>` : '<p class="small muted">Cadastro rápido: leva menos de um minuto.</p>'}
         <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
         <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
