@@ -7,6 +7,11 @@
 name: Publicar gestão
 on:
   workflow_dispatch:
+    inputs:
+      aluna_teste:
+        description: 'Só cadastrar uma aluna de teste com este e-mail (não publica o site)'
+        required: false
+        default: ''
 
 jobs:
   publicar:
@@ -28,11 +33,23 @@ jobs:
           else
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Cadastrar aluna de teste
+        if: steps.cfg.outputs.ok == 'true' && inputs.aluna_teste != ''
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PID: ${{ vars.FIREBASE_PROJECT_ID }}
+          EMAIL: ${{ inputs.aluna_teste }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npm install --no-save --silent firebase-admin@12
+          node scripts/aluna-teste.mjs "$EMAIL"
+          rm -f "$RUNNER_TEMP/sa.json"
       - name: Montar o site
-        if: steps.cfg.outputs.ok == 'true'
+        if: steps.cfg.outputs.ok == 'true' && inputs.aluna_teste == ''
         run: node scripts/build-gestao.mjs && node scripts/build-site.mjs
       - name: Publicar site e regras de acesso
-        if: steps.cfg.outputs.ok == 'true'
+        if: steps.cfg.outputs.ok == 'true' && inputs.aluna_teste == ''
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PID: ${{ vars.FIREBASE_PROJECT_ID }}
