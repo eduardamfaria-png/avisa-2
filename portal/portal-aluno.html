@@ -194,7 +194,7 @@ textarea.input { resize: vertical; }
 .parceiro { display: flex; gap: 12px; align-items: flex-start; }
 .parceiro .pl { width: 52px; height: 52px; border-radius: 14px; flex: none; display: grid; place-items: center; background: var(--c); color: #fff; font-family: var(--display); font-weight: 800; font-size: 18px; }
 .parceiro .pl-img { width: 72px; height: 52px; flex: none; object-fit: contain; border-radius: 10px; background: #fff; padding: 4px; border: 1px solid var(--line); }
-.parceiro h3 { font-size: 16.5px; margin-top: 6px; }
+.parceiro h3 { font-size: 16.5px; }
 .passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
 @media (min-width: 960px) { .user-btn { display: none; } }
 /* Entrada */
@@ -298,10 +298,10 @@ body:not(.gated) #gate { display: none; }
   ];
   // Oportunidades: só o que é DE FORA do instituto, com link para a inscrição no site de quem oferece.
   const OPORTUNIDADES = [
-    { tipo: 'Emprego', titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando. A coordenação ajuda com o currículo.', prazo: ymd(addDays(hoje, 10)), quem: 'De 14 a 22 anos', onde: 'site da empresa', link: 'https://exemplo.com/jovem-aprendiz' },
-    { tipo: 'Curso', titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades', onde: 'site do curso', link: 'https://exemplo.com/excel' },
-    { tipo: 'Edital', titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando', onde: 'site do edital', link: 'https://exemplo.com/bolsas' },
-    { tipo: 'Estágio', titulo: 'Estágio em escritório de contabilidade', texto: 'Vaga de meio período, com bolsa-auxílio e vale-transporte.', prazo: ymd(addDays(hoje, 14)), quem: 'Ensino médio cursando, a partir de 16 anos', onde: 'site da vaga', link: 'https://exemplo.com/estagio' },
+    { titulo: 'Jovem Aprendiz em supermercado da região', texto: 'Para quem tem de 14 a 22 anos e está estudando. A coordenação ajuda com o currículo.', prazo: ymd(addDays(hoje, 10)), quem: 'De 14 a 22 anos', onde: 'site da empresa', link: 'https://exemplo.com/jovem-aprendiz' },
+    { titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades', onde: 'site do curso', link: 'https://exemplo.com/excel' },
+    { titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando', onde: 'site do edital', link: 'https://exemplo.com/bolsas' },
+    { titulo: 'Estágio em escritório de contabilidade', texto: 'Vaga de meio período, com bolsa-auxílio e vale-transporte.', prazo: ymd(addDays(hoje, 14)), quem: 'Ensino médio cursando, a partir de 16 anos', onde: 'site da vaga', link: 'https://exemplo.com/estagio' },
   ];
   // Cursos do Íris com inscrições abertas: a inscrição vai para a equipe aprovar e colocar numa turma.
   const CURSOS = [
@@ -481,10 +481,10 @@ body:not(.gated) #gate { display: none; }
   const SOBRE = 'O Instituto Íris oferece cursos gratuitos para a comunidade de Éden e região: informática, dança, reforço escolar e novos cursos ao longo do ano. Acreditamos que oportunidade é para todos. (Texto de exemplo: a coordenação escreve o texto real no site de gestão.)';
   // Apoiadores reais do Íris. "logo": imagem do logo (entra quando a coordenação enviar o arquivo de cada um).
   const PARCEIROS = [
-    { nome: 'Shine Rio', tipo: 'Empresa apoiadora', texto: 'Empresa de serviços do Rio de Janeiro.', cor: '#1c2d6b', logo: '' },
-    { nome: 'Sicredi', tipo: 'Apoiador', texto: 'Cooperativa de crédito.', cor: '#17885a', logo: '' },
-    { nome: 'Governo Federal', tipo: 'Apoio', texto: 'Governo do Brasil.', cor: '#1d8bb5', logo: '' },
-    { nome: 'Futuro Sempre Presente', tipo: 'Curso parceiro', texto: 'Curso parceiro do Instituto Íris.', cor: '#d99a12', logo: '' },
+    { nome: 'Shine Rio', texto: 'Empresa de serviços do Rio de Janeiro.', cor: '#1c2d6b', logo: '' },
+    { nome: 'Sicredi', texto: 'Cooperativa de crédito.', cor: '#17885a', logo: '' },
+    { nome: 'Governo Federal', texto: 'Governo do Brasil.', cor: '#1d8bb5', logo: '' },
+    { nome: 'Futuro Sempre Presente', texto: 'Curso parceiro do Instituto Íris.', cor: '#d99a12', logo: '' },
   ];
   const AJUDA = ['Patrocínio', 'Doação (dinheiro ou materiais)', 'Parceria com empresa', 'Ser voluntário(a)', 'Outro'];
 
@@ -546,7 +546,7 @@ body:not(.gated) #gate { display: none; }
   function vPParceiros() {
     return pHeader() + `<div class="page-head"><div class="eyebrow">Parceiros e patrocinadores</div><h1>Quem apoia o Íris</h1><p>Empresas, instituições e pessoas que tornam os cursos gratuitos possíveis.</p></div>
       <button class="btn gold" data-ir="associado" style="align-self:flex-start">Quero ser um associado</button>
-      <div class="feed">${PARCEIROS.map((p) => `<article class="card pad parceiro" style="--c:${p.cor}">${p.logo ? `<img class="pl-img" src="${p.logo}" alt="Logo ${esc(p.nome)}">` : `<span class="pl">${esc(p.nome.split(' ').map((w) => w[0]).slice(0, 2).join(''))}</span>`}<div class="grow"><span class="pill">${esc(p.tipo)}</span><h3>${esc(p.nome)}</h3><p class="small muted">${esc(p.texto)}</p></div></article>`).join('')}</div>
+      <div class="feed">${PARCEIROS.map((p) => `<article class="card pad parceiro" style="--c:${p.cor}">${p.logo ? `<img class="pl-img" src="${p.logo}" alt="Logo ${esc(p.nome)}">` : `<span class="pl">${esc(p.nome.split(' ').map((w) => w[0]).slice(0, 2).join(''))}</span>`}<div class="grow"><h3>${esc(p.nome)}</h3><p class="small muted">${esc(p.texto)}</p></div></article>`).join('')}</div>
       ${assocSecao()}`;
   }
   // "Seja um associado": formulário dentro da aba Parceiros, para quem quer patrocinar, doar, ser parceiro ou voluntário.
