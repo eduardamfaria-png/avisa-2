@@ -236,6 +236,12 @@ td.r, th.r { text-align: right; }
 .quote { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14.5px; white-space: pre-wrap; }
 .mural-thumb { width: 52px; height: 40px; border-radius: 8px; flex: none; object-fit: cover; background: var(--surface-2); }
 .foto-prev { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; margin-top: 8px; }
+.fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 8px; }
+.fotos-grid .ft { position: relative; aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.fotos-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fotos-grid .ft b { position: absolute; left: 6px; top: 6px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; border-radius: 99px; padding: 1px 7px; }
+.fotos-grid .ft button { position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 99px; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+.fotos-grid .ft button.esq { right: auto; left: 4px; top: auto; bottom: 4px; }
 .item.off { opacity: .6; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14.5px; margin: 0; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
@@ -1200,7 +1206,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const l = list('mural').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
     if (!l.length) return `<div class="empty card"><h3>Mural vazio</h3><p>Publique fotos e novidades do instituto.</p><button class="btn primary" data-act="mural-new">${icon('plus')}Nova publicação</button></div>`;
     return `<p class="small muted">Fotos e novidades que aparecem no Início do site aberto e na aba Mural do Portal do Aluno. Antes de postar foto de aluno, confira se a ficha autoriza uso de imagem.</p>
-      <div class="card list">${l.map((m) => `<button class="item" data-act="mural-open" data-id="${m.id}">${m.foto ? `<img class="mural-thumb" src="${esc(m.foto)}" alt="">` : `<span class="mural-thumb" style="display:grid;place-items:center;color:var(--faint)">${icon('cam')}</span>`}<div class="grow"><strong>${esc(m.titulo)}</strong><span class="sub">Publicado em ${fmtDate((m.criadoEm || '').slice(0, 10))}</span></div></button>`).join('')}</div>`;
+      <div class="card list">${l.map((m) => `<button class="item" data-act="mural-open" data-id="${m.id}">${(m.fotos || [])[0] || m.foto ? `<img class="mural-thumb" src="${esc((m.fotos || [])[0] || m.foto)}" alt="">` : `<span class="mural-thumb" style="display:grid;place-items:center;color:var(--faint)">${icon('cam')}</span>`}<div class="grow"><strong>${esc(tituloPost(m))}</strong><span class="sub">${(m.fotos || []).length > 1 ? `${m.fotos.length} fotos · ` : ''}Publicado em ${fmtDate((m.criadoEm || '').slice(0, 10))}</span></div></button>`).join('')}</div>`;
   }
   function pOport() {
     const l = list('oportunidades').sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
@@ -1237,33 +1243,60 @@ body.gated .app { grid-template-columns: 1fr; }
     if (await guard(() => put('avisos', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Aviso atualizado.' : 'Aviso publicado no portal.')) closeModal();
   }
 
-  let fotoMural = null;
+  // Publicação do mural no estilo do Instagram: várias fotos (carrossel) + legenda, sem curtidas nem comentários.
+  // Todas as fotos ficam no próprio documento; ao salvar, elas são reduzidas para caber no limite do banco.
+  let fotosMural = [];
+  const MAX_FOTOS = 10, LIMITE_FOTOS = 880000;
+  const tituloPost = (m) => m.titulo || String(m.texto || '').split('\n')[0].slice(0, 80) || 'Publicação';
+  function fotosMuralHtml() {
+    if (!fotosMural.length) return '<p class="small muted" style="margin-top:6px">Nenhuma foto ainda.</p>';
+    return `<div class="fotos-grid">${fotosMural.map((f, i) => `<div class="ft"><img src="${esc(f)}" alt=""><b>${i + 1}</b><button type="button" data-act="mural-foto-del" data-i="${i}" aria-label="Tirar foto">×</button>${i ? `<button type="button" class="esq" data-act="mural-foto-esq" data-i="${i}" aria-label="Mover para antes">‹</button>` : ''}</div>`).join('')}</div>`;
+  }
+  function atualizarFotosMural() { const g = document.getElementById('m-fotos'); if (g) g.innerHTML = fotosMuralHtml(); const n = document.getElementById('m-n'); if (n) n.textContent = `${fotosMural.length}/${MAX_FOTOS}`; }
   function muralModal(id) {
-    const m = id ? get('mural', id) : { titulo: '', texto: '', foto: '' };
-    fotoMural = m.foto || '';
+    const m = id ? get('mural', id) : { texto: '' };
+    fotosMural = [...(m.fotos || (m.foto ? [m.foto] : []))];
+    const legenda = m.titulo && !m.fotos ? `${m.titulo}\n${m.texto || ''}`.trim() : m.texto || '';
     openModal(id ? 'Editar publicação' : 'Nova publicação no mural', `<div class="form-grid">
-      <label class="field full"><span>Foto</span><input class="input" type="file" id="m-foto" accept="image/*"><img class="foto-prev" id="m-prev" alt=""${m.foto ? ` src="${esc(m.foto)}"` : ' hidden'}></label>
-      <label class="field full"><span>Título</span><input class="input" id="m-tit" maxlength="90" value="${esc(m.titulo)}"></label>
-      <label class="field full"><span>Texto</span><textarea class="textarea" id="m-txt">${esc(m.texto)}</textarea></label>
+      <div class="field full"><span>Fotos <small class="muted" id="m-n">${fotosMural.length}/${MAX_FOTOS}</small></span>
+        <input class="input" type="file" id="m-foto" accept="image/*" multiple>
+        <small class="small muted">Pode escolher várias de uma vez. Com mais de uma, aparece em carrossel (arrasta para o lado). A ordem é a dos números; use ‹ para trocar.</small>
+        <div id="m-fotos">${fotosMuralHtml()}</div></div>
+      <label class="field full"><span>Legenda</span><textarea class="textarea" id="m-txt" rows="6" placeholder="O mesmo texto do post do Instagram">${esc(legenda)}</textarea></label>
     </div>`, delFoot('mural', id, 'mural-save'));
     $('#modal-root .modal').dataset.ctx = JSON.stringify({ col: 'mural', id });
   }
-  function lerFotoMural(file) {
-    if (!file) return;
-    const img = new Image(); const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const s = Math.min(1, 1200 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      fotoMural = c.toDataURL('image/jpeg', 0.75); URL.revokeObjectURL(url);
-      const p = document.getElementById('m-prev'); if (p) { p.src = fotoMural; p.hidden = false; }
-    };
-    img.src = url;
+  function reduzirFoto(src, lado, q) {
+    return new Promise((ok, falha) => {
+      const img = new Image();
+      img.onload = () => { const k = Math.min(1, lado / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', q)); };
+      img.onerror = falha; img.src = src;
+    });
+  }
+  async function lerFotoMural(files) {
+    const lista = [...(files || [])].filter((f) => /^image\//.test(f.type));
+    const cabem = MAX_FOTOS - fotosMural.length;
+    if (lista.length > cabem) toast(`Cabem ${MAX_FOTOS} fotos por publicação. Entraram só as ${Math.max(0, cabem)} primeiras.`);
+    for (const f of lista.slice(0, Math.max(0, cabem))) {
+      const url = URL.createObjectURL(f);
+      try { fotosMural.push(await reduzirFoto(url, 1080, 0.78)); } catch { toast('Não consegui abrir uma das fotos.'); }
+      URL.revokeObjectURL(url); atualizarFotosMural();
+    }
+  }
+  async function caberFotos(fotos) {
+    let lado = 1080, q = 0.74, out = fotos;
+    while (out.reduce((n, f) => n + f.length, 0) > LIMITE_FOTOS && lado > 480) { out = await Promise.all(fotos.map((f) => reduzirFoto(f, lado, q))); lado = Math.round(lado * 0.86); q = Math.max(0.5, q - 0.05); }
+    return out;
   }
   async function saveMural(id) {
-    const body = { titulo: val('m-tit'), texto: val('m-txt'), foto: fotoMural || '' };
-    if (!body.titulo) return toast('Escreva um título.');
+    const texto = val('m-txt');
+    if (!texto && !fotosMural.length) return toast('Coloque pelo menos uma foto ou a legenda.');
+    const btn = document.querySelector('#modal-root [data-act="mural-save"]'); if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+    const fotos = await caberFotos(fotosMural);
     const prev = id ? get('mural', id) : null;
-    if (await guard(() => put('mural', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.')) closeModal();
+    const { foto, titulo, ...resto } = semId(prev) || {};
+    const ok = await guard(() => put('mural', id || uid(), { ...resto, texto, fotos, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.');
+    if (ok) closeModal(); else if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
   }
 
   // Alcance: quem tocou no link (cliques[alunoId] = número de toques).
@@ -1837,6 +1870,8 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'mural-new': muralModal(null); break;
       case 'mural-open': muralModal(t.dataset.id); break;
       case 'mural-save': saveMural(t.dataset.id); break;
+      case 'mural-foto-del': fotosMural.splice(Number(t.dataset.i), 1); atualizarFotosMural(); break;
+      case 'mural-foto-esq': { const i = Number(t.dataset.i); [fotosMural[i - 1], fotosMural[i]] = [fotosMural[i], fotosMural[i - 1]]; atualizarFotosMural(); break; }
       case 'op-new': opModal(null); break;
       case 'op-open': opModal(t.dataset.id); break;
       case 'op-save': saveOp(t.dataset.id); break;
@@ -1875,7 +1910,7 @@ body.gated .app { grid-template-columns: 1fr; }
     return 'Não foi possível entrar. Tente de novo.';
   }
 
-  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') lerFotoMural(e.target.files[0]); });
+  document.addEventListener('change', (e) => { if (e.target.id === 'm-foto') { lerFotoMural(e.target.files).then(() => { e.target.value = ''; }); } });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'f-cep') {
       const d = e.target.value.replace(/\D/g, '').slice(0, 8);

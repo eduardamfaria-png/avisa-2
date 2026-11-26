@@ -179,6 +179,28 @@ textarea.input { resize: vertical; }
 /* Site aberto */
 .btn svg { width: 18px; height: 18px; flex: none; }
 .feed { align-items: start; }
+/* Publicação no estilo do Instagram: carrossel de fotos (ou vídeo) e legenda */
+.ig { overflow: hidden; padding: 0; }
+.ig .ig-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.ig .ig-head img { width: 34px; height: 34px; border-radius: 99px; object-fit: contain; background: #fff; border: 1px solid var(--line); max-width: none; }
+.ig .ig-head b { font-size: 14px; } .ig .ig-head small { display: block; color: var(--faint); font-size: 12px; }
+.car { position: relative; background: #0b1230; }
+.car-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.car-track::-webkit-scrollbar { display: none; }
+.car-item { flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always; aspect-ratio: 4 / 5; position: relative; }
+.car-item img, .car-item video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; display: block; }
+.car-item video { object-fit: contain; background: #000; }
+.car-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 99px; border: 0; background: rgba(255,255,255,.9); color: #111; font-size: 22px; line-height: 1; display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); z-index: 2; }
+.car-btn.prev { left: 10px; } .car-btn.next { right: 10px; } .car-btn[hidden] { display: none; }
+.car-cont { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 3px 9px; z-index: 2; }
+.car-dots { display: flex; justify-content: center; gap: 5px; padding: 10px 0 0; }
+.car-dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--line); }
+.car-dots i.on { background: var(--primary, #1c2d6b); }
+.ig .legenda { padding: 10px 14px 16px; font-size: 14.5px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.ig .legenda b { margin-right: 4px; }
+.ig .legenda.curta { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ig .mais { background: none; border: 0; color: var(--faint); font: inherit; font-size: 14px; padding: 0 14px 14px; margin-top: -10px; cursor: pointer; }
+.ig .ig-data { color: var(--faint); font-size: 12px; padding: 0 14px 14px; }
 .user-btn { margin-left: auto; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; border: 0; background: none; color: var(--navy); font-size: 11.5px; font-weight: 700; padding: 4px 6px; }
 .user-btn svg { width: 30px; height: 30px; padding: 5px; border-radius: 50%; background: var(--navy-soft); }
 .hero { padding: 20px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
@@ -354,7 +376,7 @@ body:not(.gated) #gate { display: none; }
   const MURAL = [
     { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%', cor: '#1c2d6b' },
     { titulo: 'Aula de pilates', texto: 'Movimento, saúde e bem-estar para a comunidade.', img: '%%FOTO:pilates%%', cor: '#17885a' },
-    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti.', img: '%%FOTO:fachada%%', cor: '#d99a12' },
+    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti.', midias: [{ tipo: 'foto', src: '%%FOTO:fachada%%' }, { tipo: 'foto', src: '%%FOTO:inauguracao%%' }], cor: '#d99a12' },
   ];
   // Oportunidades: só o que é DE FORA do instituto, com link para a inscrição no site de quem oferece.
   const OPORTUNIDADES = [
@@ -526,8 +548,7 @@ body:not(.gated) #gate { display: none; }
 
 
   function vMural() {
-    return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + `<div class="feed">${MURAL.map((m) => `<article class="card post">${m.img || m.foto ? `<div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${esc(m.img)}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>` : ''}
-      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${m.data ? `Publicado em ${fmtCurto(parse(m.data))} pela coordenação` : 'Instituto Íris'}</div></div></article>`).join('')}</div>`;
+    return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + (MURAL.length ? `<div class="feed">${MURAL.map(postIG).join('')}</div>` : '<div class="empty">Nenhuma publicação ainda.</div>');
   }
 
   function vOportunidades() {
@@ -595,7 +616,7 @@ body:not(.gated) #gate { display: none; }
       }, () => {});
       // Mural publicado pela equipe → Início do site (as fotos de exemplo saem quando houver publicações).
       fs.onSnapshot(fs.collection(FB.db, 'mural'), (snap) => {
-        const posts = snap.docs.map((d) => d.data()).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map((m) => ({ titulo: m.titulo || '', texto: m.texto || '', img: m.foto || '' }));
+        const posts = snap.docs.map((d) => ({ ...d.data(), __id: d.id })).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map(postDoBanco);
         if (posts.length) { MURAL_SITE.splice(0, MURAL_SITE.length, ...posts); render(); }
       }, () => {});
       atualizarSituacoes();
@@ -644,7 +665,7 @@ body:not(.gated) #gate { display: none; }
     const { db } = FB; const o = (ref, cb) => pararAluno.push(FB.onSnapshot(ref, cb, () => {}));
     o(FB.doc(db, 'portalAluno', email), (snap) => { if (snap.exists()) carregarAluno(email, snap.data()); });
     o(FB.collection(db, 'avisos'), (snap) => { AVISOS.splice(0, AVISOS.length, ...snap.docs.map((d) => { const x = d.data(); return { id: d.id, titulo: x.titulo || '', texto: x.texto || '', ate: x.ate || '', urgente: !!x.importante, turma: x.turmaId || undefined }; })); render(); });
-    o(FB.collection(db, 'mural'), (snap) => { MURAL.splice(0, MURAL.length, ...snap.docs.map((d) => d.data()).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map((m) => ({ titulo: m.titulo || '', texto: m.texto || '', img: m.foto || '', cor: '#1c2d6b', data: String(m.criadoEm || '').slice(0, 10) }))); render(); });
+    o(FB.collection(db, 'mural'), (snap) => { MURAL.splice(0, MURAL.length, ...snap.docs.map((d) => ({ ...d.data(), __id: d.id })).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map(postDoBanco)); render(); });
     o(FB.collection(db, 'oportunidades'), (snap) => { OPORTUNIDADES.splice(0, OPORTUNIDADES.length, ...snap.docs.map((d) => { const x = d.data(); let onde = 'site da inscrição'; try { onde = new URL(x.link).hostname.replace(/^www\./, ''); } catch {} return { id: d.id, tipo: x.tipo || 'Curso', titulo: x.titulo || '', texto: x.texto || '', prazo: x.prazo || H, quem: x.quem || 'Todos', link: x.link || '', onde }; })); render(); });
     o(FB.query(FB.collection(db, 'justificativas'), FB.where('email', '==', email)), (snap) => {
       S.just = {};
@@ -679,10 +700,16 @@ body:not(.gated) #gate { display: none; }
     if (mudou) { salvarVis(); render(); }
   }
 
+  // Publicação vinda do banco → formato do carrossel (fotos e, quando houver, vídeo).
+  function postDoBanco(m, i) {
+    const fotos = Array.isArray(m.fotos) ? m.fotos : m.foto ? [m.foto] : [];
+    const midias = [...(m.video ? [{ tipo: 'video', src: m.video }] : []), ...fotos.map((src) => ({ tipo: 'foto', src }))];
+    return { id: m.__id || 'm' + i, titulo: m.fotos ? '' : m.titulo || '', texto: m.texto || '', midias, data: String(m.criadoEm || '').slice(0, 10) };
+  }
   const MURAL_SITE = [
     { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%' },
     { titulo: 'Aula de pilates', texto: 'Movimento, saúde e bem-estar para a comunidade.', img: '%%FOTO:pilates%%' },
-    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti. Venha nos conhecer!', img: '%%FOTO:fachada%%' },
+    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti. Venha nos conhecer!', midias: [{ tipo: 'foto', src: '%%FOTO:fachada%%' }, { tipo: 'foto', src: '%%FOTO:inauguracao%%' }] },
   ];
   const vagasCurso = (c) => c.turmas.reduce((n, t) => n + (t.vagas || 0), 0);
   const turmaTxt = (t) => `${t.dias} · ${t.horario}`;
@@ -759,10 +786,41 @@ body:not(.gated) #gate { display: none; }
   }
 
 
-  function postCard(m) {
-    return `<article class="card post">${m.img || m.foto ? `<div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${esc(m.img)}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>` : ''}
-      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
+  // Publicação do mural (site aberto e portal do aluno): carrossel com setas, arrastar com o dedo e bolinhas; legenda embaixo.
+  const midiasDe = (m) => m.midias || (m.img ? [{ tipo: 'foto', src: m.img }] : []);
+  function postIG(m, i) {
+    const md = midiasDe(m); const pid = m.id || 'p' + i;
+    const aberto = S.legAberta && S.legAberta[pid];
+    const legenda = [m.titulo ? `<b>${esc(m.titulo)}</b>` : '', esc(m.texto || '')].filter(Boolean).join(m.titulo && m.texto ? '\n' : '');
+    const longa = (m.texto || '').length > 160 || (m.texto || '').split('\n').length > 3;
+    return `<article class="card ig">
+      <div class="ig-head">${LOGO.replace('alt="Instituto Íris"', 'alt=""')}<div><b>Instituto Íris</b>${m.data ? `<small>${fmtCurto(parse(m.data))}</small>` : ''}</div></div>
+      ${md.length ? `<div class="car" data-car="${esc(pid)}"><div class="car-track">${md.map((x, k) => `<div class="car-item">${x.tipo === 'video' ? `<video src="${esc(x.src)}" controls playsinline preload="metadata"></video>` : `<img src="${esc(x.src)}" alt="${esc((m.titulo || m.texto || 'Foto do Instituto Íris').slice(0, 80))}${md.length > 1 ? ` (${k + 1} de ${md.length})` : ''}" loading="lazy">`}</div>`).join('')}</div>
+        ${md.length > 1 ? `<span class="car-cont">1/${md.length}</span><button type="button" class="car-btn prev" data-car-ir="-1" aria-label="Foto anterior" hidden>‹</button><button type="button" class="car-btn next" data-car-ir="1" aria-label="Próxima foto">›</button>` : ''}</div>
+        ${md.length > 1 ? `<div class="car-dots" aria-hidden="true">${md.map((_, k) => `<i${k ? '' : ' class="on"'}></i>`).join('')}</div>` : ''}` : ''}
+      ${legenda ? `<div class="legenda${longa && !aberto ? ' curta' : ''}">${legenda}</div>${longa && !aberto ? `<button type="button" class="mais" data-leg="${esc(pid)}">… mais</button>` : ''}` : ''}
+    </article>`;
   }
+  // Mantém a foto em que cada carrossel estava quando a tela é redesenhada.
+  const posCar = {};
+  function marcarCarrossel(car) {
+    const tr = car.querySelector('.car-track'); const n = tr.children.length; const k = Math.round(tr.scrollLeft / (tr.clientWidth || 1));
+    posCar[car.dataset.car] = k;
+    const c = car.querySelector('.car-cont'); if (c) c.textContent = `${k + 1}/${n}`;
+    const pv = car.querySelector('.prev'), nx = car.querySelector('.next'); if (pv) pv.hidden = k <= 0; if (nx) nx.hidden = k >= n - 1;
+    const dots = car.nextElementSibling; if (dots && dots.classList.contains('car-dots')) [...dots.children].forEach((d, j) => d.classList.toggle('on', j === k));
+    car.querySelectorAll('video').forEach((v, j) => { if (j !== k && !v.paused) v.pause(); });
+  }
+  function restaurarCarrosseis() {
+    document.querySelectorAll('.car[data-car]').forEach((car) => { const k = posCar[car.dataset.car]; if (k) { const tr = car.querySelector('.car-track'); tr.scrollLeft = k * tr.clientWidth; } marcarCarrossel(car); });
+  }
+  document.addEventListener('scroll', (e) => { const tr = e.target; if (tr.classList && tr.classList.contains('car-track')) marcarCarrossel(tr.parentElement); }, true);
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-car-ir]'); if (b) { const tr = b.parentElement.querySelector('.car-track'); tr.scrollBy({ left: Number(b.dataset.carIr) * tr.clientWidth, behavior: 'smooth' }); return; }
+    const l = e.target.closest('[data-leg]'); if (l) { (S.legAberta ||= {})[l.dataset.leg] = true; const art = l.closest('.ig'); const lg = art.querySelector('.legenda'); lg.classList.remove('curta'); l.remove(); }
+  });
+  document.addEventListener('keydown', (e) => { const car = e.target.closest && e.target.closest('.car'); if (car && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { const tr = car.querySelector('.car-track'); tr.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * tr.clientWidth, behavior: 'smooth' }); } });
+
   function vPInicio() {
     // 1. Página inicial: foto das atividades com a frase do Íris; depois, o feed do mural.
     return pHeader() + `
@@ -771,7 +829,7 @@ body:not(.gated) #gate { display: none; }
           <p>Acreditamos que todos merecem oportunidades para aprender, cuidar da saúde, desenvolver seus talentos e viver melhor.</p>
           <p>O Instituto Íris nasceu para transformar vidas e construir um futuro melhor junto com você.</p></div></section>
       <div class="section-title" style="margin-top:6px"><h2>Acontece no Íris</h2></div>
-      ${MURAL_SITE.length ? `<div class="feed">${MURAL_SITE.map((m) => `<article class="card post">${m.img ? `<div class="foto"><img src="${esc(m.img)}" alt="${esc(m.titulo)}"></div>` : ''}<div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Instituto Íris</div></div></article>`).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
+      ${MURAL_SITE.length ? `<div class="feed">${MURAL_SITE.map(postIG).join('')}</div>` : '<div class="empty">Em breve, fotos das nossas aulas aqui.</div>'}`;
   }
   function vPCursos() {
     // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
@@ -955,6 +1013,7 @@ body:not(.gated) #gate { display: none; }
     $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}${entrarTab}<div class="side-foot">${pub ? '<p class="small faint">Alunos, equipe ou quem quer se inscrever: toque em Entrar</p>' : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
     const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros };
     $('#view').innerHTML = (V[cur] || (pub ? vPInicio : vInicio))();
+    restaurarCarrosseis();
     const M = S.modal;
     $('#modal-root').innerHTML = !M ? '' : M.tipo === 'just' ? modalJust(M.k) : M.tipo === 'insc' ? modalInsc(M.c) : M.tipo === 'pinsc' ? modalPInsc(M.c) : modalEntrar();
   }
