@@ -239,6 +239,18 @@ textarea.input { resize: vertical; }
 .faca p { opacity: .92; }
 .turmas-site { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
 .ts-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.cursos-lista { grid-template-columns: 1fr !important; }
+@media (min-width: 860px) {
+  .cursos-lista .atv { display: grid; grid-template-columns: minmax(260px, 40%) 1fr; column-gap: 20px; row-gap: 8px; padding: 0 20px 0 0; align-content: center; }
+  .cursos-lista .atv > * { grid-column: 2; }
+  .cursos-lista .atv > .atv-foto { grid-column: 1; grid-row: 1 / span 5; margin: 0; width: 100%; height: 0; min-height: 100%; aspect-ratio: auto; border-bottom: 0; border-right: 1px solid var(--line); }
+  .cursos-lista .atv > .row:first-of-type { margin-top: 18px; }
+  .cursos-lista .atv > div:last-child { margin-bottom: 18px; }
+}
+.modal { position: relative; }
+.modal-x { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface-2); color: var(--ink); font-size: 24px; line-height: 1; display: grid; place-items: center; z-index: 2; }
+.modal-x:hover { background: var(--line); }
+.modal > h2, .modal > .btn.ghost:first-of-type { padding-right: 44px; }
 /* Entrada */
 body.gated .app, body.gated .tabs { display: none; }
 body:not(.gated) #gate { display: none; }
@@ -315,11 +327,11 @@ body:not(.gated) #gate { display: none; }
   // ───── Dados de exemplo (protótipo) ─────
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const H = ymd(hoje);
+  // Turmas dos alunos de exemplo (horários reais; os alunos são de exemplo).
   const TURMAS = {
-    info: { nome: 'Informática básica', dias: [1, 3], inicio: '14:00', fim: '16:00', professor: 'Prof. Carla', local: 'Sala 2', cor: '#1c2d6b' },
-    danca: { nome: 'Dança', dias: [6], inicio: '10:00', fim: '11:30', professor: 'Prof. Bia', local: 'Salão principal', cor: '#17885a' },
-    reforco: { nome: 'Reforço escolar', dias: [2, 4], inicio: '09:00', fim: '11:00', professor: 'Prof. Marcos', local: 'Sala 1', cor: '#d99a12' },
-    ingles: { nome: 'Inglês para iniciantes', dias: [2, 4], inicio: '16:00', fim: '17:30', professor: 'A definir', local: 'Sala 2', cor: '#7a4fd1' },
+    info: { nome: 'Informática', curso: 'informatica', dias: [1, 3], inicio: '14:00', fim: '16:00', professor: 'Prof. João Pedro', local: 'Sala de informática', cor: '#1c2d6b' },
+    pilates: { nome: 'Pilates', curso: 'pilates', dias: [6], inicio: '10:00', fim: '11:00', professor: 'Prof. Pedro', local: 'Sala de pilates', cor: '#17885a' },
+    infosab: { nome: 'Informática (sábado)', curso: 'informatica', dias: [6], inicio: '09:00', fim: '13:00', professor: 'Prof. João Pedro', local: 'Sala de informática', cor: '#d99a12' },
   };
   // Histórico de presença gerado a partir das últimas aulas de cada turma.
   function historico(tid, padrao) {
@@ -328,19 +340,19 @@ body:not(.gated) #gate { display: none; }
     return out;
   }
   const ALUNOS = [
-    { id: 'ana', nome: 'Ana Clara Souza', turmas: ['info', 'danca'], hist: { info: historico('info', ['P', 'P', 'P', 'F', 'P', 'P']), danca: historico('danca', ['P', 'J', 'P', 'P']) } },
-    { id: 'davi', nome: 'Davi Souza', turmas: ['reforco'], hist: { reforco: historico('reforco', ['P', 'F', 'P', 'F', 'P', 'F', 'P']) } },
+    { id: 'ana', nome: 'Ana Clara Souza', turmas: ['info', 'pilates'], hist: { info: historico('info', ['P', 'P', 'P', 'F', 'P', 'P']), pilates: historico('pilates', ['P', 'J', 'P', 'P']) } },
+    { id: 'davi', nome: 'Davi Souza', turmas: ['infosab'], hist: { infosab: historico('infosab', ['P', 'F', 'P', 'F', 'P', 'F', 'P']) } },
   ];
   const AVISOS = [
-    { titulo: 'Sem aula de Dança neste sábado', texto: 'O salão estará em manutenção. As aulas voltam no sábado seguinte, no horário normal.', ate: ymd(addDays(hoje, 4)), urgente: true, turma: 'danca' },
-    { titulo: 'Aula de Informática começa às 15h na quarta', texto: 'Só nesta semana, por causa da reunião de pais. O término continua às 16h.', ate: ymd(addDays(hoje, 3)), turma: 'info' },
+    { titulo: 'Sem aula de pilates neste sábado', texto: 'A sala estará em manutenção. As aulas voltam no sábado seguinte, no horário normal.', ate: ymd(addDays(hoje, 4)), urgente: true, turma: 'pilates' },
+    { titulo: 'Aula de informática começa às 15h na quarta', texto: 'Só nesta semana. O término continua às 16h.', ate: ymd(addDays(hoje, 3)), turma: 'info' },
     { titulo: 'Festa de fim de ano: dia 13/12', texto: 'Todos os alunos e famílias estão convidados. Traga um prato para dividir!', ate: ymd(addDays(hoje, 18)) },
     { titulo: 'Aviso que já venceu (não aparece)', texto: 'Este aviso tinha data para sumir no passado.', ate: ymd(addDays(hoje, -2)) },
   ];
   const MURAL = [
-    { titulo: 'Apresentação da turma de Dança', texto: 'As alunas e alunos da Dança se apresentaram na praça do Éden no domingo. Obrigado a todas as famílias que foram prestigiar!', data: ymd(addDays(hoje, -3)), cor: '#17885a', foto: 'Foto da apresentação' },
-    { titulo: 'Nova turma de Informática à tarde', texto: 'Com a chegada de 5 computadores doados, abrimos mais uma turma. Fale com a coordenação para entrar na lista de espera.', data: ymd(addDays(hoje, -9)), cor: '#1c2d6b', foto: 'Foto do laboratório' },
-    { titulo: 'Mutirão de pintura do instituto', texto: 'Voluntários pintaram as salas no último fim de semana. O espaço ficou lindo!', data: ymd(addDays(hoje, -16)), cor: '#d99a12', foto: 'Foto do mutirão' },
+    { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%', cor: '#1c2d6b' },
+    { titulo: 'Aula de pilates', texto: 'Movimento, saúde e bem-estar para a comunidade.', img: '%%FOTO:pilates%%', cor: '#17885a' },
+    { titulo: 'Nossa sede', texto: 'O Instituto Íris fica em São João de Meriti.', img: '%%FOTO:fachada%%', cor: '#d99a12' },
   ];
   // Oportunidades: só o que é DE FORA do instituto, com link para a inscrição no site de quem oferece.
   const OPORTUNIDADES = [
@@ -348,16 +360,6 @@ body:not(.gated) #gate { display: none; }
     { titulo: 'Curso gratuito de Excel online', texto: 'Curso com certificado, oferecido por instituição parceira. Bom para quem terminou a Informática básica.', prazo: ymd(addDays(hoje, 20)), quem: 'Todas as idades', onde: 'site do curso', link: 'https://exemplo.com/excel' },
     { titulo: 'Bolsa de estudos para ensino técnico', texto: 'Inscrições abertas para bolsas integrais em cursos técnicos.', prazo: ymd(addDays(hoje, 6)), quem: 'Ensino médio completo ou cursando', onde: 'site do edital', link: 'https://exemplo.com/bolsas' },
     { titulo: 'Estágio em escritório de contabilidade', texto: 'Vaga de meio período, com bolsa-auxílio e vale-transporte.', prazo: ymd(addDays(hoje, 14)), quem: 'Ensino médio cursando, a partir de 16 anos', onde: 'site da vaga', link: 'https://exemplo.com/estagio' },
-  ];
-  // Cursos do Íris com inscrições abertas: a inscrição vai para a equipe aprovar e colocar numa turma.
-  const temVaga = (c) => c.vagas === null || c.vagas > 0;
-  const vagasTxt = (c) => (c.vagas === null ? 'Inscrições abertas' : plural(c.vagas, 'vaga', 'vagas'));
-  const CURSOS = [
-    { id: 'ingles', nome: 'Inglês para iniciantes', texto: 'Primeiros passos no inglês: conversação, vocabulário do dia a dia e música.', dias: 'Terças e quintas', horario: '16:00–17:30', inicio: 'Fevereiro', quem: 'A partir de 12 anos', vagas: 8, novo: true, turma: 'ingles' },
-    { id: 'info', nome: 'Informática básica', texto: 'Computador, internet, e-mail, Word e Excel do zero.', dias: 'Segundas e quartas', horario: '14:00–16:00', inicio: 'Turma em andamento (lista de espera)', quem: 'A partir de 10 anos', vagas: 0, turma: 'info' , foto: '%%FOTO:curso-informatica%%' },
-    { id: 'danca', nome: 'Dança', texto: 'Ritmos variados, expressão corporal e apresentações ao longo do ano.', dias: 'Sábados', horario: '10:00–11:30', inicio: 'Imediato', quem: 'A partir de 7 anos', vagas: 12, turma: 'danca' },
-    { id: 'reforco', nome: 'Reforço escolar', texto: 'Apoio em português e matemática para o ensino fundamental.', dias: 'Terças e quintas', horario: '09:00–11:00', inicio: 'Imediato', quem: 'Ensino fundamental', vagas: 5, turma: 'reforco' },
-    { id: 'pilates', nome: 'Pilates', texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', dias: 'Dias a confirmar', horario: 'horário a confirmar', inicio: 'a confirmar', quem: 'a confirmar', vagas: null, foto: '%%FOTO:pilates%%' },
   ];
 
   let uid = 0; const nid = () => 'x' + (++uid);
@@ -367,10 +369,10 @@ body:not(.gated) #gate { display: none; }
   const S = { view: 'inicio', aluno: 'ana', opTipo: 'Todos', just: {}, insc: {}, modal: null };
   try { S.view = localStorage.getItem('portal:view') || 'inicio'; } catch {}
   // Exemplos já enviados, para a coordenação ter o que avaliar.
-  { const fd = ALUNOS[1].hist.reforco.filter((x) => x.v === 'F').pop(); if (fd) S.just[`davi|reforco|${fd.data}`] = { motivo: 'Estava com febre, fiquei em casa.', arquivo: 'atestado.jpg', status: 'pendente' }; }
+  { const fd = ALUNOS[1].hist.infosab.filter((x) => x.v === 'F').pop(); if (fd) S.just[`davi|infosab|${fd.data}`] = { motivo: 'Estava com febre, fiquei em casa.', arquivo: 'atestado.jpg', status: 'pendente' }; }
   { const fs = ALUNOS[0].hist.info.filter((x) => x.v === 'F'); if (fs[0]) S.just[`ana|info|${fs[0].data}`] = { motivo: 'Consulta médica.', arquivo: 'atestado.jpg', status: 'recusada', obs: 'Traga o atestado original na próxima aula, por favor.' }; }
-  { const js = ALUNOS[0].hist.danca.filter((x) => x.v === 'J'); if (js[0]) S.just[`ana|danca|${js[0].data}`] = { motivo: 'Estava com febre.', arquivo: '', status: 'aceita', obs: 'Melhoras!' }; }
-  S.insc['davi|danca'] = { tel: '(21) 98765-4321', obs: 'Ele adora dançar, pode ser no sábado.', status: 'pendente' };
+  { const js = ALUNOS[0].hist.pilates.filter((x) => x.v === 'J'); if (js[0]) S.just[`ana|pilates|${js[0].data}`] = { motivo: 'Estava com febre.', arquivo: '', status: 'aceita', obs: 'Melhoras!' }; }
+  S.insc['davi|pilates'] = { turma: 'qualquer', espera: true, tel: '(21) 98765-4321', obs: 'Qualquer horário no sábado.', status: 'pendente' };
   const aluno = () => ALUNOS.find((a) => a.id === S.aluno);
 
   function proximaAula(a) {
@@ -468,7 +470,7 @@ body:not(.gated) #gate { display: none; }
   function modalJust(k) {
     const [, tid, data] = k.split('|');
     const d = parse(data);
-    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Justificar falta">
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Justificar falta"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
       <h2>Justificar falta</h2><p class="muted small" style="margin:4px 0 14px">${esc(TURMAS[tid].nome)} · ${DIAS_LONGO[d.getDay()]}, ${fmtCurto(d)}</p>
       <form id="form-just" class="stack" data-k="${esc(k)}">
         <label class="field"><span>Motivo</span><textarea class="input" id="just-motivo" rows="3" required placeholder="Ex.: consulta médica, problema de transporte…"></textarea></label>
@@ -478,35 +480,52 @@ body:not(.gated) #gate { display: none; }
       </form></div></div>`;
   }
 
+  // Opções de turma para inscrição: com vaga = inscrição normal; curso cheio = lista de espera (turma ou qualquer horário).
+  function opcoesTurma(c) {
+    const linhas = linhasCurso(c);
+    const comVaga = linhas.filter((t) => t.vagas > 0);
+    if (comVaga.length) return comVaga.map((t) => ({ val: t.id, txt: `${turmaTxt(t)} · vagas abertas`, espera: false }));
+    return [{ val: 'qualquer', txt: 'Qualquer horário', espera: true }, ...linhas.map((t) => ({ val: t.id, txt: turmaTxt(t), espera: true }))];
+  }
   function modalInsc(cid) {
-    const c = CURSOS.find((x) => x.id === cid); const int = false; const a = aluno();
-    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
-      <h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${esc(c.dias)} · ${esc(c.horario)}</p>
+    const c = CURSOS_SITE.find((x) => x.id === cid); const a = aluno();
+    const ops = opcoesTurma(c); const espera = ops[0].espera;
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
+      <h2>${espera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${espera ? 'As turmas estão cheias. Escolha o horário que prefere e a coordenação avisa quando abrir vaga.' : 'Escolha a turma.'}</p>
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
-        <p>Inscrever <b>${esc(a.nome)}</b> neste curso?</p>
-        ${temVaga(c) ? '' : '<p class="small" style="color:var(--amber);font-weight:700">Sem vagas agora: a inscrição entra na lista de espera.</p>'}
-        <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${esc(int ? a.telefone : '')}"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
+        <p>${espera ? 'Colocar' : 'Inscrever'} <b>${esc(a.nome)}</b> ${espera ? 'na lista de espera?' : 'neste curso?'}</p>
+        <label class="field"><span>${espera ? 'Horário que prefere' : 'Turma'} *</span><select class="input" id="insc-turma">${ops.length > 1 && !espera ? '<option value="">Escolha</option>' : ''}${ops.map((o) => `<option value="${o.val}">${esc(o.txt)}</option>`).join('')}</select><small class="small" id="insc-turma-err" style="color:var(--red);font-weight:700" hidden>Escolha a turma.</small></label>
+        <label class="field"><span>Telefone / WhatsApp para contato *</span><input class="input" type="tel" id="insc-tel" required inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16"><small class="small muted">Obrigatório: o professor vai usar para entrar em contato.</small><small class="small" id="insc-tel-err" style="color:var(--red);font-weight:700" hidden>Digite um telefone com DDD (10 ou 11 números).</small></label>
         <label class="field"><span>Observação para a coordenação (opcional)</span><textarea class="input" id="insc-obs" rows="2" placeholder="Ex.: só posso no período da tarde"></textarea></label>
-        <p class="small muted">A coordenação analisa a inscrição e avisa quando ela for aprovada e a turma definida.</p>
-        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar inscrição</button></div>
+        <p class="small muted">${espera ? 'Quando abrir vaga, a coordenação fala com você pelo WhatsApp.' : 'A coordenação analisa a inscrição e avisa quando ela for aprovada.'}</p>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">${espera ? 'Entrar na lista de espera' : 'Enviar inscrição'}</button></div>
       </form></div></div>`;
   }
-
+  // Cartão de curso (site aberto e Portal do Aluno): foto, texto, turmas com vagas e a ação.
+  function cursoBase(c, acao) {
+    const v = vagasCurso(c);
+    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx"><span class="pill ${v ? 'green' : 'amber'}">${v ? 'Vagas abertas' : 'Turmas cheias · lista de espera'}</span></div>
+      <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
+      <div class="turmas-site"><span class="small muted" style="font-weight:700">${c.resumir ? 'Horários' : plural(c.turmas.length, 'turma', 'turmas')}</span>${linhasCurso(c).map((t) => `<div class="ts-row"><span class="grow">${esc(turmaTxt(t))}</span><span class="pill ${t.vagas ? 'green' : ''}">${t.vagas ? 'Vagas abertas' : 'Cheia'}</span></div>`).join('')}</div>
+      <div>${acao}</div></article>`;
+  }
   function vCursos() {
     const a = aluno();
-    return header('Cursos do Íris', 'Inscreva-se', 'Cursos gratuitos do instituto com inscrições abertas.') + `<div class="feed">${CURSOS.map((c) => {
-      const ja = c.turma && a.turmas.includes(c.turma);
+    return header('Cursos do Íris', 'Inscreva-se', 'Cursos gratuitos do instituto. Turma cheia? Entre na lista de espera.') + `<div class="feed cursos-lista">${CURSOS_SITE.map((c) => {
+      const ja = a.turmas.some((t) => TURMAS[t]?.curso === c.id);
       const ins = S.insc[`${a.id}|${c.id}`];
-      return `<article class="card op"><div class="row wrapx">${c.novo ? '<span class="pill gold">Novo</span>' : ''}<span class="pill ${temVaga(c) ? 'green' : 'amber'}">${temVaga(c) ? vagasTxt(c) : 'Lista de espera'}</span></div>
-        <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
-        <div class="small muted">${esc(c.dias)} · ${esc(c.horario)} · Início: ${esc(c.inicio)}<br>Para quem: ${esc(c.quem)}</div>
-        <div>${ja ? '<span class="pill navy">Você já está neste curso</span>' : ins?.status === 'pendente' ? '<span class="pill amber">Inscrição enviada · aguardando aprovação</span>' : ins?.status === 'recusada' ? `<span class="pill red">Inscrição não aprovada</span>${ins.resp ? `<p class="small" style="margin-top:6px"><b>Coordenação:</b> ${esc(ins.resp)}</p>` : ''}` : `<button class="btn primary" data-insc="${c.id}">${temVaga(c) ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`}</div></article>`;
+      const acao = ja ? '<span class="pill navy">Você já está neste curso</span>'
+        : ins?.status === 'pendente' ? `<span class="pill amber">${ins.espera ? 'Você está na lista de espera' : 'Inscrição enviada · aguardando aprovação'}</span>`
+        : ins?.status === 'recusada' ? `<span class="pill red">Inscrição não aprovada</span>${ins.resp ? `<p class="small" style="margin-top:6px"><b>Coordenação:</b> ${esc(ins.resp)}</p>` : ''}`
+        : `<button class="btn primary" data-insc="${c.id}">${vagasCurso(c) ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`;
+      return cursoBase(c, acao);
     }).join('')}</div>`;
   }
 
+
   function vMural() {
     return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + `<div class="feed">${MURAL.map((m) => `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
-      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">Publicado em ${fmtCurto(parse(m.data))} pela coordenação</div></div></article>`).join('')}</div>`;
+      <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${m.data ? `Publicado em ${fmtCurto(parse(m.data))} pela coordenação` : 'Instituto Íris'}</div></div></article>`).join('')}</div>`;
   }
 
   function vOportunidades() {
@@ -529,7 +548,7 @@ body:not(.gated) #gate { display: none; }
       { id: 'info-1900', dias: 'Segundas e quartas', horario: '19:00 às 21:00', vagas: 1 },
       { id: 'info-sab', dias: 'Sábados', horario: '09:00 às 13:00', vagas: 3 },
     ] },
-    { id: 'pilates', nome: 'Pilates', texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', foto: '%%FOTO:pilates%%', turmas: [
+    { id: 'pilates', nome: 'Pilates', resumir: true, texto: 'Exercícios para fortalecer o corpo, melhorar a postura e o bem-estar.', foto: '%%FOTO:pilates%%', turmas: [
       { id: 'pil-1430', dias: 'Segundas e quartas', horario: '14:30 às 15:30', vagas: 0 },
       { id: 'pil-1600', dias: 'Segundas e quartas', horario: '16:00 às 17:00', vagas: 0 },
       { id: 'pil-1800', dias: 'Segundas e quartas', horario: '18:00 às 19:00', vagas: 0 },
@@ -547,7 +566,19 @@ body:not(.gated) #gate { display: none; }
   ];
   const vagasCurso = (c) => c.turmas.reduce((n, t) => n + (t.vagas || 0), 0);
   const turmaTxt = (t) => `${t.dias} · ${t.horario}`;
-  const acharTurma = (cid, tid) => { const c = CURSOS_SITE.find((x) => x.id === cid); return { c, t: c?.turmas.find((x) => x.id === tid) }; };
+  // Cursos com muitas turmas (ex.: Pilates) mostram só o resumo dos horários por dia: primeira aula até a última.
+  function gruposHorario(c) {
+    const g = new Map();
+    for (const t of c.turmas) {
+      const [ini, fim] = t.horario.split(' às ');
+      const x = g.get(t.dias) || { id: 'grupo-' + t.dias, dias: t.dias, ini, fim, vagas: 0 };
+      if (ini < x.ini) x.ini = ini; if (fim > x.fim) x.fim = fim; x.vagas += t.vagas || 0;
+      g.set(t.dias, x);
+    }
+    return [...g.values()].map((x) => ({ id: x.id, dias: x.dias, horario: `${x.ini} até ${x.fim}`, vagas: x.vagas }));
+  }
+  const linhasCurso = (c) => (c.resumir ? gruposHorario(c) : c.turmas);
+  const acharTurma = (cid, tid) => { const c = CURSOS_SITE.find((x) => x.id === cid); return { c, t: c && linhasCurso(c).find((x) => x.id === tid) }; };
 
   // ───── Site aberto (sem login) para quem ainda não é aluno · login só para aluno e equipe ─────
   // No site de verdade estes e-mails vêm das fichas (alunos) e da lista da equipe.
@@ -590,9 +621,9 @@ body:not(.gated) #gate { display: none; }
     const ps = S.vis.pedidos; if (!ps.length) return '';
     return `<section><div class="section-title"><h2>Sua inscrição</h2><span>${esc(S.vis.dados?.nome?.split(' ')[0] || '')}</span></div><div class="stack">${ps.map((p, i) => ({ ...p, i })).reverse().map((p) => {
       const { c, t: tm } = acharTurma(p.curso, p.turma); const k = STI[p.status];
-      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, na barra do site, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
-      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}${tm ? `<span class="small muted" style="display:block;font-family:var(--body);font-weight:600">${esc(turmaTxt(tm))}</span>` : ''}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
-        <div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
+      const txt = { enviada: p.espera ? 'Você está na lista de espera. Quando abrir vaga, a coordenação fala com você pelo WhatsApp.' : 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, na barra do site, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
+      return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}${tm || p.turma === 'qualquer' ? `<span class="small muted" style="display:block;font-family:var(--body);font-weight:600">${tm ? esc(turmaTxt(tm)) : 'Qualquer horário'}</span>` : ''}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
+        <div class="tl">${[p.espera ? 'Lista de espera' : 'Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
         <p class="small" style="margin-top:10px">${txt}</p>
         ${p.status !== 'matriculado' ? `<button class="btn ghost sm" data-avancar="${p.i}" style="margin-top:6px">(protótipo) simular próxima etapa</button>` : ''}</article>`;
     }).join('')}</div></section>`;
@@ -602,12 +633,9 @@ body:not(.gated) #gate { display: none; }
   }
   function cursoCard(c) {
     const p = S.vis.pedidos.find((x) => x.curso === c.id);
-    const v = vagasCurso(c);
-    return `<article class="card op atv">${fotoBox(c.foto, 'aula de ' + c.nome, 'atv-foto')}<div class="row wrapx"><span class="pill ${v ? 'green' : ''}">${v ? plural(v, 'vaga', 'vagas') : 'Turmas cheias no momento'}</span></div>
-      <h3>${esc(c.nome)}</h3><p>${esc(c.texto)}</p>
-      <div class="turmas-site"><span class="small muted" style="font-weight:700">${plural(c.turmas.length, 'turma', 'turmas')}</span>${c.turmas.map((t) => `<div class="ts-row"><span class="grow">${esc(turmaTxt(t))}</span><span class="pill ${t.vagas ? 'green' : ''}">${t.vagas ? plural(t.vagas, 'vaga', 'vagas') : 'Cheia'}</span></div>`).join('')}</div>
-      <div>${p ? '<span class="pill amber">Inscrição enviada · acompanhe acima</span>' : v ? `<button class="btn primary" data-pinsc="${c.id}">Quero me inscrever</button>` : '<span class="small muted">As inscrições abrem quando houver vaga.</span>'}</div></article>`;
+    return cursoBase(c, p ? `<span class="pill amber">${p.espera ? 'Você está na lista de espera · acompanhe acima' : 'Inscrição enviada · acompanhe acima'}</span>` : `<button class="btn primary" data-pinsc="${c.id}">${vagasCurso(c) ? 'Quero me inscrever' : 'Entrar na lista de espera'}</button>`);
   }
+
 
   function postCard(m) {
     return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
@@ -625,7 +653,7 @@ body:not(.gated) #gate { display: none; }
   }
   function vPCursos() {
     // 4. Nossas atividades: fotos das aulas, texto curto e inscrição.
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed">${CURSOS_SITE.slice().sort((a, b) => Number(!!vagasCurso(b)) - Number(!!vagasCurso(a))).map(cursoCard).join('')}</div>`;
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Nossas atividades</div><h1>Cursos gratuitos</h1><p>Escolha um curso com vaga e faça sua inscrição. A coordenação fala com você pelo WhatsApp para combinar a turma.</p></div>${minhasInsc()}<div class="feed cursos-lista">${CURSOS_SITE.slice().sort((a, b) => Number(!!vagasCurso(b)) - Number(!!vagasCurso(a))).map(cursoCard).join('')}</div>`;
   }
   const PROPOSITO = [['book', 'Educação', 'Conhecimento que abre portas.'], ['pulse', 'Saúde', 'Cuidado que transforma vidas.'], ['run', 'Esporte e bem-estar', 'Mais movimento, saúde e qualidade de vida.'], ['brief', 'Trabalho e renda', 'Oportunidades para conquistar autonomia.']];
   function vPSobre() {
@@ -695,12 +723,13 @@ body:not(.gated) #gate { display: none; }
     const c = CURSOS_SITE.find((x) => x.id === cid); const d = S.vis.dados || {}; const t = S.modal.tmp || {};
     const v = (k) => esc(t[k] ?? d[k] ?? '');
     const jaPediu = (id) => S.vis.pedidos.some((p) => p.curso === id);
-    const opcoes = (c ? [c] : CURSOS_SITE.filter((x) => !jaPediu(x.id))).flatMap((x) => x.turmas.filter((tt) => tt.vagas > 0).map((tt) => ({ c: x, t: tt })));
-    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
-      ${c ? `<h2>Inscrição em ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">Escolha a turma e preencha o cadastro rápido.</p>`
+    const opcoes = (c ? [c] : CURSOS_SITE.filter((x) => !jaPediu(x.id))).flatMap((x) => opcoesTurma(x).map((o) => ({ c: x, o })));
+    const soEspera = c && !vagasCurso(c);
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
+      ${c ? `<h2>${soEspera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${soEspera ? 'As turmas estão cheias. Escolha o horário que prefere e preencha o cadastro: a coordenação avisa quando abrir vaga.' : 'Escolha a turma e preencha o cadastro rápido.'}</p>`
         : `<h2>Quero me inscrever</h2><p class="muted small" style="margin:4px 0 14px">Escolha um curso com vaga e preencha o cadastro rápido.</p>`}
       <form id="form-pinsc" class="stack" data-c="${esc(cid || '')}" novalidate>
-        ${opcoes.length ? `<label class="field"><span>${c ? 'Turma' : 'Curso e turma'} <b class="req">*</b></span><select class="input" id="pi-turma">${opcoes.length > 1 ? '<option value="">Escolha</option>' : ''}${opcoes.map(({ c: x, t: tt }) => { const val = `${x.id}|${tt.id}`; return `<option value="${val}"${t.turmaSel === val ? ' selected' : ''}>${c ? '' : esc(x.nome) + ' · '}${esc(turmaTxt(tt))} · ${plural(tt.vagas, 'vaga', 'vagas')}</option>`; }).join('')}</select></label>` : '<div class="empty">Nenhuma turma com vaga aberta agora. Volte em breve!</div>'}
+        ${opcoes.length ? `<label class="field"><span>${c ? 'Turma' : 'Curso e turma'} <b class="req">*</b></span><select class="input" id="pi-turma">${opcoes.length > 1 && !soEspera ? '<option value="">Escolha</option>' : ''}${opcoes.map(({ c: x, o }) => { const val = `${x.id}|${o.val}`; return `<option value="${val}"${t.turmaSel === val ? ' selected' : ''}>${c ? '' : esc(x.nome) + ' · '}${esc(o.txt)}${o.espera && !c ? ' (lista de espera)' : ''}</option>`; }).join('')}</select></label>` : '<div class="empty">Você já se inscreveu em todos os cursos.</div>'}
         ${d.nome ? `<p class="small muted">Seus dados do cadastro já estão preenchidos. Confira e envie.</p>` : '<p class="small muted">Cadastro rápido: leva menos de um minuto.</p>'}
         <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
         <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
@@ -723,9 +752,11 @@ body:not(.gated) #gate { display: none; }
     if (S.modal.erro) return render();
     const { turmaSel: _ts, curso: _c, turma: _t, ...dados } = t;
     S.vis.dados = { ...dados, telefone: fmtTel(dig) };
-    S.vis.pedidos.push({ curso: t.curso, turma: t.turma, status: 'enviada', em: H });
+    const cc = CURSOS_SITE.find((x) => x.id === t.curso); const tt = cc && linhasCurso(cc).find((x) => x.id === t.turma);
+    const espera = t.turma === 'qualquer' || !tt || !tt.vagas;
+    S.vis.pedidos.push({ curso: t.curso, turma: t.turma, espera, status: 'enviada', em: H });
     salvarVis(); S.modal = null; S.pview = 'p-cursos'; render(); try { window.scrollTo(0, 0); } catch {}
-    toast('Inscrição enviada! Acompanhe aqui na aba Cursos.');
+    toast(espera ? 'Pronto! Você está na lista de espera. Acompanhe aqui na aba Cursos.' : 'Inscrição enviada! Acompanhe aqui na aba Cursos.');
   }
 
   // Entrar (a "pessoinha"): só aluno e equipe.
@@ -742,7 +773,7 @@ body:not(.gated) #gate { display: none; }
       <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block">Receber link de acesso</button></form>
       ${L.erro ? `<div style="margin-top:12px">${ERR(L.erro)}</div>` : ''}
       <div class="banner" style="margin-top:12px">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>.</span></div>`;
-    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Entrar">${body}</div></div>`;
+    return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Entrar"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>${body}</div></div>`;
   }
   function enviarEntrar() {
     const L = S.modal; L.email = document.getElementById('ent-email').value.trim().toLowerCase(); L.erro = '';
@@ -828,7 +859,10 @@ body:not(.gated) #gate { display: none; }
       const tel = document.getElementById('insc-tel').value.trim(); const dig = tel.replace(/\D/g, '');
       if (dig.length < 10 || dig.length > 11) { document.getElementById('insc-tel-err').hidden = false; document.getElementById('insc-tel').focus(); return; }
       const obs = document.getElementById('insc-obs').value.trim();
-      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast('Inscrição enviada! A coordenação vai analisar.'); }
+      const turma = document.getElementById('insc-turma').value;
+      if (!turma) { document.getElementById('insc-turma-err').hidden = false; return; }
+      const espera = !vagasCurso(CURSOS_SITE.find((x) => x.id === e.target.dataset.c));
+      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { turma, espera, tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast(espera ? 'Pronto! Você está na lista de espera.' : 'Inscrição enviada! A coordenação vai analisar.'); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
   document.addEventListener('change', (e) => { if (e.target.id === 'who') { S.aluno = e.target.value; render(); } });
