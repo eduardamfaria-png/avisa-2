@@ -642,6 +642,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const v = { painel: vPainel, chamada: vChamada, turmas: vTurmas, inscricoes: vInscricoes, portal: vPortal, financas: vFinancas }[S.view] || vPainel;
     $('#view').innerHTML = v();
     syncPublico();
+    syncPortalAlunos();
     if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   }
 
@@ -1021,6 +1022,58 @@ body.gated .app { grid-template-columns: 1fr; }
     if (JSON.stringify(atual || null) === JSON.stringify(lista)) return;
     clearTimeout(pubTimer);
     pubTimer = setTimeout(() => { put('publico', 'cursos', { lista, atualizadoEm: new Date().toISOString() }).catch(() => {}); }, 1500);
+  }
+
+  // ───── Portal do Aluno: um resumo por e-mail de aluno (só o que ele pode ver) ─────
+  // portalAluno/{email}: nomes, turmas e frequência dos alunos daquele e-mail (irmãos podem dividir o e-mail).
+  // emailsAlunos/{sha256 do e-mail}: só para o site conferir, antes do login, se o e-mail está em alguma ficha.
+  const emailDe = (a) => String(a.email || '').trim().toLowerCase();
+  async function sha256(t) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join(''); }
+  function resumosPortal() {
+    const porEmail = new Map();
+    for (const a of alunosList()) {
+      const e = emailDe(a);
+      if (!/^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(e) || a.exemplo || !isAtivo(a)) continue;
+      (porEmail.get(e) || porEmail.set(e, []).get(e)).push(a);
+    }
+    const chamadas = list('chamadas');
+    const out = {};
+    for (const [e, as] of porEmail) {
+      const turmaIds = [...new Set(as.flatMap((a) => a.turmaIds || []))].filter((id) => get('turmas', id));
+      const turmas = Object.fromEntries(turmaIds.map((id) => { const t = get('turmas', id); return [id, { nome: t.nome || '', curso: cursoKey(t), dias: t.dias || [], horario: t.horario || '', horarioFim: t.horarioFim || '', professor: t.professor || '', cor: t.cor || '#1c2d6b' }]; }));
+      const freq = {};
+      for (const a of as) {
+        freq[a.id] = {};
+        for (const tid of a.turmaIds || []) {
+          if (!turmas[tid]) continue;
+          freq[a.id][tid] = chamadas.filter((c) => c.turmaId === tid && c.registros && c.registros[a.id]).sort((x, y) => String(x.data).localeCompare(String(y.data))).slice(-60).map((c) => ({ d: c.data, v: c.registros[a.id] }));
+        }
+      }
+      out[e] = { alunoIds: as.map((a) => a.id), alunos: as.map((a) => ({ id: a.id, nome: a.nome || '', turmaIds: (a.turmaIds || []).filter((id) => turmas[id]) })), turmas, freq };
+    }
+    return out;
+  }
+  let portalTimer = 0, portalRodando = false;
+  function syncPortalAlunos() {
+    if (S.platform !== 'firebase' || S.mode !== 'db' || !S.canWrite || S.loaded.size < COLS.length || !S.portalPronto || portalRodando) return;
+    clearTimeout(portalTimer);
+    portalTimer = setTimeout(async () => {
+      portalRodando = true;
+      try {
+        const novos = resumosPortal();
+        const atuais = S.data.portalAluno || {};
+        for (const [e, doc] of Object.entries(novos)) {
+          const { atualizadoEm, ...velho } = atuais[e] || {};
+          if (JSON.stringify(velho) !== JSON.stringify(doc)) await put('portalAluno', e, { ...doc, atualizadoEm: new Date().toISOString() });
+        }
+        for (const e of Object.keys(atuais)) if (!novos[e]) await del('portalAluno', e);
+        const hashes = new Set(await Promise.all(Object.keys(novos).map(sha256)));
+        const existentes = S.data.emailsAlunos || {};
+        for (const h of hashes) if (!existentes[h]) await put('emailsAlunos', h, { ok: true });
+        for (const h of Object.keys(existentes)) if (!hashes.has(h)) await del('emailsAlunos', h);
+      } catch (err) { console.warn('Portal do Aluno: não foi possível atualizar', err); }
+      portalRodando = false;
+    }, 2500);
   }
 
   function pedidoRow(p) {
@@ -1840,6 +1893,7 @@ body.gated .app { grid-template-columns: 1fr; }
         for (const doc of snap.docs) next[doc.id] = doc.data();
         S.data[col] = next;
         if (col === 'publico' && !snap.metadata.fromCache) S.publicoPronto = true;
+        if ((col === 'portalAluno' || col === 'emailsAlunos') && !snap.metadata.fromCache) { (S.portalCols ||= new Set()).add(col); S.portalPronto = S.portalCols.size === 2; }
         if (!snap.metadata.fromCache && COLS.includes(col)) { S.loaded.add(col); if (S.loaded.size === COLS.length) { clearTimeout(timer); S.slow = false; } }
         schedule();
       }, () => { if (COLS.includes(col)) S.loaded.add(col); schedule(); });
@@ -1865,7 +1919,7 @@ body.gated .app { grid-template-columns: 1fr; }
       S.gate = ''; S.mode = 'db';
       S.canFinance = backend.canFinance ? await backend.canFinance(S.me.email).catch(() => false) : true;
       if (!subscribed) {
-        subscribed = true; subscribeAll(['fotos', 'config', 'pedidos', 'contatos', 'publico', 'avisos', 'mural', 'oportunidades', 'justificativas'], S.canFinance ? [] : ['lancamentos']);
+        subscribed = true; subscribeAll(['fotos', 'config', 'pedidos', 'contatos', 'publico', 'avisos', 'mural', 'oportunidades', 'justificativas', 'portalAluno', 'emailsAlunos'], S.canFinance ? [] : ['lancamentos']);
         // Completa a lista de e-mails liberados (para quem foi liberado antes da checagem prévia existir).
         setTimeout(() => { const em = S.data.config?.acesso?.emails || []; if (em.length && backend.syncPermitidos) backend.syncPermitidos(em, []).catch(() => {}); }, 4000);
       }

@@ -414,7 +414,7 @@ body:not(.gated) #gate { display: none; }
     const nx = proximaAula(a);
     const av = avisosAtivos(a);
     const resumo = a.turmas.map((t) => ({ t, f: freq(a.hist[t]) }));
-    return header(fmtLongo(hoje), `Olá, ${esc(a.nome.split(' ')[0])}!`, '') + demoBanner() + `
+    return header(fmtLongo(hoje), `Olá, ${esc(a.nome.split(' ')[0])}!`, '') + (REAL ? '' : demoBanner()) + `
       <section><div class="section-title"><h2>Avisos</h2><span>${plural(av.length, 'aviso', 'avisos')}</span></div>
         ${av.length ? `<div class="stack">${av.map(avisoHtml).join('')}</div>` : '<div class="empty">Nenhum aviso no momento.</div>'}</section>
       <div class="grid2">
@@ -476,7 +476,7 @@ body:not(.gated) #gate { display: none; }
       <h2>Justificar falta</h2><p class="muted small" style="margin:4px 0 14px">${esc(TURMAS[tid].nome)} · ${DIAS_LONGO[d.getDay()]}, ${fmtCurto(d)}</p>
       <form id="form-just" class="stack" data-k="${esc(k)}">
         <label class="field"><span>Motivo</span><textarea class="input" id="just-motivo" rows="3" required placeholder="Ex.: consulta médica, problema de transporte…"></textarea></label>
-        <label class="field"><span>Atestado ou foto (opcional)</span><input class="input" type="file" id="just-arq" accept="image/*,application/pdf"></label>
+        <label class="field"><span>Atestado ou foto (opcional)</span><input class="input" type="file" id="just-arq" accept="${REAL ? 'image/*' : 'image/*,application/pdf'}"></label>
         <p class="small muted">A coordenação avalia a justificativa. Só depois de aceita a falta passa a contar como justificada.</p>
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit">Enviar justificativa</button></div>
       </form></div></div>`;
@@ -526,7 +526,7 @@ body:not(.gated) #gate { display: none; }
 
 
   function vMural() {
-    return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + `<div class="feed">${MURAL.map((m) => `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
+    return header('Mural', 'Acontece no Íris', 'Fotos e novidades do instituto.') + `<div class="feed">${MURAL.map((m) => `<article class="card post">${m.img || m.foto ? `<div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${esc(m.img)}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>` : ''}
       <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${m.data ? `Publicado em ${fmtCurto(parse(m.data))} pela coordenação` : 'Instituto Íris'}</div></div></article>`).join('')}</div>`;
   }
 
@@ -538,7 +538,7 @@ body:not(.gated) #gate { display: none; }
       <div class="chips">${tipos.map((t) => `<button class="chip${S.opTipo === t ? ' on' : ''}" data-op="${t}">${t}</button>`).join('')}</div>
       ${lista.length ? `<div class="feed">${lista.map((o) => { const dias = Math.round((parse(o.prazo) - hoje) / 864e5); return `<article class="card op"><div class="row wrapx"><span class="pill ${cor[o.tipo]}">${o.tipo}</span><span class="small grow" style="text-align:right">${dias <= 7 ? `<b style="color:var(--red)">Termina em ${plural(dias, 'dia', 'dias')}</b>` : `Até ${fmtCurto(parse(o.prazo))}`}</span></div>
         <h3>${esc(o.titulo)}</h3><p>${esc(o.texto)}</p><div class="small muted">Para quem: ${esc(o.quem)}</div>
-        <div><button class="btn primary" data-saber="${esc(o.link || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
+        <div><button class="btn primary" data-saber="${esc(o.link || '')}" data-opid="${esc(o.id || '')}">Acessar inscrição ↗</button> <span class="small muted">no ${esc(o.onde)}</span></div></article>`; }).join('')}</div>` : '<div class="empty">Nenhuma oportunidade desse tipo agora.</div>'}`;
   }
 
   // Cursos reais do Instituto (cópia das turmas do site de gestão em 26/11).
@@ -584,8 +584,11 @@ body:not(.gated) #gate { display: none; }
   let FB = null;
   async function iniciarBanco() {
     try {
-      const [{ initializeApp }, fs] = await Promise.all([import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')]);
-      FB = { db: fs.getFirestore(initializeApp(window.IRIS_FIREBASE_CONFIG)), ...fs };
+      const [{ initializeApp }, fs, au] = await Promise.all([import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js')]);
+      const app = initializeApp(window.IRIS_FIREBASE_CONFIG);
+      FB = { db: fs.getFirestore(app), auth: au.getAuth(app), au, ...fs };
+      FB.auth.languageCode = 'pt';
+      iniciarLoginAluno();
       fs.onSnapshot(fs.doc(FB.db, 'publico', 'cursos'), (snap) => {
         const d = snap.exists() ? snap.data() : null;
         if (d && Array.isArray(d.lista) && d.lista.length) { CURSOS_SITE.splice(0, CURSOS_SITE.length, ...cursosDoBanco(d.lista)); render(); }
@@ -598,6 +601,67 @@ body:not(.gated) #gate { display: none; }
       atualizarSituacoes();
     } catch (e) { console.warn('Sem conexão com o banco', e); }
   }
+  // ───── Portal do Aluno de verdade: login pelo link do e-mail e dados do resumo do aluno ─────
+  const sha256 = async (t) => { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join(''); };
+  const nomeProf = (v) => (v ? 'Prof. ' + String(v).split(' ').map(capitalizar).join(' ') : '');
+  let pararAluno = [];
+  async function iniciarLoginAluno() {
+    const { au, auth } = FB;
+    try {
+      if (au.isSignInWithEmailLink(auth, location.href)) {
+        let email = lerLS('portal:loginEmail', '');
+        if (!email) email = (window.prompt('Para terminar a entrada, confirme seu e-mail:') || '').trim().toLowerCase();
+        if (email) await au.signInWithEmailLink(auth, email, location.href);
+        try { history.replaceState(null, '', location.pathname); } catch {}
+      }
+    } catch (e) { toast('Este link já foi usado ou expirou. Peça um novo em Entrar → Sou aluno.'); try { history.replaceState(null, '', location.pathname); } catch {} }
+    au.onAuthStateChanged(auth, async (u) => {
+      pararAluno.forEach((f) => f()); pararAluno = [];
+      const email = String(u?.email || '').toLowerCase();
+      if (!u || !email || !u.emailVerified) { S.carregandoAluno = false; if (S.auth) { S.auth = null; } gravarLS('portal:eraAluno', false); render(); return; }
+      try {
+        const snap = await FB.getDoc(FB.doc(FB.db, 'portalAluno', email));
+        // Quem não é aluno (ex.: alguém da equipe logado na gestão) continua vendo o site aberto, sem sair da conta.
+        if (!snap.exists()) { S.carregandoAluno = false; gravarLS('portal:eraAluno', false); render(); return; }
+        carregarAluno(email, snap.data());
+        assinarDadosAluno(email);
+      } catch (e) { S.carregandoAluno = false; render(); }
+    });
+  }
+  function carregarAluno(email, r) {
+    for (const k of Object.keys(TURMAS)) delete TURMAS[k];
+    for (const [id, t] of Object.entries(r.turmas || {})) TURMAS[id] = { nome: INFO_CURSOS[t.curso]?.nome || capitalizar(String(t.nome || '').split(' ')[0]), curso: t.curso, dias: t.dias || [], inicio: t.horario || '--:--', fim: t.horarioFim || '--:--', professor: nomeProf(t.professor), local: 'Instituto Íris', cor: t.cor || '#1c2d6b' };
+    ALUNOS.splice(0, ALUNOS.length, ...(r.alunos || []).map((a) => ({ id: a.id, nome: a.nome, turmas: (a.turmaIds || []).filter((t) => TURMAS[t]), hist: Object.fromEntries((a.turmaIds || []).map((t) => [t, ((r.freq || {})[a.id]?.[t] || []).map((x) => ({ data: x.d, v: x.v }))])) })));
+    EMAIL_ALUNOS[email] = ALUNOS.map((a) => a.id);
+    if (!ALUNOS.some((a) => a.id === S.aluno)) S.aluno = ALUNOS[0]?.id;
+    S.auth = { tipo: 'aluno', email }; S.carregandoAluno = false; gravarLS('portal:eraAluno', true);
+    render();
+  }
+  function assinarDadosAluno(email) {
+    const { db } = FB; const o = (ref, cb) => pararAluno.push(FB.onSnapshot(ref, cb, () => {}));
+    o(FB.doc(db, 'portalAluno', email), (snap) => { if (snap.exists()) carregarAluno(email, snap.data()); });
+    o(FB.collection(db, 'avisos'), (snap) => { AVISOS.splice(0, AVISOS.length, ...snap.docs.map((d) => { const x = d.data(); return { id: d.id, titulo: x.titulo || '', texto: x.texto || '', ate: x.ate || '', urgente: !!x.importante, turma: x.turmaId || undefined }; })); render(); });
+    o(FB.collection(db, 'mural'), (snap) => { MURAL.splice(0, MURAL.length, ...snap.docs.map((d) => d.data()).sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).map((m) => ({ titulo: m.titulo || '', texto: m.texto || '', img: m.foto || '', cor: '#1c2d6b', data: String(m.criadoEm || '').slice(0, 10) }))); render(); });
+    o(FB.collection(db, 'oportunidades'), (snap) => { OPORTUNIDADES.splice(0, OPORTUNIDADES.length, ...snap.docs.map((d) => { const x = d.data(); let onde = 'site da inscrição'; try { onde = new URL(x.link).hostname.replace(/^www\./, ''); } catch {} return { id: d.id, tipo: x.tipo || 'Curso', titulo: x.titulo || '', texto: x.texto || '', prazo: x.prazo || H, quem: x.quem || 'Todos', link: x.link || '', onde }; })); render(); });
+    o(FB.query(FB.collection(db, 'justificativas'), FB.where('email', '==', email)), (snap) => {
+      S.just = {};
+      for (const d of snap.docs) { const x = d.data(); S.just[`${x.alunoId}|${x.turmaId}|${x.data}`] = { motivo: x.motivo || '', arquivo: x.anexo ? 'foto' : '', status: x.status || 'pendente', obs: x.resposta || '' }; }
+      render();
+    });
+    S.insc = lerLS('portal:insc', {});
+    (async () => { let mudou = false; for (const v of Object.values(S.insc)) { if (!v.pid) continue; try { const snap = await FB.getDoc(FB.doc(db, 'acompanhamento', v.pid)); if (snap.exists()) { const st = { recusado: 'recusada' }[snap.data().status] || 'pendente'; const resp = snap.data().resposta || ''; if (st !== v.status || resp !== (v.resp || '')) { v.status = st; v.resp = resp; mudou = true; } } } catch {} } if (mudou) { gravarLS('portal:insc', S.insc); render(); } })();
+  }
+  function fotoReduzida(file) {
+    return new Promise((ok, falha) => {
+      if (!file) return ok('');
+      if (!/^image\//.test(file.type)) return falha(new Error('tipo'));
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 1200 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.7)); };
+      img.onerror = () => falha(new Error('foto'));
+      img.src = url;
+    });
+  }
+
   // Situação dos pedidos feitos neste aparelho (enviada, em análise, matriculado, recusado).
   async function atualizarSituacoes() {
     if (!FB) return;
@@ -655,6 +719,7 @@ body:not(.gated) #gate { display: none; }
   const gravarLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   // Quem entrou fica salvo no aparelho: na próxima vez o site já abre na tela certa.
   S.auth = REAL ? null : lerLS('portal:auth', null);
+  S.carregandoAluno = REAL && !!lerLS('portal:eraAluno', false);
   // Versão do protótipo que já abre na tela do aluno (link separado para mostrar à coordenação).
   if (!S.auth && window.PORTAL_INICIO === 'aluno') S.auth = { tipo: 'aluno', email: 'familia.souza@exemplo.com' };
   if (S.auth?.tipo === 'aluno' && EMAIL_ALUNOS[S.auth.email]) S.aluno = EMAIL_ALUNOS[S.auth.email][0];
@@ -692,7 +757,7 @@ body:not(.gated) #gate { display: none; }
 
 
   function postCard(m) {
-    return `<article class="card post"><div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${m.img}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>
+    return `<article class="card post">${m.img || m.foto ? `<div class="foto" style="background:linear-gradient(135deg, ${m.cor}, color-mix(in srgb, ${m.cor} 55%, #000))">${m.img ? `<img src="${esc(m.img)}" alt="${esc(m.titulo)}">` : `${esc(m.titulo)}<small>${esc(m.foto)} (exemplo)</small>`}</div>` : ''}
       <div class="body"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="foot">${fmtCurto(parse(m.data))} · Instituto Íris</div></div></article>`;
   }
   function vPInicio() {
@@ -832,20 +897,29 @@ body:not(.gated) #gate { display: none; }
     const L = S.modal; let body;
     const voltar = '<button class="btn ghost sm" data-ent="voltar">← Voltar</button>';
     if (L.etapa === 'enviado') body = `${voltar}<h2>Confira seu e-mail</h2><p style="margin-top:6px">Enviamos um link de acesso para <b>${esc(L.email)}</b>. Toque nele para entrar. Depois disso você continua conectado(a) neste aparelho.</p>
-      <button class="btn primary block" data-ent="abrir" style="margin-top:14px">Simular: abrir o link do e-mail</button><p class="small faint" style="margin-top:6px">No protótipo não chega e-mail de verdade: use o botão acima.</p>`;
+      ${REAL ? '<p class="small muted" style="margin-top:8px">Não chegou? Veja a caixa de spam ou lixo eletrônico. Abra o link neste mesmo aparelho.</p>' : `<button class="btn primary block" data-ent="abrir" style="margin-top:14px">Simular: abrir o link do e-mail</button><p class="small faint" style="margin-top:6px">No protótipo não chega e-mail de verdade: use o botão acima.</p>`}`;
     else if (!L.modo) body = `<h2>Entrar</h2><p class="muted small" style="margin:4px 0 14px">Como você quer entrar?</p><div class="stack">
       <button class="choice" data-ent="aluno"><span class="ic">${icon('book')}</span><span class="grow"><b>Sou aluno</b><small>Ver minhas aulas, frequência e avisos</small></span></button>
       <button class="choice" data-ent="equipe"><span class="ic">${icon('check')}</span><span class="grow"><b>Sou da equipe</b><small>Coordenação e professores</small></span></button>
       <button class="choice" data-ent="naoaluno"><span class="ic">${icon('plus')}</span><span class="grow"><b>Não sou aluno</b><small>Quero escolher um curso e me inscrever</small></span></button></div>`;
-    else if (REAL && L.modo === 'aluno') body = `${voltar}<h2>Portal do Aluno</h2><p style="margin-top:8px">O Portal do Aluno está chegando! Em breve você vai poder ver suas aulas, sua frequência e os avisos do Íris por aqui.</p><p class="small muted" style="margin-top:8px">Enquanto isso, qualquer dúvida fale com a coordenação.</p>`;
     else body = `${voltar}<h2>${L.modo === 'aluno' ? 'Sou aluno' : 'Sou da equipe'}</h2><p class="muted small" style="margin:4px 0 14px">${L.modo === 'aluno' ? 'Digite o e-mail que você deu na sua ficha de inscrição.' : 'Digite seu e-mail da equipe.'} Vamos enviar um link para você entrar, sem senha.</p>
-      <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block">Receber link de acesso</button></form>
+      <form id="form-entrar" class="stack" novalidate><input class="input" type="email" id="ent-email" autocomplete="email" placeholder="seu@email.com" value="${esc(L.email || '')}"><button class="btn primary block"${L.enviando ? ' disabled' : ''}>${L.enviando ? 'Enviando…' : 'Receber link de acesso'}</button></form>
       ${L.erro ? `<div style="margin-top:12px">${ERR(L.erro)}</div>` : ''}
       ${REAL ? '' : `<div class="banner" style="margin-top:12px">${icon('info')}<span><b>Protótipo.</b> Para testar: aluno <b>familia.souza@exemplo.com</b> · equipe <b>coordenacao@exemplo.com</b>.</span></div>`}`;
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Entrar"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>${body}</div></div>`;
   }
-  function enviarEntrar() {
+  async function enviarEntrar() {
     const L = S.modal; L.email = document.getElementById('ent-email').value.trim().toLowerCase(); L.erro = '';
+    if (REAL && L.modo === 'aluno' && okEmail(L.email)) {
+      if (!FB) { L.erro = 'Sem conexão agora. Verifique a internet e tente de novo.'; return render(); }
+      L.enviando = true; render();
+      try {
+        const existe = (await FB.getDoc(FB.doc(FB.db, 'emailsAlunos', await sha256(L.email)))).exists();
+        if (!existe) L.erro = '<b>Este e-mail não está na ficha de nenhum aluno.</b><br>Confira se digitou certo. Se continuar dando erro, fale com a coordenação para conferir o e-mail da sua ficha.';
+        else { await FB.au.sendSignInLinkToEmail(FB.auth, L.email, { url: location.origin + '/', handleCodeInApp: true }); gravarLS('portal:loginEmail', L.email); L.etapa = 'enviado'; }
+      } catch (e) { L.erro = 'Não foi possível enviar o link agora. Tente de novo em alguns minutos.'; }
+      L.enviando = false; return render();
+    }
     if (!okEmail(L.email)) L.erro = 'Digite um e-mail válido, como nome@gmail.com.';
     else if (L.modo === 'aluno' && !EMAIL_ALUNOS[L.email]) L.erro = '<b>Este e-mail não está na ficha de nenhum aluno.</b><br>Confira se digitou certo. Se continuar dando erro, fale com a coordenação para conferir o e-mail da sua ficha.';
     else if (L.modo === 'equipe' && !EMAIL_EQUIPE.includes(L.email)) L.erro = '<b>Este e-mail não tem acesso à área da equipe.</b><br>Confira se digitou certo.';
@@ -863,6 +937,7 @@ body:not(.gated) #gate { display: none; }
   const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Quem somos', 'info'], ['p-parceiros', 'Parceiros', 'heart']];
   const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
   function render() {
+    if (S.carregandoAluno) { document.body.classList.add('gated'); $('#gate').innerHTML = `<div class="gate"><div class="card gate-card"><div class="gate-logo">${LOGO}</div><p class="muted" style="text-align:center">Carregando seu portal…</p></div></div>`; return; }
     const eq = S.auth?.tipo === 'equipe';
     document.body.classList.toggle('gated', eq);
     $('#gate').innerHTML = eq ? telaEquipe() : '';
@@ -897,14 +972,16 @@ body:not(.gated) #gate { display: none; }
       else { L.modo = v; L.erro = ''; }
       render(); document.getElementById('ent-email')?.focus(); return;
     }
-    if (e.target.closest('[data-sair]')) { S.auth = null; gravarLS('portal:auth', null); S.pview = 'p-inicio'; render(); return; }
+    if (e.target.closest('[data-sair]')) { if (REAL && FB) { FB.au.signOut(FB.auth).catch(() => {}); gravarLS('portal:eraAluno', false); } S.auth = null; gravarLS('portal:auth', null); S.pview = 'p-inicio'; render(); return; }
     const av = e.target.closest('[data-avancar]');
     if (av) { const p = S.vis.pedidos[Number(av.dataset.avancar)]; p.status = p.status === 'enviada' ? 'analise' : 'matriculado'; salvarVis(); render(); return; }
     const pi = e.target.closest('[data-pinsc]'); if (pi) { S.modal = { tipo: 'pinsc', c: pi.dataset.pinsc }; render(); return; }
     if (e.target.closest('[data-insta]')) { if (REAL) window.open('https://www.instagram.com/instituto__iris/', '_blank', 'noopener'); else toast('No site de verdade, abre o Instagram @instituto__iris.'); return; }
     const op = e.target.closest('[data-op]');
     if (op) { S.opTipo = op.dataset.op; render(); return; }
-    const sb = e.target.closest('[data-saber]'); if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
+    const sb = e.target.closest('[data-saber]');
+    if (sb && REAL) { if (sb.dataset.saber) window.open(sb.dataset.saber, '_blank', 'noopener'); if (FB && sb.dataset.opid && S.aluno) FB.updateDoc(FB.doc(FB.db, 'oportunidades', sb.dataset.opid), { [`cliques.${S.aluno}`]: FB.increment(1) }).catch(() => {}); return; }
+    if (sb) { toast(`No portal de verdade, este botão abre ${sb.dataset.saber || 'o site da inscrição'} (e o Íris conta o acesso).`); return; }
     const j = e.target.closest('[data-just]'); if (j) { S.modal = { tipo: 'just', k: j.dataset.just }; render(); document.getElementById('just-motivo')?.focus(); return; }
     const ins = e.target.closest('[data-insc]'); if (ins) { S.modal = { tipo: 'insc', c: ins.dataset.insc }; render(); return; }
     const c = e.target.closest('[data-close]'); if (c && (e.target === c || c.tagName === 'BUTTON')) { S.modal = null; render(); }
@@ -925,6 +1002,15 @@ body:not(.gated) #gate { display: none; }
         .then(() => { S.assocEnviado = true; fim(); }, () => { S.assocErro = 'Não foi possível enviar agora. Verifique a internet e tente de novo.'; fim(); });
       return;
     }
+    if (e.target.id === 'form-just' && REAL) {
+      const form = e.target; const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
+      const [aid, tid, data] = form.dataset.k.split('|');
+      const btn = form.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+      fotoReduzida(document.getElementById('just-arq').files[0]).then((anexo) => FB.setDoc(FB.doc(FB.db, 'justificativas', `${aid}_${tid}_${data}`), { alunoId: aid, turmaId: tid, data, motivo: motivo.slice(0, 1000), ...(anexo ? { anexo } : {}), email: S.auth.email, status: 'pendente', enviadoEm: new Date().toISOString() }))
+        .then(() => { S.modal = null; render(); toast('Justificativa enviada para a coordenação avaliar.'); },
+          (err) => { if (btn) { btn.disabled = false; btn.textContent = 'Enviar justificativa'; } toast(err && err.message === 'tipo' ? 'Envie uma foto (JPG ou PNG) do atestado.' : 'Não foi possível enviar agora. Tente de novo.'); });
+      return;
+    }
     if (e.target.id === 'form-just') {
       const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
       const f = document.getElementById('just-arq').files[0];
@@ -937,8 +1023,15 @@ body:not(.gated) #gate { display: none; }
       const obs = document.getElementById('insc-obs').value.trim();
       const turma = document.getElementById('insc-turma').value;
       if (!turma) { document.getElementById('insc-turma-err').hidden = false; return; }
-      const espera = !vagasCurso(CURSOS_SITE.find((x) => x.id === e.target.dataset.c));
-      S.insc[`${S.aluno}|${e.target.dataset.c}`] = { turma, espera, tel: fmtTel(dig), obs, status: 'pendente' }; S.modal = null; render(); toast(espera ? 'Pronto! Você está na lista de espera.' : 'Inscrição enviada! A coordenação vai analisar.'); }
+      const cc = CURSOS_SITE.find((x) => x.id === e.target.dataset.c);
+      const espera = !vagasCurso(cc);
+      const k = `${S.aluno}|${e.target.dataset.c}`; const fim = (pid) => { S.insc[k] = { turma, espera, tel: fmtTel(dig), obs, status: 'pendente', pid }; if (REAL) gravarLS('portal:insc', S.insc); S.modal = null; render(); toast(espera ? 'Pronto! Você está na lista de espera.' : 'Inscrição enviada! A coordenação vai analisar.'); };
+      if (!REAL) return fim('');
+      const tt = cc && linhasCurso(cc).find((x) => x.id === turma);
+      const btn = e.target.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+      FB.addDoc(FB.collection(FB.db, 'pedidos'), { nome: aluno().nome.slice(0, 120), email: S.auth.email, telefone: fmtTel(dig), curso: cc.id, cursoNome: cc.nome, turmaId: turma, turmaTxt: tt ? turmaTxt(tt) : turma === 'qualquer' ? 'Qualquer horário' : '', espera, origem: 'site', status: 'pendente', enviadoEm: new Date().toISOString() })
+        .then((ref) => fim(ref.id), () => { if (btn) { btn.disabled = false; btn.textContent = espera ? 'Entrar na lista de espera' : 'Enviar inscrição'; } toast('Não foi possível enviar agora. Tente de novo.'); });
+    }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.modal) { S.modal = null; render(); } });
   if (REAL) iniciarBanco();

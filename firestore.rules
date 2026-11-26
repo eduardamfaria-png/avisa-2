@@ -76,6 +76,44 @@ service cloud.firestore {
         && txt(request.resource.data.enviadoEm, 30);
     }
 
+    // ── Portal do Aluno (aluno entra com o e-mail da ficha, por link no e-mail) ──
+    function resumoAluno() { return /databases/$(database)/documents/portalAluno/$(email()); }
+    function ehAluno() { return emailVerificado() && exists(resumoAluno()); }
+    function meusAlunos() { return get(resumoAluno()).data.alunoIds; }
+    // Resumo do aluno (nome, turmas e frequência): só o dono do e-mail lê. Só a equipe escreve.
+    match /portalAluno/{em} {
+      allow get: if emailVerificado() && em == email();
+    }
+    // "Impressão digital" dos e-mails de alunos: o site confere UM e-mail antes de mandar o link.
+    match /emailsAlunos/{hash} {
+      allow get: if true;
+    }
+    // Avisos: alunos leem.
+    match /avisos/{id} {
+      allow read: if ehAluno();
+    }
+    // Oportunidades: alunos leem e só podem somar o próprio clique no link.
+    match /oportunidades/{id} {
+      allow read: if ehAluno();
+      allow update: if ehAluno()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cliques'])
+        && request.resource.data.cliques.diff(resource.data.get('cliques', {})).affectedKeys().hasOnly(meusAlunos());
+    }
+    // Justificativa de falta: o aluno envia uma por falta (o código é aluno_turma_data) e vê só as dele.
+    match /justificativas/{id} {
+      allow read: if emailVerificado() && resource.data.email == email();
+      allow create: if ehAluno()
+        && request.resource.data.keys().hasOnly(['alunoId', 'turmaId', 'data', 'motivo', 'anexo', 'email', 'status', 'enviadoEm'])
+        && request.resource.data.alunoId in meusAlunos()
+        && id == request.resource.data.alunoId + '_' + request.resource.data.turmaId + '_' + request.resource.data.data
+        && request.resource.data.email == email()
+        && request.resource.data.status == 'pendente'
+        && txt(request.resource.data.motivo, 1000) && request.resource.data.motivo.size() > 0
+        && txt(request.resource.data.turmaId, 80) && txt(request.resource.data.data, 10)
+        && (!('anexo' in request.resource.data) || txt(request.resource.data.anexo, 900000))
+        && txt(request.resource.data.enviadoEm, 30);
+    }
+
     // Só a "impressão digital" dos e-mails liberados: qualquer um pode perguntar por UM
     // e-mail (para avisar antes de mandar o link), mas ninguém de fora lista ou altera.
     match /permitidos/{hash} {
