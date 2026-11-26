@@ -498,14 +498,14 @@ body:not(.gated) #gate { display: none; }
   const ERR = (h) => `<div class="banner err"><span>${h}</span></div>`;
 
   function pHeader() {
-    return `<div class="top">${LOGO}<div class="grow"><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div><button class="user-btn" data-entrar="1" aria-label="Entrar (alunos e equipe)">${icon('user')}<span>Entrar</span></button></div>`;
+    return `<div class="top">${LOGO}<div class="grow"><b>Instituto Íris</b><small>Aulas gratuitas em Éden</small></div></div>`;
   }
   const STI = { enviada: 0, analise: 1, matriculado: 2 };
   function minhasInsc() {
     const ps = S.vis.pedidos; if (!ps.length) return '';
     return `<section><div class="section-title"><h2>Sua inscrição</h2><span>${esc(S.vis.dados?.nome?.split(' ')[0] || '')}</span></div><div class="stack">${ps.map((p, i) => ({ ...p, i })).reverse().map((p) => {
       const c = CURSOS.find((x) => x.id === p.curso); const k = STI[p.status];
-      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, no topo, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
+      const txt = { enviada: 'Recebemos sua inscrição. A coordenação vai analisar.', analise: `A coordenação está analisando e vai falar com você pelo WhatsApp <b class="num">${esc(S.vis.dados?.telefone || '')}</b>.`, matriculado: 'Parabéns, você foi matriculado(a)! Agora toque em <b>Entrar</b>, na barra do site, e use este mesmo e-mail para ver suas aulas e sua frequência.' }[p.status];
       return `<article class="card pad"><div class="row wrapx"><h3 class="grow" style="font-size:17px">${esc(c.nome)}</h3><span class="small muted">enviada em ${fmtCurto(parse(p.em))}</span></div>
         <div class="tl">${['Enviada', 'Em análise', 'Matriculado(a)'].map((l, j) => `<div class="${j <= k ? 'on' : ''}"><i></i>${l}</div>`).join('')}</div>
         <p class="small" style="margin-top:10px">${txt}</p>
@@ -583,7 +583,7 @@ body:not(.gated) #gate { display: none; }
     const t = S.modal.tmp = { nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
     const dig = t.telefone.replace(/\D/g, '');
     const falta = [!t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
-    S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, no topo, para se inscrever pelo Portal do Aluno.' : '';
+    S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
     if (S.modal.erro) return render();
     S.vis.dados = { ...t, telefone: fmtTel(dig) };
     S.vis.pedidos.push({ curso: form.dataset.c, status: 'enviada', em: H });
@@ -634,9 +634,10 @@ body:not(.gated) #gate { display: none; }
     const nav = pub ? PNAV : NAV; const cur = pub ? S.pview : S.view;
     const dots = pub ? {} : { inicio: avisosAtivos(aluno()).length };
     const btn = ([id, l, ic]) => `<button class="tab${cur === id ? ' on' : ''}" data-nav="${id}" aria-current="${cur === id ? 'page' : 'false'}">${icon(ic)}<span>${l}</span>${dots[id] ? `<span class="dot num">${dots[id]}</span>` : ''}</button>`;
-    $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
-    $('#tabs').innerHTML = nav.map(btn).join('');
-    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}<div class="side-foot">${pub ? `<button class="btn block" data-entrar="1">${icon('user')}Entrar</button><p class="small faint" style="margin-top:6px">Para alunos e equipe</p>` : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
+    const entrarTab = pub ? `<button class="tab" data-entrar="1" aria-label="Entrar (alunos e equipe)">${icon('user')}<span>Entrar</span></button>` : '';
+    $('#tabs').style.gridTemplateColumns = `repeat(${nav.length + (pub ? 1 : 0)}, 1fr)`;
+    $('#tabs').innerHTML = nav.map(btn).join('') + entrarTab;
+    $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}${entrarTab}<div class="side-foot">${pub ? '<p class="small faint">Entrar: só para alunos e equipe</p>' : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
     const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros };
     $('#view').innerHTML = (V[cur] || (pub ? vPInicio : vInicio))();
     const M = S.modal;
