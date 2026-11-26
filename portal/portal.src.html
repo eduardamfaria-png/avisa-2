@@ -221,9 +221,9 @@ textarea.input { resize: vertical; }
 .sub { font-size: 17px; color: var(--gold-ink); font-weight: 700; }
 .tit { font-size: 23px; font-weight: 800; }
 .historia { padding: 16px; background: linear-gradient(180deg, var(--surface), var(--gold-soft)); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
-.historia .retrato { aspect-ratio: 3 / 4; object-position: center 20%; max-width: 280px; justify-self: center; border: 3px solid var(--gold); }
+.historia .retrato { aspect-ratio: 4 / 3; object-position: center 30%; max-width: 440px; justify-self: center; border: 3px solid var(--gold); }
 .historia .destaque { color: var(--gold-ink); font-weight: 700; font-style: italic; }
-@media (min-width: 860px) { .inst { grid-template-columns: 1fr 1.1fr; align-items: center; gap: 28px; } .historia { grid-template-columns: 280px 1fr; } }
+@media (min-width: 860px) { .inst { grid-template-columns: 1fr 1.1fr; align-items: center; gap: 28px; } .historia { grid-template-columns: 440px 1fr; } }
 .mensagem { padding: 22px 18px; background: var(--navy); border-color: var(--navy); color: var(--navy-ink); }
 .mensagem .eyebrow { color: var(--gold); }
 .mensagem blockquote { margin: 12px 0 0; padding-left: 16px; border-left: 3px solid var(--gold); display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.55; }
@@ -526,7 +526,7 @@ body:not(.gated) #gate { display: none; }
   const BAIRROS = ['Éden', 'Vilar dos Teles', 'Coelho da Rocha', 'Jardim Meriti', 'Centro'];
   const COMO = ['Instagram', 'Indicação', 'WhatsApp', 'Escola', 'Na rua / evento', 'Outro'];
   // Fotos do site aberto: enquanto estiverem vazias, aparece um quadro dizendo qual foto vai ali.
-  const FOTOS = { hero: '%%FOTO:inauguracao%%', fachada: '%%FOTO:fachada%%', iris: '%%FOTO:iris%%', fundador: '%%FOTO:fundador%%' };
+  const FOTOS = { hero: '%%FOTO:inauguracao%%', fachada: '%%FOTO:fachada%%', iris: '%%FOTO:iris-eduardo%%', fundador: '%%FOTO:fundador%%' };
   // Apoiadores reais do Íris. "logo": imagem do logo (entra quando a coordenação enviar o arquivo de cada um).
   const PARCEIROS = [
     { nome: 'Shine Rio', texto: 'Empresa de serviços do Rio de Janeiro.', cor: '#1c2d6b', logo: '%%PARC:shine-rio%%' },
@@ -604,7 +604,7 @@ body:not(.gated) #gate { display: none; }
           <p>Oferecemos atividades gratuitas e trabalhamos para ampliar cada vez mais nossos projetos, promovendo inclusão, conhecimento, bem-estar e qualidade de vida.</p>
           <p><b>Aqui, todos são bem-vindos!</b></p></div></section>
 
-      <section class="card inst historia">${fotoBox(FOTOS.iris, 'Íris, mãe do fundador (fundo claro, detalhe dourado)', 'inst-foto retrato')}
+      <section class="card inst historia">${fotoBox(FOTOS.iris, 'Íris com o filho, Eduardo Faria', 'inst-foto retrato')}
         <div class="inst-txt"><div class="eyebrow">Nossa história</div><h2 class="tit">Um nome que carrega amor e propósito</h2>
           <p>O Instituto Íris recebeu esse nome em homenagem à mãe de seu fundador, Eduardo Faria.</p>
           <p>Uma homenagem que ganhou um propósito ainda maior: cuidar de pessoas, criar oportunidades e contribuir para que outras famílias tenham uma vida melhor.</p>
