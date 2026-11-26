@@ -539,14 +539,16 @@ body:not(.gated) #gate { display: none; }
       <section class="card pad row wrapx"><span class="grow">Acompanhe as novidades no Instagram <b>@instituto__iris</b></span><button class="btn" data-insta="1">Abrir Instagram ↗</button></section>`;
   }
   function vPParceiros() {
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Parceiros</div><h1>Quem apoia o Íris</h1><p>Empresas e pessoas que tornam os cursos gratuitos possíveis. (Exemplos: a coordenação cadastra os parceiros reais.)</p></div>
+    return pHeader() + `<div class="page-head"><div class="eyebrow">Parceiros e patrocinadores</div><h1>Quem apoia o Íris</h1><p>Empresas e pessoas que tornam os cursos gratuitos possíveis. (Exemplos: a coordenação cadastra os parceiros reais.)</p></div>
+      <button class="btn gold" data-ir="associado" style="align-self:flex-start">Quero ser um associado</button>
       <div class="feed">${PARCEIROS.map((p) => `<article class="card pad parceiro" style="--c:${p.cor}"><span class="pl">${esc(p.nome.split(' ').map((w) => w[0]).slice(0, 2).join(''))}</span><div class="grow"><span class="pill">${esc(p.tipo)}</span><h3>${esc(p.nome)}</h3><p class="small muted">${esc(p.texto)}</p></div></article>`).join('')}</div>
-      <article class="card pad cta"><h3>Sua empresa também pode apoiar</h3><button class="btn primary" data-nav="p-associado" style="margin-top:10px">Seja um associado</button></article>`;
+      ${assocSecao()}`;
   }
-  function vPAssociado() {
-    if (S.assocEnviado) return pHeader() + `<section class="card pad" style="text-align:center"><h1 style="font-size:24px">Obrigado!</h1><p class="muted" style="margin-top:6px">Recebemos seu contato. A coordenação vai falar com você em breve.</p><button class="btn" data-nav="p-inicio" style="margin-top:14px">Voltar ao início</button></section>`;
-    return pHeader() + `<div class="page-head"><div class="eyebrow">Seja um associado</div><h1>Apoie o Instituto Íris</h1><p>Patrocine, doe, seja parceiro ou voluntário. Deixe seu contato e a coordenação fala com você.</p></div>
-      <section class="card pad"><form id="form-assoc" class="stack" novalidate>
+  // "Seja um associado": formulário dentro da aba Parceiros, para quem quer patrocinar, doar, ser parceiro ou voluntário.
+  function assocSecao() {
+    if (S.assocEnviado) return `<section class="card pad cta" id="associado" style="text-align:center"><h2 style="font-size:22px">Obrigado!</h2><p class="muted" style="margin-top:6px">Recebemos seu contato. A coordenação vai falar com você em breve.</p></section>`;
+    return `<section class="card pad cta" id="associado"><div class="eyebrow">Seja um associado</div><h2 style="font-size:22px;margin-top:4px">Apoie o Instituto Íris</h2><p class="muted" style="margin:4px 0 14px">Patrocine, doe, seja parceiro ou voluntário. Deixe seu contato e a coordenação fala com você.</p>
+      <form id="form-assoc" class="stack" novalidate>
         <label class="field"><span>Seu nome <b class="req">*</b></span><input class="input" id="as-nome" autocomplete="name"></label>
         <label class="field"><span>Empresa (se for o caso)</span><input class="input" id="as-emp" autocomplete="organization"></label>
         <label class="field"><span>WhatsApp <b class="req">*</b></span><input class="input" type="tel" id="as-tel" inputmode="tel" placeholder="(21) 99999-9999" maxlength="16"></label>
@@ -556,6 +558,7 @@ body:not(.gated) #gate { display: none; }
         ${S.assocErro ? ERR(S.assocErro) : ''}
         <button class="btn primary block">Enviar</button></form></section>`;
   }
+
 
   // Inscrição de quem ainda não é aluno: cadastro rápido junto com a inscrição (sem login).
   function modalPInsc(cid) {
@@ -621,8 +624,8 @@ body:not(.gated) #gate { display: none; }
   }
 
   const NAV = [['inicio', 'Início', 'home'], ['aulas', 'Aulas', 'book'], ['frequencia', 'Frequência', 'check'], ['cursos', 'Cursos', 'plus'], ['mural', 'Mural', 'image'], ['oportunidades', 'Oportunid.', 'rocket']];
-  const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Sobre', 'info'], ['p-parceiros', 'Parceiros', 'heart'], ['p-associado', 'Associe-se', 'plus']];
-  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris', 'p-associado': 'Seja um associado' };
+  const PNAV = [['p-inicio', 'Início', 'home'], ['p-cursos', 'Cursos', 'book'], ['p-sobre', 'Sobre', 'info'], ['p-parceiros', 'Parceiros', 'heart']];
+  const LONGO = { oportunidades: 'Oportunidades', cursos: 'Cursos do Íris' };
   function render() {
     const eq = S.auth?.tipo === 'equipe';
     document.body.classList.toggle('gated', eq);
@@ -635,7 +638,7 @@ body:not(.gated) #gate { display: none; }
     $('#tabs').style.gridTemplateColumns = `repeat(${nav.length}, 1fr)`;
     $('#tabs').innerHTML = nav.map(btn).join('');
     $('#side').innerHTML = `<div class="brand">${LOGO}<small>${pub ? 'Aulas gratuitas em Éden' : 'Portal do Aluno'}</small></div>${nav.map(([id, l, ic]) => btn([id, LONGO[id] || l, ic])).join('')}<div class="side-foot">${pub ? `<button class="btn block" data-entrar="1">${icon('user')}Entrar</button><p class="small faint" style="margin-top:6px">Para alunos e equipe</p>` : '<button class="btn sm block" data-sair="1">Sair</button>'}</div>`;
-    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros, 'p-associado': vPAssociado };
+    const V = { inicio: vInicio, aulas: vAulas, frequencia: vFrequencia, cursos: vCursos, mural: vMural, oportunidades: vOportunidades, 'p-inicio': vPInicio, 'p-cursos': vPCursos, 'p-sobre': vPSobre, 'p-parceiros': vPParceiros };
     $('#view').innerHTML = (V[cur] || (pub ? vPInicio : vInicio))();
     const M = S.modal;
     $('#modal-root').innerHTML = !M ? '' : M.tipo === 'just' ? modalJust(M.k) : M.tipo === 'insc' ? modalInsc(M.c) : M.tipo === 'pinsc' ? modalPInsc(M.c) : modalEntrar();
@@ -645,6 +648,7 @@ body:not(.gated) #gate { display: none; }
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]');
     if (nav) { if (!S.auth) { S.pview = nav.dataset.nav; S.assocEnviado = false; } else { S.view = nav.dataset.nav; try { localStorage.setItem('portal:view', S.view); } catch {} } render(); try { window.scrollTo(0, 0); } catch {} return; }
+    if (e.target.closest('[data-ir]')) { document.getElementById('associado')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (e.target.closest('[data-entrar]')) { S.modal = { tipo: 'entrar', modo: '', etapa: '' }; render(); return; }
     const en = e.target.closest('[data-ent]');
     if (en) {
@@ -674,7 +678,7 @@ body:not(.gated) #gate { display: none; }
       const g = (id) => document.getElementById(id).value.trim(); const dig = g('as-tel').replace(/\D/g, '');
       S.assocErro = !g('as-nome') ? 'Escreva seu nome.' : (dig.length < 10 || dig.length > 11) ? 'Digite um WhatsApp com DDD.' : '';
       if (!S.assocErro) S.assocEnviado = true;
-      render(); return;
+      render(); document.getElementById('associado')?.scrollIntoView({ block: 'start' }); return;
     }
     if (e.target.id === 'form-just') {
       const motivo = document.getElementById('just-motivo').value.trim(); if (!motivo) return;
