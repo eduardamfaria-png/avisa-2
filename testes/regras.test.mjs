@@ -10,6 +10,7 @@ await env.withSecurityRulesDisabled(async (c) => {
   await setDoc(doc(d, 'acompanhamento/p1'), { status: 'analise' });
   await setDoc(doc(d, 'contatos/c1'), { nome: 'C', telefone: '1', enviadoEm: 'x' });
   await setDoc(doc(d, 'mural/m1'), { titulo: 'Inauguração', foto: '' });
+  await setDoc(doc(d, 'muralVideo/v1_0'), { vid: 'v1', n: 0, d: 'AAAA' });
   await setDoc(doc(d, 'avisos/av1'), { titulo: 'Aviso' });
   await setDoc(doc(d, 'oportunidades/o1'), { titulo: 'Vaga' });
   await setDoc(doc(d, 'justificativas/j1'), { motivo: 'x', email: 'outro@x.com' });
@@ -60,6 +61,9 @@ await t('site NÃO lê avisos', getDocs(collection(anon, 'avisos')), false);
 await t('site NÃO lê oportunidades', getDocs(collection(anon, 'oportunidades')), false);
 await t('site NÃO lê justificativas', getDocs(collection(anon, 'justificativas')), false);
 await t('equipe publica no mural', setDoc(doc(equipe, 'mural/m2'), { titulo: 'x' }), true);
+await t('site lê pedaço de vídeo do mural', getDoc(doc(anon, 'muralVideo/v1_0')), true);
+await t('site NÃO grava vídeo no mural', setDoc(doc(anon, 'muralVideo/x_0'), { d: 'x' }), false);
+await t('equipe grava pedaço de vídeo', setDoc(doc(equipe, 'muralVideo/v2_0'), { vid: 'v2', n: 0, d: 'AAAA' }), true);
 await t('equipe aceita justificativa', updateDoc(doc(equipe, 'justificativas/j1'), { status: 'aceita' }), true);
 await t('equipe publica aviso e oportunidade', setDoc(doc(equipe, 'avisos/av2'), { titulo: 'x' }), true);
 const jus = { alunoId: 'a1', turmaId: 't3', data: '2026-11-23', motivo: 'Consulta médica', email: 'ana@x.com', status: 'pendente', enviadoEm: new Date().toISOString() };

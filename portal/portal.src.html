@@ -193,6 +193,10 @@ textarea.input { resize: vertical; }
 .car-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 99px; border: 0; background: rgba(255,255,255,.9); color: #111; font-size: 22px; line-height: 1; display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); z-index: 2; }
 .car-btn.prev { left: 10px; } .car-btn.next { right: 10px; } .car-btn[hidden] { display: none; }
 .car-btn { padding: 0; } .car-btn svg { display: block; margin: auto; }
+.car-play { position: absolute; inset: 0; border: 0; padding: 0; background: #0b1230; cursor: pointer; width: 100%; height: 100%; }
+.car-play img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
+.car-play .play-ic { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 99px; background: rgba(0,0,0,.55); color: #fff; display: grid; place-items: center; }
+.car-play.carregando .play-ic { width: auto; height: auto; padding: 8px 14px; }
 /* Mural em uma coluna só, rolando para baixo (como o feed do Instagram) */
 .feed.mural-col { grid-template-columns: 1fr; max-width: 560px; margin-left: auto; margin-right: auto; width: 100%; }
 /* Setas só aparecem com o mouse em cima da foto; no celular passa arrastando com o dedo */
@@ -710,8 +714,8 @@ body:not(.gated) #gate { display: none; }
   // Publicação vinda do banco → formato do carrossel (fotos e, quando houver, vídeo).
   function postDoBanco(m, i) {
     const fotos = Array.isArray(m.fotos) ? m.fotos : m.foto ? [m.foto] : [];
-    const midias = [...(m.video ? [{ tipo: 'video', src: m.video }] : []), ...fotos.map((src) => ({ tipo: 'foto', src }))];
-    return { id: m.__id || 'm' + i, titulo: m.fotos ? '' : m.titulo || '', texto: m.texto || '', midias, data: String(m.criadoEm || '').slice(0, 10) };
+    const midias = Array.isArray(m.midias) ? m.midias.map((x) => (x.t === 'v' ? { tipo: 'video', vid: x.vid, partes: x.partes, capa: x.capa, mime: x.mime } : { tipo: 'foto', src: x.src })) : fotos.map((src) => ({ tipo: 'foto', src }));
+    return { id: m.__id || 'm' + i, titulo: m.fotos || m.midias ? '' : m.titulo || '', texto: m.texto || '', midias, data: String(m.criadoEm || '').slice(0, 10) };
   }
   const MURAL_SITE = [
     { titulo: 'Turma de informática', texto: 'Formação gratuita em tecnologia e inovação, em parceria com o Futuro Sempre Presente.', img: '%%FOTO:curso-informatica%%' },
@@ -802,12 +806,32 @@ body:not(.gated) #gate { display: none; }
     const longa = (m.texto || '').length > 160 || (m.texto || '').split('\n').length > 3;
     return `<article class="card ig">
       <div class="ig-head">${LOGO.replace('alt="Instituto Íris"', 'alt=""')}<div><b>Instituto Íris</b>${m.data ? `<small>${fmtCurto(parse(m.data))}</small>` : ''}</div></div>
-      ${md.length ? `<div class="car" data-car="${esc(pid)}"><div class="car-track">${md.map((x, k) => `<div class="car-item">${x.tipo === 'video' ? `<video src="${esc(x.src)}" controls playsinline preload="metadata"></video>` : `<img src="${esc(x.src)}" alt="${esc((m.titulo || m.texto || 'Foto do Instituto Íris').slice(0, 80))}${md.length > 1 ? ` (${k + 1} de ${md.length})` : ''}" loading="lazy">`}</div>`).join('')}</div>
+      ${md.length ? `<div class="car" data-car="${esc(pid)}"><div class="car-track">${md.map((x, k) => `<div class="car-item">${x.tipo === 'video' ? videoItem(x) : `<img src="${esc(x.src)}" alt="${esc((m.titulo || m.texto || 'Foto do Instituto Íris').slice(0, 80))}${md.length > 1 ? ` (${k + 1} de ${md.length})` : ''}" loading="lazy">`}</div>`).join('')}</div>
         ${md.length > 1 ? `<span class="car-cont">1/${md.length}</span><button type="button" class="car-btn prev" data-car-ir="-1" aria-label="Foto anterior" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" class="car-btn next" data-car-ir="1" aria-label="Próxima foto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>` : ''}</div>
         ${md.length > 1 ? `<div class="car-dots" aria-hidden="true">${md.map((_, k) => `<i${k ? '' : ' class="on"'}></i>`).join('')}</div>` : ''}` : ''}
       ${legenda ? `<div class="legenda${longa && !aberto ? ' curta' : ''}">${legenda}</div>${longa && !aberto ? `<button type="button" class="mais" data-leg="${esc(pid)}">… mais</button>` : ''}` : ''}
     </article>`;
   }
+  // Vídeo do mural: guardado em pedaços no banco; só baixa quando a pessoa toca no ▶ (economiza internet).
+  const VIDEOS = {};
+  function videoItem(x) {
+    if (x.src || VIDEOS[x.vid]) return `<video src="${esc(x.src || VIDEOS[x.vid])}" controls playsinline preload="metadata"${x.capa ? ` poster="${esc(x.capa)}"` : ''}></video>`;
+    return `<button type="button" class="car-play" data-vid="${esc(x.vid)}" data-partes="${Number(x.partes) || 0}" data-mime="${esc(x.mime || 'video/mp4')}" aria-label="Assistir vídeo">${x.capa ? `<img src="${esc(x.capa)}" alt="">` : ''}<span class="play-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>`;
+  }
+  async function tocarVideo(bt) {
+    const { vid, mime } = bt.dataset; const partes = Number(bt.dataset.partes);
+    if (!FB || !partes) return toast('Não foi possível carregar o vídeo agora.');
+    bt.disabled = true; bt.classList.add('carregando'); const ic = bt.querySelector('.play-ic'); if (ic) ic.innerHTML = '<span class="small">Carregando…</span>';
+    try {
+      const docs = await Promise.all(Array.from({ length: partes }, (_, n) => FB.getDoc(FB.doc(FB.db, 'muralVideo', `${vid}_${n}`))));
+      const pedacos = docs.map((d) => { const b = atob(d.data().d); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; });
+      VIDEOS[vid] = URL.createObjectURL(new Blob(pedacos, { type: mime || 'video/mp4' }));
+      const capa = bt.querySelector('img')?.getAttribute('src');
+      const v = document.createElement('video'); v.src = VIDEOS[vid]; v.controls = true; v.playsInline = true; v.autoplay = true; if (capa) v.poster = capa;
+      bt.replaceWith(v); v.play().catch(() => {});
+    } catch (e) { bt.disabled = false; bt.classList.remove('carregando'); if (ic) ic.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'; toast('Não foi possível carregar o vídeo. Confira a internet e tente de novo.'); }
+  }
+  document.addEventListener('click', (e) => { const bt = e.target.closest('.car-play'); if (bt) tocarVideo(bt); });
   // Mantém a foto em que cada carrossel estava quando a tela é redesenhada.
   const posCar = {};
   function marcarCarrossel(car) {

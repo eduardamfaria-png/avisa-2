@@ -38,6 +38,10 @@ service cloud.firestore {
     match /mural/{id} {
       allow read: if true;
     }
+    // Pedaços dos vídeos do mural (só a equipe grava, pela regra geral).
+    match /muralVideo/{id} {
+      allow read: if true;
+    }
     // Pedido de inscrição ou lista de espera feito no site: qualquer um cria, com campos conferidos.
     // Ninguém de fora lê, lista, altera ou apaga pedidos.
     match /pedidos/{id} {

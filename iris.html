@@ -1019,7 +1019,7 @@ body.gated .app { grid-template-columns: 1fr; }
   const vagasLivres = (t) => { const cap = Number(t.capacidade) || 0; return cap ? Math.max(0, cap - alunosDaTurma(t.id).length) : null; };
   const toISO = (v) => (v && v.toDate ? v.toDate().toISOString() : String(v || ''));
   const waLink = (tel) => { let d = String(tel || '').replace(/\D/g, ''); if (d.length && d.length <= 11) d = '55' + d; return `https://wa.me/${d}`; };
-  const pedidosPend = () => list('pedidos').filter((p) => p.status === 'pendente').sort((a, b) => toISO(a.enviadoEm).localeCompare(toISO(b.enviadoEm)));
+  const pedidosPend = () => list('pedidos').filter((p) => p.status === 'pendente' || p.status === 'recusado').map((p) => (p.status === 'recusado' ? { ...p, espera: true } : p)).sort((a, b) => toISO(a.enviadoEm).localeCompare(toISO(b.enviadoEm)));
   const turmasDoCurso = (key) => turmasList().filter((t) => cursoKey(t) === key);
 
   // Publica, para o site aberto, só o que é público de cada turma: curso, dias, horário e se tem vaga.
@@ -1115,10 +1115,9 @@ body.gated .app { grid-template-columns: 1fr; }
         <dt>E-mail</dt><dd>${esc(p.email || '—')}</dd><dt>Como conheceu</dt><dd>${esc(p.comoConheceu || 'Não informou')}</dd><dt>Recebe novidades</dt><dd>${esc(p.aceitaComunicacoes || 'Não')}</dd></dl>
       <div class="form-grid" style="margin-top:16px">
         <label class="field full"><span>Colocar na turma</span><select class="select" id="p-turma">${ts.length ? ts.map((t) => { const v = vagasLivres(t); return `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.nome)} · ${esc(horarioTxt(t) || '--:--')} · ${v == null ? 'vagas não definidas' : v ? plural(v, 'vaga', 'vagas') : 'cheia'}</option>`; }).join('') : '<option value="">Nenhuma turma deste curso</option>'}</select></label>
-        <label class="field full"><span>Se for recusar: motivo (opcional)</span><input class="input" id="p-resp" placeholder="Ex.: idade mínima do curso"></label>
       </div>
-      <p class="small muted" style="margin-top:10px">Combine com a pessoa pelo WhatsApp e toque em <b>Matricular e preencher ficha</b>: a ficha abre com os dados do cadastro e a turma escolhida.</p>`,
-      `<button class="btn danger" data-act="ped-recusar" data-id="${id}">Recusar</button><span class="grow"></span><button class="btn" data-act="modal-close">Depois</button><button class="btn primary" data-act="ped-ficha" data-id="${id}">Matricular e preencher ficha</button>`);
+      <p class="small muted" style="margin-top:10px">Combine com a pessoa pelo WhatsApp e toque em <b>Matricular e preencher ficha</b>: a ficha abre com os dados do cadastro e a turma escolhida.${p.espera ? ' Enquanto não abrir vaga, a pessoa continua aqui na lista de espera, com o contato guardado.' : ' Se não tiver vaga no horário, coloque na lista de espera: o contato fica guardado para quando abrir vaga.'}</p>`,
+      `${p.espera ? '' : `<button class="btn" data-act="ped-espera" data-id="${id}">Colocar na lista de espera</button>`}<span class="grow"></span><button class="btn" data-act="modal-close">Depois</button><button class="btn primary" data-act="ped-ficha" data-id="${id}">Matricular e preencher ficha</button>`);
   }
   function fichaDoPedido(id) {
     const p = get('pedidos', id); if (!p) return;
@@ -1137,9 +1136,8 @@ body.gated .app { grid-template-columns: 1fr; }
     await patch('pedidos', pedidoId, { status: 'aprovado', alunoId, turmaFinal: turmaId || '', avaliadoEm: new Date().toISOString(), avaliadoPor: S.me?.email || '' });
     await put('acompanhamento', pedidoId, { status: 'matriculado' });
   }
-  async function recusarPedido(id) {
-    const resposta = val('p-resp');
-    if (await guard(async () => { await patch('pedidos', id, { status: 'recusado', resposta, avaliadoEm: new Date().toISOString(), avaliadoPor: S.me?.email || '' }); await put('acompanhamento', id, { status: 'recusado', resposta }); }, 'Pedido recusado.')) closeModal();
+  async function esperaPedido(id) {
+    if (await guard(async () => { await patch('pedidos', id, { espera: true, status: 'pendente', paraEsperaEm: new Date().toISOString(), paraEsperaPor: S.me?.email || '' }); await put('acompanhamento', id, { status: 'espera' }); }, 'Ficou na lista de espera. O contato continua guardado.')) closeModal();
   }
   function contatoModal(id) {
     const c = get('contatos', id); if (!c) return;
@@ -1191,7 +1189,7 @@ body.gated .app { grid-template-columns: 1fr; }
     const l = list('mural').sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
     if (!l.length) return `<div class="empty card"><h3>Mural vazio</h3><p>Publique fotos e novidades do instituto.</p><button class="btn primary" data-act="mural-new">${icon('plus')}Nova publicação</button></div>`;
     return `<p class="small muted">Fotos e novidades que aparecem no Início do site aberto e na aba Mural do Portal do Aluno. Antes de postar foto de aluno, confira se a ficha autoriza uso de imagem.</p>
-      <div class="card list">${l.map((m) => `<button class="item" data-act="mural-open" data-id="${m.id}">${(m.fotos || [])[0] || m.foto ? `<img class="mural-thumb" src="${esc((m.fotos || [])[0] || m.foto)}" alt="">` : `<span class="mural-thumb" style="display:grid;place-items:center;color:var(--faint)">${icon('cam')}</span>`}<div class="grow"><strong>${esc(tituloPost(m))}</strong><span class="sub">${(m.fotos || []).length > 1 ? `${m.fotos.length} fotos · ` : ''}Publicado em ${fmtDate((m.criadoEm || '').slice(0, 10))}</span></div></button>`).join('')}</div>`;
+      <div class="card list">${l.map((m) => `<button class="item" data-act="mural-open" data-id="${m.id}">${midiasDoPost(m)[0] ? `<img class="mural-thumb" src="${esc(midiasDoPost(m)[0].src || midiasDoPost(m)[0].capa)}" alt="">` : `<span class="mural-thumb" style="display:grid;place-items:center;color:var(--faint)">${icon('cam')}</span>`}<div class="grow"><strong>${esc(tituloPost(m))}</strong><span class="sub">${(() => { const md = midiasDoPost(m); const nf = md.filter((x) => x.t === 'f').length, nv = md.length - nf; return [nf > 1 ? `${nf} fotos` : '', nv ? plural(nv, 'vídeo', 'vídeos') : ''].filter(Boolean).map((x) => x + ' · ').join(''); })()}Publicado em ${fmtDate((m.criadoEm || '').slice(0, 10))}</span></div></button>`).join('')}</div>`;
   }
   function pOport() {
     const l = list('oportunidades').sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
@@ -1228,24 +1226,27 @@ body.gated .app { grid-template-columns: 1fr; }
     if (await guard(() => put('avisos', id || uid(), { ...semId(prev), ...body, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Aviso atualizado.' : 'Aviso publicado no portal.')) closeModal();
   }
 
-  // Publicação do mural no estilo do Instagram: várias fotos (carrossel) + legenda, sem curtidas nem comentários.
-  // Todas as fotos ficam no próprio documento; ao salvar, elas são reduzidas para caber no limite do banco.
-  let fotosMural = [];
-  const MAX_FOTOS = 10, LIMITE_FOTOS = 880000;
+  // Publicação do mural no estilo do Instagram: fotos e vídeos em carrossel + legenda, sem curtidas nem comentários.
+  // Fotos ficam no próprio documento (reduzidas para caber). Vídeos vão em pedaços na coleção muralVideo
+  // ({vid}_{n}), e a publicação guarda só a capa e quantos pedaços são.
+  let midiasMural = [];
+  const MAX_MIDIAS = 10, LIMITE_DOC = 880000, MAX_VIDEO_MB = 25, PEDACO = 690000;
+  const midiasDoPost = (m) => m.midias || (m.fotos || (m.foto ? [m.foto] : [])).map((src) => ({ t: 'f', src }));
   const tituloPost = (m) => m.titulo || String(m.texto || '').split('\n')[0].slice(0, 80) || 'Publicação';
+  const fmtDur = (s) => { s = Math.round(s || 0); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   function fotosMuralHtml() {
-    if (!fotosMural.length) return '<p class="small muted" style="margin-top:6px">Nenhuma foto ainda.</p>';
-    return `<div class="fotos-grid">${fotosMural.map((f, i) => `<div class="ft"><img src="${esc(f)}" alt=""><b>${i + 1}</b><button type="button" data-act="mural-foto-del" data-i="${i}" aria-label="Tirar foto ${i + 1}" title="Tirar esta foto">×</button>${fotosMural.length > 1 ? `<div class="ordem"><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="-1" aria-label="Mover foto ${i + 1} para antes" title="Mover para antes"${i ? '' : ' disabled'}>◀</button><span>ordem</span><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="1" aria-label="Mover foto ${i + 1} para depois" title="Mover para depois"${i < fotosMural.length - 1 ? '' : ' disabled'}>▶</button></div>` : ''}</div>`).join('')}</div>`;
+    if (!midiasMural.length) return '<p class="small muted" style="margin-top:6px">Nenhuma foto ou vídeo ainda.</p>';
+    return `<div class="fotos-grid">${midiasMural.map((f, i) => `<div class="ft"><img src="${esc(f.t === 'v' ? f.capa : f.src)}" alt=""><b>${i + 1}${f.t === 'v' ? ` · ▶ ${fmtDur(f.dur)}` : ''}</b><button type="button" data-act="mural-foto-del" data-i="${i}" aria-label="Tirar item ${i + 1}" title="Tirar">×</button>${midiasMural.length > 1 ? `<div class="ordem"><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="-1" aria-label="Mover item ${i + 1} para antes" title="Mover para antes"${i ? '' : ' disabled'}>◀</button><span>ordem</span><button type="button" data-act="mural-foto-mover" data-i="${i}" data-d="1" aria-label="Mover item ${i + 1} para depois" title="Mover para depois"${i < midiasMural.length - 1 ? '' : ' disabled'}>▶</button></div>` : ''}</div>`).join('')}</div>`;
   }
-  function atualizarFotosMural() { const g = document.getElementById('m-fotos'); if (g) g.innerHTML = fotosMuralHtml(); const n = document.getElementById('m-n'); if (n) n.textContent = `${fotosMural.length}/${MAX_FOTOS}`; }
+  function atualizarFotosMural() { const g = document.getElementById('m-fotos'); if (g) g.innerHTML = fotosMuralHtml(); const n = document.getElementById('m-n'); if (n) n.textContent = `${midiasMural.length}/${MAX_MIDIAS}`; }
   function muralModal(id) {
     const m = id ? get('mural', id) : { texto: '' };
-    fotosMural = [...(m.fotos || (m.foto ? [m.foto] : []))];
-    const legenda = m.titulo && !m.fotos ? `${m.titulo}\n${m.texto || ''}`.trim() : m.texto || '';
+    midiasMural = midiasDoPost(m).map((x) => ({ ...x }));
+    const legenda = m.titulo && !m.fotos && !m.midias ? `${m.titulo}\n${m.texto || ''}`.trim() : m.texto || '';
     openModal(id ? 'Editar publicação' : 'Nova publicação no mural', `<div class="form-grid">
-      <div class="field full"><span>Fotos <small class="muted" id="m-n">${fotosMural.length}/${MAX_FOTOS}</small></span>
-        <input class="input" type="file" id="m-foto" accept="image/*" multiple>
-        <small class="small muted">Pode escolher várias de uma vez. Com mais de uma, aparece em carrossel (arrasta para o lado). O número é a ordem em que aparecem; para mudar a ordem, use ◀ ▶ embaixo da foto. O × tira a foto.</small>
+      <div class="field full"><span>Fotos e vídeos <small class="muted" id="m-n">${midiasMural.length}/${MAX_MIDIAS}</small></span>
+        <input class="input" type="file" id="m-foto" accept="image/*,video/*" multiple>
+        <small class="small muted">Pode escolher várias fotos e vídeos de uma vez (vídeo de até ${MAX_VIDEO_MB} MB). Com mais de um, aparece em carrossel (arrasta para o lado). O número é a ordem em que aparecem; para mudar a ordem, use ◀ ▶ embaixo. O × tira.</small>
         <div id="m-fotos">${fotosMuralHtml()}</div></div>
       <label class="field full"><span>Legenda</span><textarea class="textarea" id="m-txt" rows="6" placeholder="O mesmo texto do post do Instagram">${esc(legenda)}</textarea></label>
     </div>`, delFoot('mural', id, 'mural-save'));
@@ -1258,30 +1259,72 @@ body.gated .app { grid-template-columns: 1fr; }
       img.onerror = falha; img.src = src;
     });
   }
+  // Capa do vídeo (um quadro do começo) e duração.
+  function capaDoVideo(file) {
+    return new Promise((ok, falha) => {
+      const v = document.createElement('video'); const url = URL.createObjectURL(file);
+      v.muted = true; v.playsInline = true; v.preload = 'auto';
+      const fim = (r) => { URL.revokeObjectURL(url); r(); };
+      v.onloadedmetadata = () => { v.currentTime = Math.min(0.5, (v.duration || 1) / 2); };
+      v.onseeked = () => { try { const k = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight)); const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k) || 400; c.height = Math.round(v.videoHeight * k) || 500; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); const capa = c.toDataURL('image/jpeg', 0.7); const dur = v.duration; fim(() => ok({ capa, dur })); } catch (e) { fim(() => falha(e)); } };
+      v.onerror = () => fim(() => falha(new Error('video')));
+      v.src = url;
+    });
+  }
   async function lerFotoMural(files) {
-    const lista = [...(files || [])].filter((f) => /^image\//.test(f.type));
-    const cabem = MAX_FOTOS - fotosMural.length;
-    if (lista.length > cabem) toast(`Cabem ${MAX_FOTOS} fotos por publicação. Entraram só as ${Math.max(0, cabem)} primeiras.`);
+    const lista = [...(files || [])].filter((f) => /^(image|video)\//.test(f.type));
+    const cabem = MAX_MIDIAS - midiasMural.length;
+    if (lista.length > cabem) toast(`Cabem ${MAX_MIDIAS} fotos e vídeos por publicação. Entraram só os ${Math.max(0, cabem)} primeiros.`);
     for (const f of lista.slice(0, Math.max(0, cabem))) {
-      const url = URL.createObjectURL(f);
-      try { fotosMural.push(await reduzirFoto(url, 1080, 0.78)); } catch { toast('Não consegui abrir uma das fotos.'); }
-      URL.revokeObjectURL(url); atualizarFotosMural();
+      if (/^video\//.test(f.type)) {
+        if (f.size > MAX_VIDEO_MB * 1024 * 1024) { toast(`O vídeo "${f.name}" tem ${Math.round(f.size / 1048576)} MB. O limite é ${MAX_VIDEO_MB} MB: corte ou diminua a qualidade e tente de novo.`); continue; }
+        try { const { capa, dur } = await capaDoVideo(f); midiasMural.push({ t: 'v', capa, dur, mime: f.type, file: f }); } catch { toast('Não consegui abrir esse vídeo. Tente outro formato (MP4).'); }
+      } else {
+        const url = URL.createObjectURL(f);
+        try { midiasMural.push({ t: 'f', src: await reduzirFoto(url, 1080, 0.78) }); } catch { toast('Não consegui abrir uma das fotos.'); }
+        URL.revokeObjectURL(url);
+      }
+      atualizarFotosMural();
     }
   }
-  async function caberFotos(fotos) {
-    let lado = 1080, q = 0.74, out = fotos;
-    while (out.reduce((n, f) => n + f.length, 0) > LIMITE_FOTOS && lado > 480) { out = await Promise.all(fotos.map((f) => reduzirFoto(f, lado, q))); lado = Math.round(lado * 0.86); q = Math.max(0.5, q - 0.05); }
+  async function caberMidias(itens) {
+    let lado = 1080, q = 0.74, out = itens;
+    const total = (l) => l.reduce((n, x) => n + (x.t === 'v' ? x.capa.length : x.src.length), 0);
+    while (total(out) > LIMITE_DOC && lado > 480) { out = await Promise.all(itens.map(async (x) => (x.t === 'f' ? { ...x, src: await reduzirFoto(x.src, lado, q) } : x))); lado = Math.round(lado * 0.86); q = Math.max(0.5, q - 0.05); }
     return out;
   }
+  function paraBase64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+  async function enviarVideo(item, aviso) {
+    const bytes = new Uint8Array(await item.file.arrayBuffer());
+    const vid = uid(); const partes = Math.ceil(bytes.length / PEDACO);
+    for (let n = 0; n < partes; n++) {
+      aviso(`Enviando vídeo… ${Math.round((n / partes) * 100)}%`);
+      if (S.mode === 'db') await db.collection('muralVideo').doc(`${vid}_${n}`).set({ vid, n, d: paraBase64(bytes.subarray(n * PEDACO, (n + 1) * PEDACO)) });
+    }
+    return { t: 'v', vid, partes, capa: item.capa, mime: item.mime || 'video/mp4', dur: item.dur || 0 };
+  }
+  async function apagarVideos(lista) { for (const v of lista) for (let n = 0; n < (v.partes || 0); n++) if (S.mode === 'db') await db.collection('muralVideo').doc(`${v.vid}_${n}`).delete().catch(() => {}); }
   async function saveMural(id) {
     const texto = val('m-txt');
-    if (!texto && !fotosMural.length) return toast('Coloque pelo menos uma foto ou a legenda.');
-    const btn = document.querySelector('#modal-root [data-act="mural-save"]'); if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
-    const fotos = await caberFotos(fotosMural);
+    if (!texto && !midiasMural.length) return toast('Coloque pelo menos uma foto, um vídeo ou a legenda.');
+    if (!S.canWrite) return toast('Você tem acesso só para ver. Peça acesso de edição a quem administra a página.');
+    const btn = document.querySelector('#modal-root [data-act="mural-save"]'); const aviso = (t) => { if (btn) { btn.disabled = true; btn.textContent = t; } };
+    aviso('Salvando…');
     const prev = id ? get('mural', id) : null;
-    const { foto, titulo, ...resto } = semId(prev) || {};
-    const ok = await guard(() => put('mural', id || uid(), { ...resto, texto, fotos, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.');
-    if (ok) closeModal(); else if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
+    let midias;
+    try {
+      const enviados = [];
+      for (const x of midiasMural) enviados.push(x.t === 'v' && x.file ? await enviarVideo(x, aviso) : x);
+      midias = await caberMidias(enviados);
+    } catch (e) { console.warn(e); if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; } return toast('Não foi possível enviar o vídeo agora. Confira a internet e tente de novo.'); }
+    aviso('Salvando…');
+    const { foto, fotos, titulo, ...resto } = semId(prev) || {};
+    const ok = await guard(() => put('mural', id || uid(), { ...resto, texto, midias, criadoEm: prev?.criadoEm || new Date().toISOString() }), id ? 'Publicação atualizada.' : 'Publicado no mural.');
+    if (ok) {
+      const ficam = new Set(midias.filter((x) => x.t === 'v').map((x) => x.vid));
+      apagarVideos(midiasDoPost(prev || {}).filter((x) => x.t === 'v' && !ficam.has(x.vid)));
+      closeModal();
+    } else if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
   }
 
   // Alcance: quem tocou no link (cliques[alunoId] = número de toques).
@@ -1373,7 +1416,7 @@ body.gated .app { grid-template-columns: 1fr; }
     return [...g.values()].map((x) => {
       const ps = x.pedidos;
       x.virouAluno = ps.some((p) => p.status === 'aprovado');
-      x.situacao = x.virouAluno ? ['Virou aluno', 'green'] : ps.some((p) => p.status === 'pendente' && !p.espera) ? ['Pedido em análise', 'amber'] : ps.some((p) => p.status === 'pendente') ? ['Na lista de espera', ''] : ['Não aprovado', 'red'];
+      x.situacao = x.virouAluno ? ['Virou aluno', 'green'] : ps.some((p) => p.status === 'pendente' && !p.espera) ? ['Pedido em análise', 'amber'] : ['Na lista de espera', ''];
       return x;
     }).sort((a, b) => toISO(b.enviadoEm).localeCompare(toISO(a.enviadoEm)));
   }
@@ -1806,7 +1849,7 @@ body.gated .app { grid-template-columns: 1fr; }
         if (key === 'apagar-exemplos') { await deleteExamples(); return; }
         if (key === 'del-aluno') { if (await guard(async () => { await del('alunos', ctx.id); if (S.platform === 'firebase' && S.data.fotos?.[ctx.id]) await del('fotos', ctx.id); }, 'Cadastro excluído.')) closeModal(); }
         if (key === 'del-turma') { if (await guard(() => del('turmas', ctx.id), 'Turma excluída.')) closeModal(); }
-        if (key === 'del-portal') { if (await guard(() => del(ctx.col, ctx.id), 'Removido.')) closeModal(); }
+        if (key === 'del-portal') { const antes = ctx.col === 'mural' ? midiasDoPost(get('mural', ctx.id) || {}).filter((x) => x.t === 'v') : []; if (await guard(() => del(ctx.col, ctx.id), 'Removido.')) { apagarVideos(antes); closeModal(); } }
         if (key === 'del-contato') { if (await guard(() => del('contatos', ctx.id), 'Contato apagado.')) closeModal(); }
         if (key === 'del-lanc') { if (await guard(() => del('lancamentos', ctx.id), 'Lançamento excluído.')) closeModal(); }
         break;
@@ -1845,7 +1888,7 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'csv-alunos': csvAlunos(); break;
       case 'ped-open': pedidoModal(t.dataset.id); break;
       case 'ped-ficha': fichaDoPedido(t.dataset.id); break;
-      case 'ped-recusar': recusarPedido(t.dataset.id); break;
+      case 'ped-espera': esperaPedido(t.dataset.id); break;
       case 'contato-open': contatoModal(t.dataset.id); break;
       case 'insc-aba': S.inscAba = t.dataset.v; render(); break;
       case 'p-sub': S.portalSub = t.dataset.v; render(); break;
@@ -1855,8 +1898,8 @@ body.gated .app { grid-template-columns: 1fr; }
       case 'mural-new': muralModal(null); break;
       case 'mural-open': muralModal(t.dataset.id); break;
       case 'mural-save': saveMural(t.dataset.id); break;
-      case 'mural-foto-del': fotosMural.splice(Number(t.dataset.i), 1); atualizarFotosMural(); break;
-      case 'mural-foto-mover': { const i = Number(t.dataset.i), j = i + Number(t.dataset.d); if (j >= 0 && j < fotosMural.length) { [fotosMural[i], fotosMural[j]] = [fotosMural[j], fotosMural[i]]; atualizarFotosMural(); } break; }
+      case 'mural-foto-del': midiasMural.splice(Number(t.dataset.i), 1); atualizarFotosMural(); break;
+      case 'mural-foto-mover': { const i = Number(t.dataset.i), j = i + Number(t.dataset.d); if (j >= 0 && j < midiasMural.length) { [midiasMural[i], midiasMural[j]] = [midiasMural[j], midiasMural[i]]; atualizarFotosMural(); } break; }
       case 'op-new': opModal(null); break;
       case 'op-open': opModal(t.dataset.id); break;
       case 'op-save': saveOp(t.dataset.id); break;
