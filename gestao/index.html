@@ -1103,15 +1103,24 @@ body.gated .app { grid-template-columns: 1fr; }
     }, 2500);
   }
 
-  function pedidoRow(p) {
-    return `<button class="item" data-act="ped-open" data-id="${p.id}">${avatar({ nome: p.nome }, 36)}<div class="grow"><strong>${esc(p.nome)}</strong><span class="sub">${esc(p.cursoNome || p.curso)}${p.turmaTxt ? ' · ' + esc(p.turmaTxt) : ''}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(p.telefone || '—')}</span></div><span class="pill ${p.espera ? '' : 'amber'}">${p.espera ? 'Na espera' : 'Avaliar'}</span></button>`;
+  // Data completa (dd/mm/aaaa) e data + hora de quando a pessoa pediu.
+  const fmtDataCompleta = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '')); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v || '—'); };
+  const fmtQuando = (v) => { const d = new Date(toISO(v)); return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' às'); };
+  const entrouNaEspera = (p) => toISO(p.paraEsperaEm || p.enviadoEm);
+  function pedidoRow(p, pos) {
+    return `<button class="item" data-act="ped-open" data-id="${p.id}">${pos ? `<span class="num" style="font-weight:800;min-width:30px;text-align:center;color:var(--muted)">${pos}º</span>` : ''}${avatar({ nome: p.nome }, 36)}<div class="grow"><strong>${esc(p.nome)}</strong><span class="sub" style="display:block">${esc(p.cursoNome || p.curso)}${p.turmaTxt ? ' · ' + esc(p.turmaTxt) : ''}</span><span class="sub" style="display:block">${p.espera ? 'Na lista desde' : 'Pediu em'} ${fmtQuando(p.espera ? entrouNaEspera(p) : p.enviadoEm)}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(p.telefone || '—')}</span></div><span class="pill ${p.espera ? '' : 'amber'}">${p.espera ? 'Na espera' : 'Avaliar'}</span></button>`;
   }
   function pedidosSec() {
     const ps = pedidosPend(); const novos = ps.filter((p) => !p.espera), espera = ps.filter((p) => p.espera);
     const contatos = list('contatos').sort((a, b) => toISO(b.enviadoEm).localeCompare(toISO(a.enviadoEm)));
     let out = '';
-    if (novos.length) out += `<section><div class="section-title"><h2>Pedidos pelo site</h2><span>${plural(novos.length, 'aguardando avaliação', 'aguardando avaliação')}</span></div><div class="card list">${novos.map(pedidoRow).join('')}</div></section>`;
-    if (espera.length) out += `<section><div class="section-title"><h2>Lista de espera</h2><span>${plural(espera.length, 'pessoa', 'pessoas')}</span></div><div class="card list">${espera.map(pedidoRow).join('')}</div></section>`;
+    if (novos.length) out += `<section><div class="section-title"><h2>Solicitações de inscrição</h2><span>${plural(novos.length, 'para avaliar', 'para avaliar')} · turma com vaga</span></div><div class="card list">${novos.map((p) => pedidoRow(p)).join('')}</div></section>`;
+    if (espera.length) {
+      // Prioridade: quem entrou primeiro na lista de espera de cada curso vem primeiro.
+      const porCurso = new Map();
+      for (const p of [...espera].sort((a, b) => entrouNaEspera(a).localeCompare(entrouNaEspera(b)))) { const k = p.cursoNome || p.curso || 'Outros'; (porCurso.get(k) || porCurso.set(k, []).get(k)).push(p); }
+      out += `<section><div class="section-title"><h2>Lista de espera</h2><span>${plural(espera.length, 'pessoa', 'pessoas')} · por ordem de chegada</span></div>${[...porCurso].map(([curso, l]) => `<div class="small muted" style="font-weight:700;margin:10px 2px 6px">${esc(curso)}</div><div class="card list">${l.map((p, i) => pedidoRow(p, i + 1)).join('')}</div>`).join('')}</section>`;
+    }
     if (contatos.length) out += `<section><div class="section-title"><h2>Quer apoiar o Íris</h2><span>contatos do "Seja um associado"</span></div><div class="card list">${contatos.map((c) => `<button class="item" data-act="contato-open" data-id="${c.id}"><div class="grow"><strong>${esc(c.nome)}${c.empresa ? ' · ' + esc(c.empresa) : ''}</strong><span class="sub">${esc(c.ajuda || '')} · ${fmtDate(toISO(c.enviadoEm).slice(0, 10))}</span><span class="sub num" style="display:block;color:var(--green);font-weight:700">WhatsApp ${esc(c.telefone || '—')}</span></div></button>`).join('')}</div></section>`;
     return out;
   }
@@ -1126,10 +1135,10 @@ body.gated .app { grid-template-columns: 1fr; }
     const ts = turmasDoCurso(p.curso);
     const sel = ts.find((t) => t.id === p.turmaId)?.id || ts.find((t) => vagasLivres(t) !== 0)?.id || ts[0]?.id || '';
     const idade = age(p.nascimento);
-    openModal(p.espera ? 'Lista de espera' : 'Pedido de inscrição', `<div class="row" style="margin-bottom:14px">${avatar({ nome: p.nome }, 44)}<div class="grow"><b>${esc(p.nome)}</b><div class="small muted">Pelo site em ${fmtDate(toISO(p.enviadoEm).slice(0, 10))}${p.espera ? ' · na lista de espera' : ''}</div></div></div>
+    openModal(p.espera ? 'Lista de espera' : 'Solicitação de inscrição', `<div class="row" style="margin-bottom:14px">${avatar({ nome: p.nome }, 44)}<div class="grow"><b>${esc(p.nome)}</b><div class="small muted">Pediu pelo site em ${fmtQuando(p.enviadoEm)}${p.espera ? `<br>Na lista de espera desde ${fmtQuando(entrouNaEspera(p))}` : ''}</div></div></div>
       ${waCard(p.telefone)}
       <dl class="kv" style="margin-top:14px"><dt>Curso</dt><dd>${esc(p.cursoNome || p.curso)}</dd><dt>Horário pedido</dt><dd>${esc(p.turmaTxt || '—')}</dd>
-        <dt>Nascimento</dt><dd>${p.nascimento ? `${fmtDate(p.nascimento)}${idade != null ? ` · ${idade} anos` : ''}` : '—'}</dd><dt>Bairro</dt><dd>${esc(p.bairro || '—')}</dd>
+        <dt>Nascimento</dt><dd>${p.nascimento ? `${fmtDataCompleta(p.nascimento)}${idade != null ? ` · ${idade} anos` : ''}` : '—'}</dd><dt>Bairro</dt><dd>${esc(p.bairro || '—')}</dd>
         <dt>E-mail</dt><dd>${esc(p.email || '—')}</dd><dt>Como conheceu</dt><dd>${esc(p.comoConheceu || 'Não informou')}</dd><dt>Recebe novidades</dt><dd>${esc(p.aceitaComunicacoes || 'Não')}</dd></dl>
       <div class="form-grid" style="margin-top:16px">
         <label class="field full"><span>Colocar na turma</span><select class="select" id="p-turma">${ts.length ? ts.map((t) => { const v = vagasLivres(t); return `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.nome)} · ${esc(horarioTxt(t) || '--:--')} · ${v == null ? 'vagas não definidas' : v ? plural(v, 'vaga', 'vagas') : 'cheia'}</option>`; }).join('') : '<option value="">Nenhuma turma deste curso</option>'}</select></label>

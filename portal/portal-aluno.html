@@ -520,14 +520,15 @@ body:not(.gated) #gate { display: none; }
   function opcoesTurma(c) {
     const linhas = linhasCurso(c);
     const comVaga = linhas.filter((t) => t.vagas > 0);
-    if (comVaga.length) return comVaga.map((t) => ({ val: t.id, txt: `${turmaTxt(t)} · vagas abertas`, espera: false }));
+    // Todos os horários aparecem: com vaga vira solicitação de inscrição; turma cheia vai para a lista de espera.
+    if (comVaga.length) return linhas.map((t) => (t.vagas > 0 ? { val: t.id, txt: `${turmaTxt(t)} · vagas abertas`, espera: false } : { val: t.id, txt: `${turmaTxt(t)} · turma cheia (lista de espera)`, espera: true }));
     return [{ val: 'qualquer', txt: 'Qualquer horário', espera: true }, ...linhas.map((t) => ({ val: t.id, txt: turmaTxt(t), espera: true }))];
   }
   function modalInsc(cid) {
     const c = CURSOS_SITE.find((x) => x.id === cid); const a = aluno();
     const ops = opcoesTurma(c); const espera = ops[0].espera;
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
-      <h2>${espera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${espera ? 'As turmas estão cheias. Escolha o horário que prefere e a coordenação avisa quando abrir vaga.' : 'Escolha a turma.'}</p>
+      <h2>${espera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${espera ? 'As turmas estão cheias. Escolha o horário que prefere e a coordenação avisa quando abrir vaga.' : `Escolha a turma.${ops.some((o) => o.espera) ? ' Horário com turma cheia vai para a lista de espera.' : ''}`}</p>
       <form id="form-insc" class="stack" data-c="${esc(cid)}">
         <p>${espera ? 'Colocar' : 'Inscrever'} <b>${esc(a.nome)}</b> ${espera ? 'na lista de espera?' : 'neste curso?'}</p>
         <label class="field"><span>${espera ? 'Horário que prefere' : 'Turma'} *</span><select class="input" id="insc-turma">${ops.length > 1 && !espera ? '<option value="">Escolha</option>' : ''}${ops.map((o) => `<option value="${o.val}">${esc(o.txt)}</option>`).join('')}</select><small class="small" id="insc-turma-err" style="color:var(--red);font-weight:700" hidden>Escolha a turma.</small></label>
@@ -938,7 +939,7 @@ body:not(.gated) #gate { display: none; }
     const opcoes = (c ? [c] : CURSOS_SITE.filter((x) => !jaPediu(x.id))).flatMap((x) => opcoesTurma(x).map((o) => ({ c: x, o })));
     const soEspera = c && !vagasCurso(c);
     return `<div class="backdrop" data-close="1"><div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição"><button type="button" class="modal-x" data-close="1" aria-label="Fechar">×</button>
-      ${c ? `<h2>${soEspera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${soEspera ? 'As turmas estão cheias. Escolha o horário que prefere e preencha o cadastro: a coordenação avisa quando abrir vaga.' : 'Escolha a turma e preencha o cadastro rápido.'}</p>`
+      ${c ? `<h2>${soEspera ? 'Lista de espera' : 'Inscrição'}: ${esc(c.nome)}</h2><p class="muted small" style="margin:4px 0 14px">${soEspera ? 'As turmas estão cheias. Escolha o horário que prefere e preencha o cadastro: a coordenação avisa quando abrir vaga.' : `Escolha a turma e preencha o cadastro rápido.${opcoesTurma(c).some((o) => o.espera) ? ' Se escolher um horário com turma cheia, você entra na lista de espera desse horário.' : ''}`}</p>`
         : `<h2>Quero me inscrever</h2><p class="muted small" style="margin:4px 0 14px">Escolha um curso com vaga e preencha o cadastro rápido.</p>`}
       <form id="form-pinsc" class="stack" data-c="${esc(cid || '')}" novalidate>
         ${opcoes.length ? `<label class="field"><span>${c ? 'Turma' : 'Curso e turma'} <b class="req">*</b></span><select class="input" id="pi-turma">${opcoes.length > 1 && !soEspera ? '<option value="">Escolha</option>' : ''}${opcoes.map(({ c: x, o }) => { const val = `${x.id}|${o.val}`; return `<option value="${val}"${t.turmaSel === val ? ' selected' : ''}>${c ? '' : esc(x.nome) + ' · '}${esc(o.txt)}${o.espera && !c ? ' (lista de espera)' : ''}</option>`; }).join('')}</select></label>` : '<div class="empty">Você já se inscreveu em todos os cursos.</div>'}
@@ -946,7 +947,7 @@ body:not(.gated) #gate { display: none; }
         <label class="field"><span>Nome completo <b class="req">*</b></span><input class="input" id="pi-nome" autocomplete="name" value="${v('nome')}"></label>
         <label class="field"><span>E-mail <b class="req">*</b></span><input class="input" type="email" id="pi-email" autocomplete="email" placeholder="seu@email.com" value="${v('email')}"></label>
         <label class="field"><span>WhatsApp <b class="req">*</b></span><input class="input" type="tel" id="pi-tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" maxlength="16" value="${v('telefone')}"></label>
-        <label class="field"><span>Data de nascimento <b class="req">*</b></span><input class="input" type="date" id="pi-nasc" value="${v('nascimento')}"></label>
+        <label class="field"><span>Data de nascimento <b class="req">*</b></span><input class="input" type="date" id="pi-nasc" min="1920-01-01" max="${new Date().getFullYear() - 5}-12-31" value="${v('nascimento')}"><small class="small muted">Dia, mês e ano.</small></label>
         <label class="field"><span>Bairro onde mora <b class="req">*</b></span><input class="input" id="pi-bairro" list="dl-bairros" placeholder="Ex.: Éden" value="${v('bairro')}"><datalist id="dl-bairros">${BAIRROS.map((b) => `<option value="${b}">`).join('')}</datalist></label>
         <label class="field"><span>Como conheceu o Íris</span><select class="input" id="pi-como"><option value="">Escolha (opcional)</option>${COMO.map((x) => `<option${(t.comoConheceu ?? d.comoConheceu) === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
         <label class="check"><input type="checkbox" id="pi-aceite"${(t.aceite ?? d.aceite) ? ' checked' : ''}><span class="small">Aceito receber comunicações do Instituto Íris sobre novos cursos e novidades por e-mail ou WhatsApp. Posso cancelar quando quiser.</span></label>
@@ -954,13 +955,14 @@ body:not(.gated) #gate { display: none; }
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close="1">Cancelar</button><button class="btn primary" type="submit"${S.modal.enviando ? ' disabled' : ''}>${S.modal.enviando ? 'Enviando…' : 'Enviar inscrição'}</button></div>
       </form></div></div>`;
   }
+  const nascOk = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); if (!m) return false; const a = +m[1], hoje = new Date().getFullYear(); return a >= 1920 && a <= hoje - 5; };
   async function enviarPInsc(form) {
     if (S.modal.enviando) return;
     const g = (id) => document.getElementById(id).value.trim();
     const turmaSel = document.getElementById('pi-turma')?.value || '';
     const t = S.modal.tmp = { turmaSel, curso: turmaSel.split('|')[0], turma: turmaSel.split('|')[1] || '', nome: g('pi-nome'), email: g('pi-email').toLowerCase(), telefone: g('pi-tel'), nascimento: g('pi-nasc'), bairro: g('pi-bairro'), comoConheceu: g('pi-como'), aceite: document.getElementById('pi-aceite').checked };
     const dig = t.telefone.replace(/\D/g, '');
-    const falta = [!t.turma && 'turma', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !t.nascimento && 'data de nascimento', !t.bairro && 'bairro'].filter(Boolean);
+    const falta = [!t.turma && 'turma', !t.nome && 'nome', !okEmail(t.email) && 'e-mail válido', (dig.length < 10 || dig.length > 11) && 'WhatsApp com DDD', !nascOk(t.nascimento) && 'data de nascimento completa (dia, mês e ano)', !t.bairro && 'bairro'].filter(Boolean);
     S.modal.erro = falta.length ? `Preencha: ${falta.join(', ')}.` : !REAL && EMAIL_ALUNOS[t.email] ? 'Este e-mail já é de um aluno. Toque em <b>Entrar</b>, na barra do site, para se inscrever pelo Portal do Aluno.' : '';
     if (S.modal.erro) return render();
     const { turmaSel: _ts, curso: _c, turma: _t, ...dados } = t;
@@ -1118,7 +1120,8 @@ body:not(.gated) #gate { display: none; }
       const turma = document.getElementById('insc-turma').value;
       if (!turma) { document.getElementById('insc-turma-err').hidden = false; return; }
       const cc = CURSOS_SITE.find((x) => x.id === e.target.dataset.c);
-      const espera = !vagasCurso(cc);
+      const ttSel = cc && linhasCurso(cc).find((x) => x.id === turma);
+      const espera = turma === 'qualquer' || !ttSel || !ttSel.vagas;
       const k = `${S.aluno}|${e.target.dataset.c}`; const fim = (pid) => { S.insc[k] = { turma, espera, tel: fmtTel(dig), obs, status: 'pendente', pid }; if (REAL) gravarLS('portal:insc', S.insc); S.modal = null; render(); toast(espera ? 'Pronto! Você está na lista de espera.' : 'Inscrição enviada! A coordenação vai analisar.'); };
       if (!REAL) return fim('');
       const tt = cc && linhasCurso(cc).find((x) => x.id === turma);
